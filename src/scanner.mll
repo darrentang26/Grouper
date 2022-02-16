@@ -12,6 +12,8 @@ rule token = parse
 | ')'      { RPAREN }
 | '{'      { LBRACE }
 | '}'      { RBRACE }
+| '['      { LBRACKET }
+| ']'      { RBRACKET }
 | '@'      { AT }
 | ';'      { SEMI }
 | ','      { COMMA }
@@ -26,15 +28,17 @@ rule token = parse
 | "<="     { LEQ }
 | ">"      { GT }
 | ">="     { GEQ }
-| "&&"     { AND }
-| "||"     { OR }
-| "!"      { NOT }
+| "and"    { AND }
+| "or"     { OR }
+| "not"    { NOT }
 | "if"     { IF }
 | "else"   { ELSE }
-| "return" { RETURN }
+| "type"   { TYPE }
 | "int"    { INT }
 | "bool"   { BOOL }
+| "string" { STRING }
 | "fun"    { FUNCTION }
+| "let"    { LET }
 | "true"   { BLIT(true)  }
 | "false"  { BLIT(false) }
 | digits as lxm { LITERAL(int_of_string lxm) }
