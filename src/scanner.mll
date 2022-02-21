@@ -24,6 +24,7 @@ rule token = parse
 | '*'      { STAR }
 | '/'      { DIVIDE }
 | '='      { ASSIGN }
+| '_'      { UNDERSCORE }
 | "->"     { ARROW }
 | "=="     { EQ }
 | "!="     { NEQ }
@@ -55,6 +56,9 @@ rule token = parse
 | "string" { STRING }
 | "true"   { BLIT(true)  }
 | "false"  { BLIT(false) }
+| "lambda" { FUNCTION }
+| "match"  { MATCH }
+| "with"   { WITH }
 | digits as lxm { LITERAL(int_of_string lxm) }
 | digits '.' digit* as lxm { FLIT(lxm) }
 | '"' _ '"' as lxm { STRINGLIT(lxm) }
