@@ -8,11 +8,11 @@ open Ast
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE ASSIGN UNDERSCORE ARROW
 %token EQ NEQ LT LEQ GT GEQ AND OR NOT
 %token GROUP RING FIELD LET IN LAND IF THEN ELSE END
-%token TYPE OF BAR LIST PAIR INT BOOL FLOAT STRING
+%token TYPE OF BAR LIST PAIR INT BOOL FLOAT STRING VOID PRINT
 %token FUNCTION MATCH WITH
 %token <int> LITERAL
 %token <bool> BLIT
-%token <string> NAME FLIT STRINGLIT
+%token <string> NAME ADTNAME FLIT STRINGLIT
 %token EOF
 
 %start program
@@ -35,46 +35,75 @@ open Ast
 program:
   tdecls lexprs EOF { ($1, $2) }
 
+
+//-------------------- TYPES --------------------//
+
 tdecls:
     /* nothing */ { []       }
   | tdecls tdecl  { $2 :: $1 }
 
 tdecl:
-  TYPE NAME ASSIGN typ { ($2, $4) }
+  TYPE NAME ASSIGN type_expr { ($2, $4) }
 
-typ:
-    INT           { Int   }
-  | BOOL          { Bool  }
-  | FLOAT         { Float }
-  | STRING        { String }
-  | utyp_opt      { UTyp($1) }
-  | typ LIST      { List($1) }
-  | typ STAR typ  { PairType($1, $3) }
-  | typ ARROW typ { FTyp($1, $3) }
+type_expr:
+    INT             { IntExpr }
+  | BOOL            { BoolExpr }
+  | FLOAT           { FloatExpr }
+  | STRING          { StringExpr }
+  | LPAREN RPAREN   { VoidExpr }
+  | adt_opt         { AdtTypeExpr($1) }
+  | LBRACKET struct_decl_body RBRACKET
+                    { StructTypeExpr($2) }
+  | type_expr LIST  { ListType($1) }
+  | type_expr STAR typ_expr
+                    { PairType($1, $3) }
+  | type_expr ARROW type_expr
+                    { FunType($1, $3) }
+  | type_expr GROUP { GroupType($1) }
+  | type_expr RING  { RingType($1) }
+  | type_expr FIELD { FieldType($1) }
+  | LPAREN type_expr RPAREN
+                    { $2 }
 
-utyp:
-    NAME              { (Name($1), Void) }
-  | NAME OF typ       { (Name($1), $3) }
+adt_opt:
+    adt_type_expr                   { [$1] }
+  | adt_type_expr BAR adt_type_expr { $1 :: $3 }
 
-utyp_opt:
-    utyp              { [$1] }
-  | utyp BAR utyp_opt { $1 :: $3 }
+adt_type_expr:
+    NAME              { (Name($1), VoidName) }
+  | NAME OF type_name { (Name($1), $3) }
+
+struct_decl_body:
+    NAME COLON type_name                        { [($1, $3)] }
+  | NAME COLON type_name COMMA struct_decl_body { ($1, $3) :: $5 }
+
+type_name:
+    INT           { IntName   }
+  | BOOL          { BoolName  }
+  | FLOAT         { FloatName }
+  | STRING        { StringName }
+  | NAME          { UserTypeName($1) } // for adts and structs
+  | typ LIST      { ListTypeName($1) }
+  | typ STAR typ  { PairTypeName($1, $3) }
+  | typ ARROW typ { FunTypeName($1, $3) }
+  | typ GROUP     { GroupTypeName($1) }
+  | typ RING      { RingTypeName($1) }
+  | typ FIELD     { FieldTypeName($1) }
+
+
+//-------------------- LET AND EXPRESSIONS --------------------//
 
 lexprs:
-    /* nothing */ { []       }
-  | lexprs lexpr  { $2 :: $1 }
+    LET letand_opt lexprs { Let($2, $3)}
+  | LET letand_opt lexpr  { Let($2, $3) }
+  | lexpr                 { $1 }
 
 lexpr:
-    LET letand_opt %prec NOIN 
-  | LET letand_opt IN expr
+  LET letand_opt IN expr  { Let($2, $4) }
 
 letand_opt:
-    typ_name NAME ASSIGN expr              {}
-  | typ_name NAME ASSIGN expr LAND letand  {}
-
-typ_name:
-    NAME
-  | typ
+    named_typ NAME ASSIGN expr                  { [(($2, $1), $4)] }
+  | named_typ NAME ASSIGN expr LAND letand_opt  { (($2, $1), $4) :: $6 }
 
 expr:
     lexpr                 { $1 }
@@ -91,10 +120,77 @@ expr:
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
   | expr expr             { Call($1, $2) }
-  | IF expr THEN expr ELSE expr END
+  | IF expr THEN expr ELSE expr
                           { If($2, $4, $6) }
+  | algebraic_expr        { $1 }  
+  | LBRACE struct_init_body RBRACE
+                          { StructInit($2) }
+  | NAME DOT NAME         { StructRef($1, $3) }
+  | PRINT expr            { Print($2) }
+  | target_conc_outer     { AdtExpr($1) }
+  | LPAREN expr RPAREN    { $2 }
 
-list_expr
+
+//-------------------- FUNCTION DEFINITION --------------------//
+
+fn_def:
+    formals expr                     { Function($1, $2)}
+  | formals MATCH formals WITH match { Function($1, Match($3, $5)) }
+
+//---------- formals ----------//
+formals:
+  LPAREN formals_opt RPAREN { $2 }
+
+formals_opt:
+    /* nothing */ { [] }
+  | formal_list   { $1 }
+
+formal_list:
+    NAME              { [$1] }
+  | formal_list NAME  { $2 :: $1 }
+
+//---------- pattern matching ----------//
+match:
+    match_line { [$1] }
+  | match_line match { $1 :: $2 }
+
+match_line:
+  BAR LPAREN pattern RPAREN ARROW expr { (Pattern($2), $4) }
+
+pattern:
+    target_wild  { [$1] }
+  | target_wild COMMA pattern { $1 :: $3 }
+
+target_wild:
+    ADTNAME                           { TargetWildName($1) }
+  | expr                              { TargetWildExpr($1) }
+  | ADTNAME LPAREN target_wild RPAREN { TargetWildApp($1, $3) }
+  | UNDERSCORE                        { CatchAll }
+
+target_conc_outer:
+    ADTNAME                                 { TargetConcName($1) }
+  | ADTNAME LPAREN target_conc_inner RPAREN { TargetConcApp($1, $3) }
+
+target_conc_inner:
+    target_conc_outer           { $1 }
+  | ADTNAME LPAREN expr RPAREN  { TargetConcApp($1, TargetConcExpr($3)) }
+
+
+//-------------------- MISC RULES --------------------//
+
+algebraic_expr:
+    GROUP named_typ expr expr expr expr
+                      { Group ($2, $3, $4, $5, $6) }        
+  | RING named_typ expr expr expr expr expr expr
+                      { Ring  (Group ($2, $3, $4, $5, $6), $7, $8) }
+  | FIELD named_typ expr expr expr expr expr expr expr
+                      { Field (Ring  (Group ($2, $3, $4, $5, $6), $7, $8), $9) }
+
+struct_init_body:
+    NAME ASSIGN expr                         { [($1, $3)] }
+  | NAME ASSIGN expr COMMMA struct_init_body { ($1, $3) :: $5 }
+
+list_expr:
   | LBRACKET inside_list RBRACKET  { $2 }
 
 inside_list:
@@ -114,39 +210,3 @@ binop:
   | GEQ     { Geq }
   | AND     { And}
   | OR      { Or }
-
-fn_def:
-    formals expr                     { Function($1, $2)}
-  | formals MATCH formals WITH match { Function($1, Match($3, $5)) }
-
-match:
-    match_line { [$1] }
-  | match_line match { $1 :: $2 }
-
-match_line:
-  BAR pattern ARROW expr { (Pattern($2), $4) }
-
-pattern:
-    target                    { [$1]) }
-  | LPAREN target_list RPAREN { $2 }
-
-target_list:
-    target              { [$1] }
-  | target target_list  { $1 :: $3}
-
-target:
-    NAME                      { TargetName($1) }
-  | expr                      { TargetExpr($1) }
-  | NAME LPAREN target RPAREN { TargetApp($1, $3) }
-  | UNDERSCORE                { CatchAll }
-
-formals:
-  LPAREN formals_opt RPAREN { $2 }
-
-formals_opt:
-    /* nothing */ { [] }
-  | formal_list   { $1 }
-
-formal_list:
-    NAME              { [$1] }
-  | formal_list NAME  { $2 :: $1 }

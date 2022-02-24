@@ -15,7 +15,6 @@ rule token = parse
 | '}'      { RBRACE }
 | '['      { LBRACKET }
 | ']'      { RBRACKET }
-| '@'      { decorator lexbuf }
 | ':'      { COLON }
 | '.'      { DOT }
 | ','      { COMMA }
@@ -44,8 +43,9 @@ rule token = parse
 | "if"     { IF }
 | "then"   { THEN }
 | "else"   { ELSE }
-| "end"    { END }
 | "type"   { TYPE }
+| '*'      { STAR }
+| "->"     { ARROW }
 | "of"     { OF }
 | '|'      { BAR }
 | "list"   { LIST }
@@ -54,6 +54,8 @@ rule token = parse
 | "bool"   { BOOL }
 | "float"  { FLOAT }
 | "string" { STRING }
+| "void"   { VOID }
+| "print"  { PRINT }
 | "true"   { BLIT(true)  }
 | "false"  { BLIT(false) }
 | "lambda" { FUNCTION }
@@ -62,7 +64,8 @@ rule token = parse
 | digits as lxm { LITERAL(int_of_string lxm) }
 | digits '.' digit* as lxm { FLIT(lxm) }
 | '"' _ '"' as lxm { STRINGLIT(lxm) }
-| ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { NAME(lxm) }
+| ['a'-'z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { NAME(lxm) }
+| ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ADTNAME(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
@@ -73,12 +76,3 @@ and comment = parse
 and lcomment = parse
   '\n' { token lexbuf }
 | _    { lcomment lexbuf }
-
-and decorator = parse
-  [' ' '\t' '\r'] { decorator lexbuf }
-| '\n' { token lexbuf }
-| "overload"  { OVERLOAD }
-| "types"     { TYPES }
-| '*'         { STAR }
-| "->"        { ARROW }
-| ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { NAME(lxm) }
