@@ -7,8 +7,8 @@ open Ast
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE ASSIGN UNDERSCORE ARROW
 %token EQ NEQ LT LEQ GT GEQ AND OR NOT
-%token GROUP RING FIELD LET IN LAND IF THEN ELSE END
-%token TYPE OF BAR LIST PAIR INT BOOL FLOAT STRING VOID PRINT
+%token GROUP RING FIELD POLY LET IN LAND IF THEN ELSE
+%token TYPE OF BAR LIST INT BOOL FLOAT STRING VOID PRINT
 %token FUNCTION MATCH WITH
 %token <int> LITERAL
 %token <bool> BLIT
@@ -18,7 +18,6 @@ open Ast
 %start program
 %type <Ast.program> program
 
-%nonassoc NOIN
 %nonassoc IN
 %right ASSIGN
 %left ARROW
@@ -50,18 +49,19 @@ type_expr:
   | BOOL            { BoolExpr }
   | FLOAT           { FloatExpr }
   | STRING          { StringExpr }
-  | LPAREN RPAREN   { VoidExpr }
+  | VOID            { VoidExpr }
   | adt_opt         { AdtTypeExpr($1) }
-  | LBRACKET struct_decl_body RBRACKET
+  | LBRACE struct_decl_body RBRACE
                     { StructTypeExpr($2) }
   | type_expr LIST  { ListType($1) }
-  | type_expr STAR typ_expr
+  | type_expr STAR type_expr
                     { PairType($1, $3) }
   | type_expr ARROW type_expr
                     { FunType($1, $3) }
   | type_expr GROUP { GroupType($1) }
   | type_expr RING  { RingType($1) }
   | type_expr FIELD { FieldType($1) }
+  | type_expr POLY  { PolyType($1) }
   | LPAREN type_expr RPAREN
                     { $2 }
 
@@ -83,28 +83,28 @@ type_name:
   | FLOAT         { FloatName }
   | STRING        { StringName }
   | NAME          { UserTypeName($1) } // for adts and structs
-  | typ LIST      { ListTypeName($1) }
-  | typ STAR typ  { PairTypeName($1, $3) }
-  | typ ARROW typ { FunTypeName($1, $3) }
-  | typ GROUP     { GroupTypeName($1) }
-  | typ RING      { RingTypeName($1) }
-  | typ FIELD     { FieldTypeName($1) }
+  | type_name LIST      { ListTypeName($1) }
+  | type_name STAR type_name  { PairTypeName($1, $3) }
+  | type_name ARROW type_name { FunTypeName($1, $3) }
+  | type_name GROUP     { GroupTypeName($1) }
+  | type_name RING      { RingTypeName($1) }
+  | type_name FIELD     { FieldTypeName($1) }
+  | type_name POLY      { PolyTypeName($1) }
 
 
 //-------------------- LET AND EXPRESSIONS --------------------//
 
 lexprs:
-    LET letand_opt lexprs { Let($2, $3)}
-  | LET letand_opt lexpr  { Let($2, $3) }
+    LET letand_opt lexprs { Let($2, $3) }
   | lexpr                 { $1 }
 
 lexpr:
   LET letand_opt IN expr  { Let($2, $4) }
 
 letand_opt:
-    named_typ NAME ASSIGN expr                  { [(($2, $1), $4)] }
-  | named_typ NAME ASSIGN expr LAND letand_opt  { (($2, $1), $4) :: $6 }
-
+    type_name NAME ASSIGN expr                  { [(($2, $1), $4)] }
+  | type_name NAME ASSIGN expr LAND letand_opt  { (($2, $1), $4) :: $6 }
+    
 expr:
     lexpr                 { $1 }
   | LITERAL               { Literal($1) }
@@ -135,7 +135,7 @@ expr:
 
 fn_def:
     formals expr                     { Function($1, $2)}
-  | formals MATCH formals WITH match { Function($1, Match($3, $5)) }
+  | formals MATCH formals WITH match_rule { Function($1, Match($3, $5)) }
 
 //---------- formals ----------//
 formals:
@@ -150,12 +150,12 @@ formal_list:
   | formal_list NAME  { $2 :: $1 }
 
 //---------- pattern matching ----------//
-match:
+match_rule:
     match_line { [$1] }
-  | match_line match { $1 :: $2 }
+  | match_line match_rule { $1 :: $2 }
 
 match_line:
-  BAR LPAREN pattern RPAREN ARROW expr { (Pattern($2), $4) }
+  BAR LPAREN pattern RPAREN ARROW expr { (Pattern($3), $6) }
 
 pattern:
     target_wild  { [$1] }
@@ -179,16 +179,16 @@ target_conc_inner:
 //-------------------- MISC RULES --------------------//
 
 algebraic_expr:
-    GROUP named_typ expr expr expr expr
+    GROUP type_name expr expr expr expr
                       { Group ($2, $3, $4, $5, $6) }        
-  | RING named_typ expr expr expr expr expr expr
+  | RING type_name expr expr expr expr expr expr
                       { Ring  (Group ($2, $3, $4, $5, $6), $7, $8) }
-  | FIELD named_typ expr expr expr expr expr expr expr
+  | FIELD type_name expr expr expr expr expr expr expr
                       { Field (Ring  (Group ($2, $3, $4, $5, $6), $7, $8), $9) }
 
 struct_init_body:
     NAME ASSIGN expr                         { [($1, $3)] }
-  | NAME ASSIGN expr COMMMA struct_init_body { ($1, $3) :: $5 }
+  | NAME ASSIGN expr COMMA struct_init_body { ($1, $3) :: $5 }
 
 list_expr:
   | LBRACKET inside_list RBRACKET  { $2 }

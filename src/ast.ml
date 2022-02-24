@@ -17,6 +17,7 @@ type type_name =
   | GroupTypeName of type_name
   | RingTypeName of type_name
   | FieldTypeName of type_name
+  | PolyTypeName of type_name
 
 (* these types can occur in type definitions *)
 type type_expr = 
@@ -29,6 +30,7 @@ type type_expr =
   | GroupType of type_expr
   | RingType of type_expr
   | FieldType of type_expr
+  | PolyType of type_expr
 
 type typ_decl = name * type_expr
 
