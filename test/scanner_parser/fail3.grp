@@ -1,0 +1,9 @@
+type weather = Clear | NotClear
+type care = Do | Dont
+
+let weather -> bool check_clear_but_forgot_parens = match forecast,care with
+    Clear,Care    -> "yay"
+|   NotClear,Care -> "boo"
+|   _             -> "meh"
+and weather notRain = Clear in 
+    print (check_clear_but_forgot_parens not_rain)    

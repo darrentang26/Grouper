@@ -1,0 +1,1 @@
+let not_typed = "i dont have a type!" in print not_typed

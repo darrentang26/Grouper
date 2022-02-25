@@ -1,0 +1,5 @@
+let int * int -> int add = function (n m) n + m
+and int -> int inverse = function (n) -1 * n 
+and int identity = 0
+and int * int -> bool equals = function (n m) n == m  
+and group num_group = add identity inverse equals 

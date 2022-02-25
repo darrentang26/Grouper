@@ -1,0 +1,12 @@
+.DS_Store
+
+
+# built output
+src/_build/
+
+src/scanner.ml
+
+src/parser.automaton
+src/parser.output
+src/parser.mli
+src/parser.ml
