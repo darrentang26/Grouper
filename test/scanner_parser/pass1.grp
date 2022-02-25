@@ -1,0 +1,4 @@
+let int x = 5 
+and int y = 10
+and int z = x + y in
+   if x + y / z > z then print "yay" else print "boo"
