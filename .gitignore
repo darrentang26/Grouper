@@ -2,6 +2,8 @@
 
 
 # built output
+*.native
+
 src/_build/
 
 src/scanner.ml
