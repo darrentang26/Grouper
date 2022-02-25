@@ -2,6 +2,8 @@
 
 
 # built output
+src/_build/
+
 src/scanner.ml
 
 src/parser.automaton
