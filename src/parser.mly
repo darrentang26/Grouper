@@ -6,10 +6,10 @@ open Ast
 
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE ASSIGN UNDERSCORE ARROW
-%token EQ NEQ LT LEQ GT GEQ AND OR NOT
+%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS
 %token GROUP RING FIELD POLY LET IN LAND IF THEN ELSE
 %token TYPE OF BAR LIST INT BOOL FLOAT STRING VOID PRINT
-%token FUNCTION MATCH WITH
+%token FUNCTION MATCH WITH END
 %token <int> LITERAL
 %token <bool> BLIT
 %token <string> NAME ADTNAME FLIT STRINGLIT
@@ -18,9 +18,14 @@ open Ast
 %start program
 %type <Ast.program> program
 
-%nonassoc IN
-%right ASSIGN
+%nonassoc NOIN
+%nonassoc LET IN PRINT FUNCTION IF
 %left ARROW
+%nonassoc LIST
+%nonassoc GROUP RING FIELD POLY
+%nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
+%right ASSIGN
+%left CONS
 %left OR
 %left AND
 %left EQ NEQ
@@ -28,6 +33,7 @@ open Ast
 %left PLUS MINUS
 %left STAR DIVIDE
 %right NOT
+%nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
 
 %%
 
@@ -71,7 +77,7 @@ adt_opt:
 
 adt_type_expr:
     NAME              { (Name($1), VoidName) }
-  | NAME OF type_name { (Name($1), $3) }
+  | NAME OF type_name %prec IN { (Name($1), $3) }
 
 struct_decl_body:
     NAME COLON type_name                        { [($1, $3)] }
@@ -107,35 +113,40 @@ letand_opt:
     
 expr:
     lexpr                 { $1 }
-  | LITERAL               { Literal($1) }
+  | LITERAL          { Literal($1) }
   | FLIT	                { Fliteral($1) }
   | BLIT                  { BoolLit($1) }
   | STRINGLIT             { StringLit($1) }
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
-  | list_expr             { ListExpr($1) }
+  | LBRACKET inside_list RBRACKET  { List_Expr($2) }
   | NAME                  { Name($1) }
-  | expr binop expr       { Binop($1, $2, $3) }
+  | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
-  | expr expr             { Call($1, $2) }
-  | IF expr THEN expr ELSE expr
+  | expr expr   %prec NOT { Call($1, $2) }
+  | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
-  | algebraic_expr        { $1 }  
+  | GROUP LBRACE type_name expr expr expr expr RBRACE
+                      { Group ($3, $4, $5, $6, $7) }        
+  | RING LBRACE type_name expr expr expr expr expr expr RBRACE
+                      { Ring  (Group ($3, $4, $5, $6, $7), $8, $9) }
+  | FIELD LBRACE type_name expr expr expr expr expr expr expr RBRACE
+                      { Field (Ring  (Group ($3, $4, $5, $6, $7), $8, $9,) $10) }
   | LBRACE struct_init_body RBRACE
                           { StructInit($2) }
   | NAME DOT NAME         { StructRef($1, $3) }
   | PRINT expr            { Print($2) }
-  | target_conc_outer     { AdtExpr($1) }
+  | target_conc %prec IN          { AdtExpr($1) }
   | LPAREN expr RPAREN    { $2 }
 
 
 //-------------------- FUNCTION DEFINITION --------------------//
 
 fn_def:
-    formals expr                     { Function($1, $2)}
-  | formals MATCH formals WITH match_rule { Function($1, Match($3, $5)) }
+    formals expr   %prec IN                           { Function($1, $2)}
+  | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
 
 //---------- formals ----------//
 formals:
@@ -163,39 +174,50 @@ pattern:
 
 target_wild:
     ADTNAME                           { TargetWildName($1) }
-  | expr                              { TargetWildExpr($1) }
+  | literal                           { TargetWildLiteral($1) }
   | ADTNAME LPAREN target_wild RPAREN { TargetWildApp($1, $3) }
   | UNDERSCORE                        { CatchAll }
 
-target_conc_outer:
-    ADTNAME                                 { TargetConcName($1) }
-  | ADTNAME LPAREN target_conc_inner RPAREN { TargetConcApp($1, $3) }
+literal:
+    LITERAL               { Literal($1) }
+  | FLIT	                { Fliteral($1) }
+  | BLIT                  { BoolLit($1) }
+  | STRINGLIT             { StringLit($1) }
+  | LPAREN literal COMMA literal RPAREN
+                          { PairExpr($2, $4) }
+  | LBRACKET inside_lit_list RBRACKET  { ListExpr($2) }
 
-target_conc_inner:
-    target_conc_outer           { $1 }
-  | ADTNAME LPAREN expr RPAREN  { TargetConcApp($1, TargetConcExpr($3)) }
+inside_lit_list:
+    /* nothing */ { [] }
+  | literal COMMA inside_lit_list { $1 :: $3 }
+
+
+target_conc:
+    ADTNAME                                 { TargetConcName($1) }
+    | ADTNAME LPAREN target_conc RPAREN { TargetConcApp($1, $3) }
+    | ADTNAME LPAREN expr RPAREN { TargetConcApp($1, TargetConcExpr($3)) }
 
 
 //-------------------- MISC RULES --------------------//
 
-algebraic_expr:
-    GROUP type_name expr expr expr expr
+/*algebraic_expr:
+    GROUP type_name expr expr expr expr %prec IN
                       { Group ($2, $3, $4, $5, $6) }        
-  | RING type_name expr expr expr expr expr expr
+  | RING type_name expr expr expr expr expr expr %prec IN
                       { Ring  (Group ($2, $3, $4, $5, $6), $7, $8) }
-  | FIELD type_name expr expr expr expr expr expr expr
-                      { Field (Ring  (Group ($2, $3, $4, $5, $6), $7, $8), $9) }
+  | FIELD type_name expr expr expr expr expr expr expr %prec IN
+                      { Field (Ring  (Group ($2, $3, $4, $5, $6), $7, $8), $9) }*/
 
 struct_init_body:
     NAME ASSIGN expr                         { [($1, $3)] }
   | NAME ASSIGN expr COMMA struct_init_body { ($1, $3) :: $5 }
 
-list_expr:
-  | LBRACKET inside_list RBRACKET  { $2 }
+/*list_expr:
+  | LBRACKET inside_list RBRACKET  { $2 }*/
 
 inside_list:
     /* nothing */ { [] }
-  | expr inside_list { $1 :: $2 }
+  | expr COMMA inside_list { $1 :: $3 }
 
 binop:
     PLUS    { Add }
@@ -210,3 +232,4 @@ binop:
   | GEQ     { Geq }
   | AND     { And}
   | OR      { Or }
+  | CONS    { Cons }

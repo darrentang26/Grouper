@@ -11,124 +11,130 @@
    6            | BOOL
    7            | FLOAT
    8            | STRING
-   9            | LPAREN RPAREN
+   9            | VOID
   10            | adt_opt
-  11            | LBRACKET struct_decl_body RBRACKET
+  11            | LBRACE struct_decl_body RBRACE
   12            | type_expr LIST
   13            | type_expr STAR type_expr
   14            | type_expr ARROW type_expr
   15            | type_expr GROUP
   16            | type_expr RING
   17            | type_expr FIELD
-  18            | LPAREN type_expr RPAREN
+  18            | type_expr POLY
+  19            | LPAREN type_expr RPAREN
 
-  19  adt_opt : adt_type_expr
-  20          | adt_type_expr BAR adt_type_expr
+  20  adt_opt : adt_type_expr
+  21          | adt_type_expr BAR adt_type_expr
 
-  21  adt_type_expr : NAME
-  22                | NAME OF type_name
+  22  adt_type_expr : NAME
+  23                | NAME OF type_name
 
-  23  struct_decl_body : NAME COLON type_name
-  24                   | NAME COLON type_name COMMA struct_decl_body
+  24  struct_decl_body : NAME COLON type_name
+  25                   | NAME COLON type_name COMMA struct_decl_body
 
-  25  type_name : INT
-  26            | BOOL
-  27            | FLOAT
-  28            | STRING
-  29            | NAME
-  30            | type_name LIST
-  31            | type_name STAR type_name
-  32            | type_name ARROW type_name
-  33            | type_name GROUP
-  34            | type_name RING
-  35            | type_name FIELD
+  26  type_name : INT
+  27            | BOOL
+  28            | FLOAT
+  29            | STRING
+  30            | NAME
+  31            | type_name LIST
+  32            | type_name STAR type_name
+  33            | type_name ARROW type_name
+  34            | type_name GROUP
+  35            | type_name RING
+  36            | type_name FIELD
+  37            | type_name POLY
 
-  36  lexprs : LET letand_opt lexprs
-  37         | LET letand_opt lexpr
-  38         | lexpr
+  38  lexprs : LET letand_opt lexprs
+  39         | lexpr
 
-  39  lexpr : LET letand_opt IN expr
+  40  lexpr : LET letand_opt IN expr
 
-  40  letand_opt : type_name NAME ASSIGN expr
-  41             | type_name NAME ASSIGN expr LAND letand_opt
+  41  letand_opt : type_name NAME ASSIGN expr
+  42             | type_name NAME ASSIGN expr LAND letand_opt
 
-  42  expr : lexpr
-  43       | LITERAL
-  44       | FLIT
-  45       | BLIT
-  46       | STRINGLIT
-  47       | LPAREN expr COMMA expr RPAREN
-  48       | list_expr
-  49       | NAME
-  50       | expr binop expr
-  51       | MINUS expr
-  52       | NOT expr
-  53       | FUNCTION fn_def
-  54       | expr expr
-  55       | IF expr THEN expr ELSE expr
-  56       | algebraic_expr
-  57       | LBRACE struct_init_body RBRACE
-  58       | NAME DOT NAME
-  59       | PRINT expr
-  60       | target_conc_outer
-  61       | LPAREN expr RPAREN
+  43  expr : lexpr
+  44       | LITERAL
+  45       | FLIT
+  46       | BLIT
+  47       | STRINGLIT
+  48       | LPAREN expr COMMA expr RPAREN
+  49       | LBRACKET inside_list RBRACKET
+  50       | NAME
+  51       | expr binop expr
+  52       | MINUS expr
+  53       | NOT expr
+  54       | FUNCTION fn_def
+  55       | expr expr
+  56       | IF expr THEN expr ELSE expr END
+  57       | GROUP LBRACE type_name expr expr expr expr RBRACE
+  58       | RING LBRACE type_name expr expr expr expr expr expr RBRACE
+  59       | FIELD LBRACE type_name expr expr expr expr expr expr expr RBRACE
+  60       | LBRACE struct_init_body RBRACE
+  61       | NAME DOT NAME
+  62       | PRINT expr
+  63       | target_conc
+  64       | LPAREN expr RPAREN
 
-  62  fn_def : formals expr
-  63         | formals MATCH formals WITH match
+  65  fn_def : formals expr
+  66         | formals MATCH formals WITH match_rule END
 
-  64  formals : LPAREN formals_opt RPAREN
+  67  formals : LPAREN formals_opt RPAREN
 
-  65  formals_opt :
-  66              | formal_list
+  68  formals_opt :
+  69              | formal_list
 
-  67  formal_list : NAME
-  68              | formal_list NAME
+  70  formal_list : NAME
+  71              | formal_list NAME
 
-  69  match : match_line
-  70        | match_line match
+  72  match_rule : match_line
+  73             | match_line match_rule
 
-  71  match_line : BAR LPAREN pattern RPAREN ARROW expr
+  74  match_line : BAR LPAREN pattern RPAREN ARROW expr
 
-  72  pattern : target_wild
-  73          | target_wild COMMA pattern
+  75  pattern : target_wild
+  76          | target_wild COMMA pattern
 
-  74  target_wild : ADTNAME
-  75              | expr
-  76              | ADTNAME LPAREN target_wild RPAREN
-  77              | UNDERSCORE
+  77  target_wild : ADTNAME
+  78              | literal
+  79              | ADTNAME LPAREN target_wild RPAREN
+  80              | UNDERSCORE
 
-  78  target_conc_outer : ADTNAME
-  79                    | ADTNAME LPAREN target_conc_inner RPAREN
+  81  literal : LITERAL
+  82          | FLIT
+  83          | BLIT
+  84          | STRINGLIT
+  85          | LPAREN literal COMMA literal RPAREN
+  86          | LBRACKET inside_lit_list RBRACKET
 
-  80  target_conc_inner : target_conc_outer
-  81                    | ADTNAME LPAREN expr RPAREN
+  87  inside_lit_list :
+  88                  | literal COMMA inside_lit_list
 
-  82  algebraic_expr : GROUP type_name expr expr expr expr
-  83                 | RING type_name expr expr expr expr expr expr
-  84                 | FIELD type_name expr expr expr expr expr expr expr
+  89  target_conc : ADTNAME
+  90              | ADTNAME LPAREN target_conc RPAREN
+  91              | ADTNAME LPAREN expr RPAREN
 
-  85  struct_init_body : NAME ASSIGN expr
-  86                   | NAME ASSIGN expr COMMA struct_init_body
+  92  struct_init_body : NAME ASSIGN expr
+  93                   | NAME ASSIGN expr COMMA struct_init_body
 
-  87  list_expr : LBRACKET inside_list RBRACKET
+  94  inside_list :
+  95              | expr COMMA inside_list
 
-  88  inside_list :
-  89              | expr inside_list
+  96  binop : PLUS
+  97        | MINUS
+  98        | STAR
+  99        | DIVIDE
+ 100        | EQ
+ 101        | NEQ
+ 102        | LT
+ 103        | GT
+ 104        | LEQ
+ 105        | GEQ
+ 106        | AND
+ 107        | OR
+ 108        | CONS
 
-  90  binop : PLUS
-  91        | MINUS
-  92        | STAR
-  93        | DIVIDE
-  94        | EQ
-  95        | NEQ
-  96        | LT
-  97        | GT
-  98        | LEQ
-  99        | GEQ
- 100        | AND
- 101        | OR
-
- 102  %entry% : '\001' program
+ 109  %entry% : '\001' program
 
 state 0
 	$accept : . %entry% $end  (0)
@@ -140,7 +146,7 @@ state 0
 
 
 state 1
-	%entry% : '\001' . program  (102)
+	%entry% : '\001' . program  (109)
 	tdecls : .  (2)
 
 	.  reduce 2
@@ -156,9 +162,9 @@ state 2
 
 
 state 3
-	%entry% : '\001' program .  (102)
+	%entry% : '\001' program .  (109)
 
-	.  reduce 102
+	.  reduce 109
 
 
 state 4
@@ -175,9 +181,8 @@ state 4
 
 
 state 5
-	lexprs : LET . letand_opt lexprs  (36)
-	lexprs : LET . letand_opt lexpr  (37)
-	lexpr : LET . letand_opt IN expr  (39)
+	lexprs : LET . letand_opt lexprs  (38)
+	lexpr : LET . letand_opt IN expr  (40)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -211,72 +216,73 @@ state 8
 
 
 state 9
-	lexprs : lexpr .  (38)
+	lexprs : lexpr .  (39)
 
-	.  reduce 38
+	.  reduce 39
 
 
 state 10
-	type_name : INT .  (25)
-
-	.  reduce 25
-
-
-state 11
-	type_name : BOOL .  (26)
+	type_name : INT .  (26)
 
 	.  reduce 26
 
 
-state 12
-	type_name : FLOAT .  (27)
+state 11
+	type_name : BOOL .  (27)
 
 	.  reduce 27
 
 
-state 13
-	type_name : STRING .  (28)
+state 12
+	type_name : FLOAT .  (28)
 
 	.  reduce 28
 
 
-state 14
-	type_name : NAME .  (29)
+state 13
+	type_name : STRING .  (29)
 
 	.  reduce 29
 
 
+state 14
+	type_name : NAME .  (30)
+
+	.  reduce 30
+
+
 state 15
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
-	letand_opt : type_name . NAME ASSIGN expr  (40)
-	letand_opt : type_name . NAME ASSIGN expr LAND letand_opt  (41)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
+	letand_opt : type_name . NAME ASSIGN expr  (41)
+	letand_opt : type_name . NAME ASSIGN expr LAND letand_opt  (42)
 
 	STAR  shift 19
 	ARROW  shift 20
 	GROUP  shift 21
 	RING  shift 22
 	FIELD  shift 23
-	LIST  shift 24
-	NAME  shift 25
+	POLY  shift 24
+	LIST  shift 25
+	NAME  shift 26
 	.  error
 
 
 state 16
-	lexprs : LET letand_opt . lexprs  (36)
-	lexprs : LET letand_opt . lexpr  (37)
-	lexpr : LET letand_opt . IN expr  (39)
+	lexprs : LET letand_opt . lexprs  (38)
+	lexpr : LET letand_opt . IN expr  (40)
 
 	LET  shift 5
-	IN  shift 26
+	IN  shift 27
 	.  error
 
-	lexprs  goto 27
-	lexpr  goto 28
+	lexprs  goto 28
+	lexpr  goto 9
 
 
 state 17
@@ -293,7 +299,7 @@ state 18
 
 
 state 19
-	type_name : type_name STAR . type_name  (31)
+	type_name : type_name STAR . type_name  (32)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -306,7 +312,7 @@ state 19
 
 
 state 20
-	type_name : type_name ARROW . type_name  (32)
+	type_name : type_name ARROW . type_name  (33)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -319,39 +325,45 @@ state 20
 
 
 state 21
-	type_name : type_name GROUP .  (33)
-
-	.  reduce 33
-
-
-state 22
-	type_name : type_name RING .  (34)
+	type_name : type_name GROUP .  (34)
 
 	.  reduce 34
 
 
-state 23
-	type_name : type_name FIELD .  (35)
+state 22
+	type_name : type_name RING .  (35)
 
 	.  reduce 35
 
 
-state 24
-	type_name : type_name LIST .  (30)
+state 23
+	type_name : type_name FIELD .  (36)
 
-	.  reduce 30
+	.  reduce 36
+
+
+state 24
+	type_name : type_name POLY .  (37)
+
+	.  reduce 37
 
 
 state 25
-	letand_opt : type_name NAME . ASSIGN expr  (40)
-	letand_opt : type_name NAME . ASSIGN expr LAND letand_opt  (41)
+	type_name : type_name LIST .  (31)
+
+	.  reduce 31
+
+
+state 26
+	letand_opt : type_name NAME . ASSIGN expr  (41)
+	letand_opt : type_name NAME . ASSIGN expr LAND letand_opt  (42)
 
 	ASSIGN  shift 32
 	.  error
 
 
-state 26
-	lexpr : LET letand_opt IN . expr  (39)
+state 27
+	lexpr : LET letand_opt IN . expr  (40)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -375,127 +387,117 @@ state 26
 
 	lexpr  goto 51
 	expr  goto 52
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 27
-	lexprs : LET letand_opt lexprs .  (36)
-
-	.  reduce 36
-
-
-28: reduce/reduce conflict (reduce 37, reduce 38) on EOF
 state 28
-	lexprs : LET letand_opt lexpr .  (37)
-	lexprs : lexpr .  (38)
+	lexprs : LET letand_opt lexprs .  (38)
 
-	.  reduce 37
+	.  reduce 38
 
 
 state 29
 	tdecl : TYPE NAME ASSIGN . type_expr  (4)
 
-	LPAREN  shift 56
-	LBRACKET  shift 57
-	INT  shift 58
-	BOOL  shift 59
-	FLOAT  shift 60
-	STRING  shift 61
-	NAME  shift 62
+	LPAREN  shift 54
+	LBRACE  shift 55
+	INT  shift 56
+	BOOL  shift 57
+	FLOAT  shift 58
+	STRING  shift 59
+	VOID  shift 60
+	NAME  shift 61
 	.  error
 
-	type_expr  goto 63
-	adt_opt  goto 64
-	adt_type_expr  goto 65
+	type_expr  goto 62
+	adt_opt  goto 63
+	adt_type_expr  goto 64
 
 
-30: shift/reduce conflict (shift 21, reduce 31) on GROUP
-30: shift/reduce conflict (shift 22, reduce 31) on RING
-30: shift/reduce conflict (shift 23, reduce 31) on FIELD
-30: shift/reduce conflict (shift 24, reduce 31) on LIST
 state 30
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name STAR type_name .  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name STAR type_name .  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
 
-	GROUP  shift 21
-	RING  shift 22
-	FIELD  shift 23
-	LIST  shift 24
-	LPAREN  reduce 31
-	RPAREN  reduce 31
-	LBRACE  reduce 31
-	LBRACKET  reduce 31
-	RBRACKET  reduce 31
-	COMMA  reduce 31
-	MINUS  reduce 31
-	STAR  reduce 31
-	ARROW  reduce 31
-	NOT  reduce 31
-	LET  reduce 31
-	IF  reduce 31
-	TYPE  reduce 31
-	BAR  reduce 31
-	PRINT  reduce 31
-	FUNCTION  reduce 31
-	LITERAL  reduce 31
-	BLIT  reduce 31
-	NAME  reduce 31
-	ADTNAME  reduce 31
-	FLIT  reduce 31
-	STRINGLIT  reduce 31
+	.  reduce 32
 
 
-31: shift/reduce conflict (shift 21, reduce 32) on GROUP
-31: shift/reduce conflict (shift 22, reduce 32) on RING
-31: shift/reduce conflict (shift 23, reduce 32) on FIELD
-31: shift/reduce conflict (shift 24, reduce 32) on LIST
 state 31
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name ARROW type_name .  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name ARROW type_name .  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
 
 	STAR  shift 19
 	GROUP  shift 21
 	RING  shift 22
 	FIELD  shift 23
-	LIST  shift 24
-	LPAREN  reduce 32
-	RPAREN  reduce 32
-	LBRACE  reduce 32
-	LBRACKET  reduce 32
-	RBRACKET  reduce 32
-	COMMA  reduce 32
-	MINUS  reduce 32
-	ARROW  reduce 32
-	NOT  reduce 32
-	LET  reduce 32
-	IF  reduce 32
-	TYPE  reduce 32
-	BAR  reduce 32
-	PRINT  reduce 32
-	FUNCTION  reduce 32
-	LITERAL  reduce 32
-	BLIT  reduce 32
-	NAME  reduce 32
-	ADTNAME  reduce 32
-	FLIT  reduce 32
-	STRINGLIT  reduce 32
+	POLY  shift 24
+	LIST  shift 25
+	LPAREN  reduce 33
+	RPAREN  reduce 33
+	LBRACE  reduce 33
+	RBRACE  reduce 33
+	LBRACKET  reduce 33
+	COMMA  reduce 33
+	MINUS  reduce 33
+	ARROW  reduce 33
+	NOT  reduce 33
+	LET  reduce 33
+	IF  reduce 33
+	TYPE  reduce 33
+	BAR  reduce 33
+	PRINT  reduce 33
+	FUNCTION  reduce 33
+	LITERAL  reduce 33
+	BLIT  reduce 33
+	NAME  reduce 33
+	ADTNAME  reduce 33
+	FLIT  reduce 33
+	STRINGLIT  reduce 33
 
 
 state 32
-	letand_opt : type_name NAME ASSIGN . expr  (40)
-	letand_opt : type_name NAME ASSIGN . expr LAND letand_opt  (41)
+	letand_opt : type_name NAME ASSIGN . expr  (41)
+	letand_opt : type_name NAME ASSIGN . expr LAND letand_opt  (42)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	NOT  shift 37
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 65
+	target_conc  goto 53
+
+
+state 33
+	expr : LPAREN . expr COMMA expr RPAREN  (48)
+	expr : LPAREN . expr RPAREN  (64)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -519,54 +521,21 @@ state 32
 
 	lexpr  goto 51
 	expr  goto 66
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 33
-	expr : LPAREN . expr COMMA expr RPAREN  (47)
-	expr : LPAREN . expr RPAREN  (61)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 67
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 34
-	expr : LBRACE . struct_init_body RBRACE  (57)
+	expr : LBRACE . struct_init_body RBRACE  (60)
 
-	NAME  shift 68
+	NAME  shift 67
 	.  error
 
-	struct_init_body  goto 69
+	struct_init_body  goto 68
 
 
 state 35
-	list_expr : LBRACKET . inside_list RBRACKET  (87)
-	inside_list : .  (88)
+	expr : LBRACKET . inside_list RBRACKET  (49)
+	inside_list : .  (94)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -586,18 +555,44 @@ state 35
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RBRACKET  reduce 88
+	RBRACKET  reduce 94
 
 	lexpr  goto 51
-	expr  goto 70
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-	inside_list  goto 71
+	expr  goto 69
+	inside_list  goto 70
+	target_conc  goto 53
 
 
 state 36
-	expr : MINUS . expr  (51)
+	expr : MINUS . expr  (52)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	NOT  shift 37
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 71
+	target_conc  goto 53
+
+
+state 37
+	expr : NOT . expr  (53)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -621,13 +616,46 @@ state 36
 
 	lexpr  goto 51
 	expr  goto 72
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 37
-	expr : NOT . expr  (52)
+state 38
+	expr : GROUP . LBRACE type_name expr expr expr expr RBRACE  (57)
+
+	LBRACE  shift 73
+	.  error
+
+
+state 39
+	expr : RING . LBRACE type_name expr expr expr expr expr expr RBRACE  (58)
+
+	LBRACE  shift 74
+	.  error
+
+
+state 40
+	expr : FIELD . LBRACE type_name expr expr expr expr expr expr expr RBRACE  (59)
+
+	LBRACE  shift 75
+	.  error
+
+
+state 41
+	lexpr : LET . letand_opt IN expr  (40)
+
+	INT  shift 10
+	BOOL  shift 11
+	FLOAT  shift 12
+	STRING  shift 13
+	NAME  shift 14
+	.  error
+
+	type_name  goto 15
+	letand_opt  goto 76
+
+
+state 42
+	expr : IF . expr THEN expr ELSE expr END  (56)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -650,67 +678,12 @@ state 37
 	.  error
 
 	lexpr  goto 51
-	expr  goto 73
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	expr  goto 77
+	target_conc  goto 53
 
 
-state 38
-	algebraic_expr : GROUP . type_name expr expr expr expr  (82)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	.  error
-
-	type_name  goto 74
-
-
-state 39
-	algebraic_expr : RING . type_name expr expr expr expr expr expr  (83)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	.  error
-
-	type_name  goto 75
-
-
-state 40
-	algebraic_expr : FIELD . type_name expr expr expr expr expr expr expr  (84)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	.  error
-
-	type_name  goto 76
-
-
-state 41
-	lexpr : LET . letand_opt IN expr  (39)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	.  error
-
-	type_name  goto 15
-	letand_opt  goto 77
-
-
-state 42
-	expr : IF . expr THEN expr ELSE expr  (55)
+state 43
+	expr : PRINT . expr  (62)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -734,330 +707,273 @@ state 42
 
 	lexpr  goto 51
 	expr  goto 78
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 43
-	expr : PRINT . expr  (59)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 79
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 44
-	expr : FUNCTION . fn_def  (53)
+	expr : FUNCTION . fn_def  (54)
 
-	LPAREN  shift 80
+	LPAREN  shift 79
 	.  error
 
-	fn_def  goto 81
-	formals  goto 82
+	fn_def  goto 80
+	formals  goto 81
 
 
 state 45
-	expr : LITERAL .  (43)
-
-	.  reduce 43
-
-
-state 46
-	expr : BLIT .  (45)
-
-	.  reduce 45
-
-
-state 47
-	expr : NAME .  (49)
-	expr : NAME . DOT NAME  (58)
-
-	DOT  shift 83
-	LPAREN  reduce 49
-	RPAREN  reduce 49
-	LBRACE  reduce 49
-	RBRACE  reduce 49
-	LBRACKET  reduce 49
-	RBRACKET  reduce 49
-	COMMA  reduce 49
-	PLUS  reduce 49
-	MINUS  reduce 49
-	STAR  reduce 49
-	DIVIDE  reduce 49
-	EQ  reduce 49
-	NEQ  reduce 49
-	LT  reduce 49
-	LEQ  reduce 49
-	GT  reduce 49
-	GEQ  reduce 49
-	AND  reduce 49
-	OR  reduce 49
-	NOT  reduce 49
-	GROUP  reduce 49
-	RING  reduce 49
-	FIELD  reduce 49
-	LET  reduce 49
-	IN  reduce 49
-	LAND  reduce 49
-	IF  reduce 49
-	THEN  reduce 49
-	ELSE  reduce 49
-	BAR  reduce 49
-	PRINT  reduce 49
-	FUNCTION  reduce 49
-	LITERAL  reduce 49
-	BLIT  reduce 49
-	NAME  reduce 49
-	ADTNAME  reduce 49
-	FLIT  reduce 49
-	STRINGLIT  reduce 49
-	EOF  reduce 49
-
-
-48: shift/reduce conflict (shift 84, reduce 78) on LPAREN
-state 48
-	target_conc_outer : ADTNAME .  (78)
-	target_conc_outer : ADTNAME . LPAREN target_conc_inner RPAREN  (79)
-
-	LPAREN  shift 84
-	RPAREN  reduce 78
-	LBRACE  reduce 78
-	RBRACE  reduce 78
-	LBRACKET  reduce 78
-	RBRACKET  reduce 78
-	COMMA  reduce 78
-	PLUS  reduce 78
-	MINUS  reduce 78
-	STAR  reduce 78
-	DIVIDE  reduce 78
-	EQ  reduce 78
-	NEQ  reduce 78
-	LT  reduce 78
-	LEQ  reduce 78
-	GT  reduce 78
-	GEQ  reduce 78
-	AND  reduce 78
-	OR  reduce 78
-	NOT  reduce 78
-	GROUP  reduce 78
-	RING  reduce 78
-	FIELD  reduce 78
-	LET  reduce 78
-	IN  reduce 78
-	LAND  reduce 78
-	IF  reduce 78
-	THEN  reduce 78
-	ELSE  reduce 78
-	BAR  reduce 78
-	PRINT  reduce 78
-	FUNCTION  reduce 78
-	LITERAL  reduce 78
-	BLIT  reduce 78
-	NAME  reduce 78
-	ADTNAME  reduce 78
-	FLIT  reduce 78
-	STRINGLIT  reduce 78
-	EOF  reduce 78
-
-
-state 49
-	expr : FLIT .  (44)
+	expr : LITERAL .  (44)
 
 	.  reduce 44
 
 
-state 50
-	expr : STRINGLIT .  (46)
+state 46
+	expr : BLIT .  (46)
 
 	.  reduce 46
 
 
+state 47
+	expr : NAME .  (50)
+	expr : NAME . DOT NAME  (61)
+
+	DOT  shift 82
+	LPAREN  reduce 50
+	RPAREN  reduce 50
+	LBRACE  reduce 50
+	RBRACE  reduce 50
+	LBRACKET  reduce 50
+	COMMA  reduce 50
+	PLUS  reduce 50
+	MINUS  reduce 50
+	STAR  reduce 50
+	DIVIDE  reduce 50
+	EQ  reduce 50
+	NEQ  reduce 50
+	LT  reduce 50
+	LEQ  reduce 50
+	GT  reduce 50
+	GEQ  reduce 50
+	AND  reduce 50
+	OR  reduce 50
+	NOT  reduce 50
+	CONS  reduce 50
+	GROUP  reduce 50
+	RING  reduce 50
+	FIELD  reduce 50
+	LET  reduce 50
+	IN  reduce 50
+	LAND  reduce 50
+	IF  reduce 50
+	THEN  reduce 50
+	ELSE  reduce 50
+	BAR  reduce 50
+	PRINT  reduce 50
+	FUNCTION  reduce 50
+	END  reduce 50
+	LITERAL  reduce 50
+	BLIT  reduce 50
+	NAME  reduce 50
+	ADTNAME  reduce 50
+	FLIT  reduce 50
+	STRINGLIT  reduce 50
+	EOF  reduce 50
+
+
+state 48
+	target_conc : ADTNAME .  (89)
+	target_conc : ADTNAME . LPAREN target_conc RPAREN  (90)
+	target_conc : ADTNAME . LPAREN expr RPAREN  (91)
+
+	LPAREN  shift 83
+	RPAREN  reduce 89
+	LBRACE  reduce 89
+	RBRACE  reduce 89
+	LBRACKET  reduce 89
+	COMMA  reduce 89
+	PLUS  reduce 89
+	MINUS  reduce 89
+	STAR  reduce 89
+	DIVIDE  reduce 89
+	EQ  reduce 89
+	NEQ  reduce 89
+	LT  reduce 89
+	LEQ  reduce 89
+	GT  reduce 89
+	GEQ  reduce 89
+	AND  reduce 89
+	OR  reduce 89
+	NOT  reduce 89
+	CONS  reduce 89
+	GROUP  reduce 89
+	RING  reduce 89
+	FIELD  reduce 89
+	LET  reduce 89
+	IN  reduce 89
+	LAND  reduce 89
+	IF  reduce 89
+	THEN  reduce 89
+	ELSE  reduce 89
+	BAR  reduce 89
+	PRINT  reduce 89
+	FUNCTION  reduce 89
+	END  reduce 89
+	LITERAL  reduce 89
+	BLIT  reduce 89
+	NAME  reduce 89
+	ADTNAME  reduce 89
+	FLIT  reduce 89
+	STRINGLIT  reduce 89
+	EOF  reduce 89
+
+
+state 49
+	expr : FLIT .  (45)
+
+	.  reduce 45
+
+
+state 50
+	expr : STRINGLIT .  (47)
+
+	.  reduce 47
+
+
 state 51
-	expr : lexpr .  (42)
+	expr : lexpr .  (43)
 
-	.  reduce 42
+	.  reduce 43
 
 
-52: shift/reduce conflict (shift 33, reduce 39) on LPAREN
-52: shift/reduce conflict (shift 34, reduce 39) on LBRACE
-52: shift/reduce conflict (shift 35, reduce 39) on LBRACKET
-52: shift/reduce conflict (shift 38, reduce 39) on GROUP
-52: shift/reduce conflict (shift 39, reduce 39) on RING
-52: shift/reduce conflict (shift 40, reduce 39) on FIELD
-52: shift/reduce conflict (shift 41, reduce 39) on LET
-52: shift/reduce conflict (shift 42, reduce 39) on IF
-52: shift/reduce conflict (shift 43, reduce 39) on PRINT
-52: shift/reduce conflict (shift 44, reduce 39) on FUNCTION
-52: shift/reduce conflict (shift 45, reduce 39) on LITERAL
-52: shift/reduce conflict (shift 46, reduce 39) on BLIT
-52: shift/reduce conflict (shift 47, reduce 39) on NAME
-52: shift/reduce conflict (shift 48, reduce 39) on ADTNAME
-52: shift/reduce conflict (shift 49, reduce 39) on FLIT
-52: shift/reduce conflict (shift 50, reduce 39) on STRINGLIT
 state 52
-	lexpr : LET letand_opt IN expr .  (39)
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
+	lexpr : LET letand_opt IN expr .  (40)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
 	LITERAL  shift 45
 	BLIT  shift 46
 	NAME  shift 47
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RPAREN  reduce 39
-	RBRACE  reduce 39
-	RBRACKET  reduce 39
-	COMMA  reduce 39
-	IN  reduce 39
-	LAND  reduce 39
-	THEN  reduce 39
-	ELSE  reduce 39
-	BAR  reduce 39
-	EOF  reduce 39
+	RPAREN  reduce 40
+	RBRACE  reduce 40
+	COMMA  reduce 40
+	IN  reduce 40
+	LAND  reduce 40
+	THEN  reduce 40
+	ELSE  reduce 40
+	BAR  reduce 40
+	END  reduce 40
+	EOF  reduce 40
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 53
-	expr : list_expr .  (48)
+	expr : target_conc .  (63)
 
-	.  reduce 48
+	.  reduce 63
 
 
 state 54
-	expr : algebraic_expr .  (56)
+	type_expr : LPAREN . type_expr RPAREN  (19)
 
-	.  reduce 56
+	LPAREN  shift 54
+	LBRACE  shift 55
+	INT  shift 56
+	BOOL  shift 57
+	FLOAT  shift 58
+	STRING  shift 59
+	VOID  shift 60
+	NAME  shift 61
+	.  error
+
+	type_expr  goto 99
+	adt_opt  goto 63
+	adt_type_expr  goto 64
 
 
 state 55
-	expr : target_conc_outer .  (60)
+	type_expr : LBRACE . struct_decl_body RBRACE  (11)
 
-	.  reduce 60
+	NAME  shift 100
+	.  error
+
+	struct_decl_body  goto 101
 
 
 state 56
-	type_expr : LPAREN . RPAREN  (9)
-	type_expr : LPAREN . type_expr RPAREN  (18)
-
-	LPAREN  shift 56
-	RPAREN  shift 99
-	LBRACKET  shift 57
-	INT  shift 58
-	BOOL  shift 59
-	FLOAT  shift 60
-	STRING  shift 61
-	NAME  shift 62
-	.  error
-
-	type_expr  goto 100
-	adt_opt  goto 64
-	adt_type_expr  goto 65
-
-
-state 57
-	type_expr : LBRACKET . struct_decl_body RBRACKET  (11)
-
-	NAME  shift 101
-	.  error
-
-	struct_decl_body  goto 102
-
-
-state 58
 	type_expr : INT .  (5)
 
 	.  reduce 5
 
 
-state 59
+state 57
 	type_expr : BOOL .  (6)
 
 	.  reduce 6
 
 
-state 60
+state 58
 	type_expr : FLOAT .  (7)
 
 	.  reduce 7
 
 
-state 61
+state 59
 	type_expr : STRING .  (8)
 
 	.  reduce 8
 
 
+state 60
+	type_expr : VOID .  (9)
+
+	.  reduce 9
+
+
+state 61
+	adt_type_expr : NAME .  (22)
+	adt_type_expr : NAME . OF type_name  (23)
+
+	OF  shift 102
+	RPAREN  reduce 22
+	STAR  reduce 22
+	ARROW  reduce 22
+	GROUP  reduce 22
+	RING  reduce 22
+	FIELD  reduce 22
+	POLY  reduce 22
+	LET  reduce 22
+	TYPE  reduce 22
+	BAR  reduce 22
+	LIST  reduce 22
+
+
 state 62
-	adt_type_expr : NAME .  (21)
-	adt_type_expr : NAME . OF type_name  (22)
-
-	OF  shift 103
-	RPAREN  reduce 21
-	STAR  reduce 21
-	ARROW  reduce 21
-	GROUP  reduce 21
-	RING  reduce 21
-	FIELD  reduce 21
-	LET  reduce 21
-	TYPE  reduce 21
-	BAR  reduce 21
-	LIST  reduce 21
-
-
-state 63
 	tdecl : TYPE NAME ASSIGN type_expr .  (4)
 	type_expr : type_expr . LIST  (12)
 	type_expr : type_expr . STAR type_expr  (13)
@@ -1065,66 +981,68 @@ state 63
 	type_expr : type_expr . GROUP  (15)
 	type_expr : type_expr . RING  (16)
 	type_expr : type_expr . FIELD  (17)
+	type_expr : type_expr . POLY  (18)
 
-	STAR  shift 104
-	ARROW  shift 105
-	GROUP  shift 106
-	RING  shift 107
-	FIELD  shift 108
+	STAR  shift 103
+	ARROW  shift 104
+	GROUP  shift 105
+	RING  shift 106
+	FIELD  shift 107
+	POLY  shift 108
 	LIST  shift 109
 	LET  reduce 4
 	TYPE  reduce 4
 
 
-state 64
+state 63
 	type_expr : adt_opt .  (10)
 
 	.  reduce 10
 
 
-state 65
-	adt_opt : adt_type_expr .  (19)
-	adt_opt : adt_type_expr . BAR adt_type_expr  (20)
+state 64
+	adt_opt : adt_type_expr .  (20)
+	adt_opt : adt_type_expr . BAR adt_type_expr  (21)
 
 	BAR  shift 110
-	RPAREN  reduce 19
-	STAR  reduce 19
-	ARROW  reduce 19
-	GROUP  reduce 19
-	RING  reduce 19
-	FIELD  reduce 19
-	LET  reduce 19
-	TYPE  reduce 19
-	LIST  reduce 19
+	RPAREN  reduce 20
+	STAR  reduce 20
+	ARROW  reduce 20
+	GROUP  reduce 20
+	RING  reduce 20
+	FIELD  reduce 20
+	POLY  reduce 20
+	LET  reduce 20
+	TYPE  reduce 20
+	LIST  reduce 20
 
 
-66: shift/reduce conflict (shift 41, reduce 40) on LET
-state 66
-	letand_opt : type_name NAME ASSIGN expr .  (40)
-	letand_opt : type_name NAME ASSIGN expr . LAND letand_opt  (41)
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
+state 65
+	letand_opt : type_name NAME ASSIGN expr .  (41)
+	letand_opt : type_name NAME ASSIGN expr . LAND letand_opt  (42)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
-	LET  shift 41
 	LAND  shift 111
 	IF  shift 42
 	PRINT  shift 43
@@ -1135,40 +1053,40 @@ state 66
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	IN  reduce 40
+	LET  reduce 41
+	IN  reduce 41
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 67
-	expr : LPAREN expr . COMMA expr RPAREN  (47)
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : LPAREN expr . RPAREN  (61)
+state 66
+	expr : LPAREN expr . COMMA expr RPAREN  (48)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : LPAREN expr . RPAREN  (64)
 
 	LPAREN  shift 33
 	RPAREN  shift 112
 	LBRACE  shift 34
 	LBRACKET  shift 35
 	COMMA  shift 113
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -1186,49 +1104,48 @@ state 67
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 68
-	struct_init_body : NAME . ASSIGN expr  (85)
-	struct_init_body : NAME . ASSIGN expr COMMA struct_init_body  (86)
+state 67
+	struct_init_body : NAME . ASSIGN expr  (92)
+	struct_init_body : NAME . ASSIGN expr COMMA struct_init_body  (93)
 
 	ASSIGN  shift 114
 	.  error
 
 
-state 69
-	expr : LBRACE struct_init_body . RBRACE  (57)
+state 68
+	expr : LBRACE struct_init_body . RBRACE  (60)
 
 	RBRACE  shift 115
 	.  error
 
 
-state 70
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	inside_list : expr . inside_list  (89)
-	inside_list : .  (88)
+state 69
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	inside_list : expr . COMMA inside_list  (95)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	COMMA  shift 116
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -1242,134 +1159,32 @@ state 70
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RBRACKET  reduce 88
-
-	lexpr  goto 51
-	expr  goto 116
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-	inside_list  goto 117
-
-
-state 71
-	list_expr : LBRACKET inside_list . RBRACKET  (87)
-
-	RBRACKET  shift 118
 	.  error
-
-
-72: shift/reduce conflict (shift 33, reduce 51) on LPAREN
-72: shift/reduce conflict (shift 34, reduce 51) on LBRACE
-72: shift/reduce conflict (shift 35, reduce 51) on LBRACKET
-72: shift/reduce conflict (shift 38, reduce 51) on GROUP
-72: shift/reduce conflict (shift 39, reduce 51) on RING
-72: shift/reduce conflict (shift 40, reduce 51) on FIELD
-72: shift/reduce conflict (shift 41, reduce 51) on LET
-72: shift/reduce conflict (shift 42, reduce 51) on IF
-72: shift/reduce conflict (shift 43, reduce 51) on PRINT
-72: shift/reduce conflict (shift 44, reduce 51) on FUNCTION
-72: shift/reduce conflict (shift 45, reduce 51) on LITERAL
-72: shift/reduce conflict (shift 46, reduce 51) on BLIT
-72: shift/reduce conflict (shift 47, reduce 51) on NAME
-72: shift/reduce conflict (shift 48, reduce 51) on ADTNAME
-72: shift/reduce conflict (shift 49, reduce 51) on FLIT
-72: shift/reduce conflict (shift 50, reduce 51) on STRINGLIT
-state 72
-	expr : expr . binop expr  (50)
-	expr : MINUS expr .  (51)
-	expr : expr . expr  (54)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 51
-	RBRACE  reduce 51
-	RBRACKET  reduce 51
-	COMMA  reduce 51
-	PLUS  reduce 51
-	MINUS  reduce 51
-	STAR  reduce 51
-	DIVIDE  reduce 51
-	EQ  reduce 51
-	NEQ  reduce 51
-	LT  reduce 51
-	LEQ  reduce 51
-	GT  reduce 51
-	GEQ  reduce 51
-	AND  reduce 51
-	OR  reduce 51
-	IN  reduce 51
-	LAND  reduce 51
-	THEN  reduce 51
-	ELSE  reduce 51
-	BAR  reduce 51
-	EOF  reduce 51
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-73: shift/reduce conflict (shift 33, reduce 52) on LPAREN
-73: shift/reduce conflict (shift 34, reduce 52) on LBRACE
-73: shift/reduce conflict (shift 35, reduce 52) on LBRACKET
-73: shift/reduce conflict (shift 38, reduce 52) on GROUP
-73: shift/reduce conflict (shift 39, reduce 52) on RING
-73: shift/reduce conflict (shift 40, reduce 52) on FIELD
-73: shift/reduce conflict (shift 41, reduce 52) on LET
-73: shift/reduce conflict (shift 42, reduce 52) on IF
-73: shift/reduce conflict (shift 43, reduce 52) on PRINT
-73: shift/reduce conflict (shift 44, reduce 52) on FUNCTION
-73: shift/reduce conflict (shift 45, reduce 52) on LITERAL
-73: shift/reduce conflict (shift 46, reduce 52) on BLIT
-73: shift/reduce conflict (shift 47, reduce 52) on NAME
-73: shift/reduce conflict (shift 48, reduce 52) on ADTNAME
-73: shift/reduce conflict (shift 49, reduce 52) on FLIT
-73: shift/reduce conflict (shift 50, reduce 52) on STRINGLIT
-state 73
-	expr : expr . binop expr  (50)
-	expr : NOT expr .  (52)
-	expr : expr . expr  (54)
+state 70
+	expr : LBRACKET inside_list . RBRACKET  (49)
+
+	RBRACKET  shift 117
+	.  error
+
+
+state 71
+	expr : expr . binop expr  (51)
+	expr : MINUS expr .  (52)
+	expr : expr . expr  (55)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
 	RPAREN  reduce 52
 	RBRACE  reduce 52
-	RBRACKET  reduce 52
 	COMMA  reduce 52
 	PLUS  reduce 52
 	MINUS  reduce 52
@@ -1383,292 +1198,244 @@ state 73
 	GEQ  reduce 52
 	AND  reduce 52
 	OR  reduce 52
+	CONS  reduce 52
+	GROUP  reduce 52
+	RING  reduce 52
+	FIELD  reduce 52
+	LET  reduce 52
 	IN  reduce 52
 	LAND  reduce 52
+	IF  reduce 52
 	THEN  reduce 52
 	ELSE  reduce 52
 	BAR  reduce 52
+	PRINT  reduce 52
+	FUNCTION  reduce 52
+	END  reduce 52
+	LITERAL  reduce 52
+	BLIT  reduce 52
+	NAME  reduce 52
+	ADTNAME  reduce 52
+	FLIT  reduce 52
+	STRINGLIT  reduce 52
 	EOF  reduce 52
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
+
+
+state 72
+	expr : expr . binop expr  (51)
+	expr : NOT expr .  (53)
+	expr : expr . expr  (55)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	RPAREN  reduce 53
+	RBRACE  reduce 53
+	COMMA  reduce 53
+	PLUS  reduce 53
+	MINUS  reduce 53
+	STAR  reduce 53
+	DIVIDE  reduce 53
+	EQ  reduce 53
+	NEQ  reduce 53
+	LT  reduce 53
+	LEQ  reduce 53
+	GT  reduce 53
+	GEQ  reduce 53
+	AND  reduce 53
+	OR  reduce 53
+	CONS  reduce 53
+	GROUP  reduce 53
+	RING  reduce 53
+	FIELD  reduce 53
+	LET  reduce 53
+	IN  reduce 53
+	LAND  reduce 53
+	IF  reduce 53
+	THEN  reduce 53
+	ELSE  reduce 53
+	BAR  reduce 53
+	PRINT  reduce 53
+	FUNCTION  reduce 53
+	END  reduce 53
+	LITERAL  reduce 53
+	BLIT  reduce 53
+	NAME  reduce 53
+	ADTNAME  reduce 53
+	FLIT  reduce 53
+	STRINGLIT  reduce 53
+	EOF  reduce 53
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 73
+	expr : GROUP LBRACE . type_name expr expr expr expr RBRACE  (57)
+
+	INT  shift 10
+	BOOL  shift 11
+	FLOAT  shift 12
+	STRING  shift 13
+	NAME  shift 14
+	.  error
+
+	type_name  goto 118
 
 
 state 74
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
-	algebraic_expr : GROUP type_name . expr expr expr expr  (82)
+	expr : RING LBRACE . type_name expr expr expr expr expr expr RBRACE  (58)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	STAR  shift 19
-	ARROW  shift 20
-	NOT  shift 37
-	GROUP  shift 119
-	RING  shift 120
-	FIELD  shift 121
-	LET  shift 41
-	IF  shift 42
-	LIST  shift 24
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	INT  shift 10
+	BOOL  shift 11
+	FLOAT  shift 12
+	STRING  shift 13
+	NAME  shift 14
 	.  error
 
-	lexpr  goto 51
-	expr  goto 122
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	type_name  goto 119
 
 
 state 75
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
-	algebraic_expr : RING type_name . expr expr expr expr expr expr  (83)
+	expr : FIELD LBRACE . type_name expr expr expr expr expr expr expr RBRACE  (59)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	STAR  shift 19
-	ARROW  shift 20
-	NOT  shift 37
-	GROUP  shift 119
-	RING  shift 120
-	FIELD  shift 121
-	LET  shift 41
-	IF  shift 42
-	LIST  shift 24
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	INT  shift 10
+	BOOL  shift 11
+	FLOAT  shift 12
+	STRING  shift 13
+	NAME  shift 14
 	.  error
 
-	lexpr  goto 51
-	expr  goto 123
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	type_name  goto 120
 
 
 state 76
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
-	algebraic_expr : FIELD type_name . expr expr expr expr expr expr expr  (84)
+	lexpr : LET letand_opt . IN expr  (40)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	STAR  shift 19
-	ARROW  shift 20
-	NOT  shift 37
-	GROUP  shift 119
-	RING  shift 120
-	FIELD  shift 121
-	LET  shift 41
-	IF  shift 42
-	LIST  shift 24
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	IN  shift 27
 	.  error
-
-	lexpr  goto 51
-	expr  goto 124
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
 
 
 state 77
-	lexpr : LET letand_opt . IN expr  (39)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : IF expr . THEN expr ELSE expr END  (56)
 
-	IN  shift 26
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
+	NOT  shift 37
+	CONS  shift 96
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	THEN  shift 121
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
 	.  error
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
 
 
 state 78
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : IF expr . THEN expr ELSE expr  (55)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : PRINT expr .  (62)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	THEN  shift 125
-	PRINT  shift 43
-	FUNCTION  shift 44
 	LITERAL  shift 45
 	BLIT  shift 46
 	NAME  shift 47
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	.  error
+	RPAREN  reduce 62
+	RBRACE  reduce 62
+	COMMA  reduce 62
+	IN  reduce 62
+	LAND  reduce 62
+	THEN  reduce 62
+	ELSE  reduce 62
+	BAR  reduce 62
+	END  reduce 62
+	EOF  reduce 62
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-79: shift/reduce conflict (shift 33, reduce 59) on LPAREN
-79: shift/reduce conflict (shift 34, reduce 59) on LBRACE
-79: shift/reduce conflict (shift 35, reduce 59) on LBRACKET
-79: shift/reduce conflict (shift 85, reduce 59) on PLUS
-79: shift/reduce conflict (shift 86, reduce 59) on MINUS
-79: shift/reduce conflict (shift 87, reduce 59) on STAR
-79: shift/reduce conflict (shift 88, reduce 59) on DIVIDE
-79: shift/reduce conflict (shift 89, reduce 59) on EQ
-79: shift/reduce conflict (shift 90, reduce 59) on NEQ
-79: shift/reduce conflict (shift 91, reduce 59) on LT
-79: shift/reduce conflict (shift 92, reduce 59) on LEQ
-79: shift/reduce conflict (shift 93, reduce 59) on GT
-79: shift/reduce conflict (shift 94, reduce 59) on GEQ
-79: shift/reduce conflict (shift 95, reduce 59) on AND
-79: shift/reduce conflict (shift 96, reduce 59) on OR
-79: shift/reduce conflict (shift 37, reduce 59) on NOT
-79: shift/reduce conflict (shift 38, reduce 59) on GROUP
-79: shift/reduce conflict (shift 39, reduce 59) on RING
-79: shift/reduce conflict (shift 40, reduce 59) on FIELD
-79: shift/reduce conflict (shift 41, reduce 59) on LET
-79: shift/reduce conflict (shift 42, reduce 59) on IF
-79: shift/reduce conflict (shift 43, reduce 59) on PRINT
-79: shift/reduce conflict (shift 44, reduce 59) on FUNCTION
-79: shift/reduce conflict (shift 45, reduce 59) on LITERAL
-79: shift/reduce conflict (shift 46, reduce 59) on BLIT
-79: shift/reduce conflict (shift 47, reduce 59) on NAME
-79: shift/reduce conflict (shift 48, reduce 59) on ADTNAME
-79: shift/reduce conflict (shift 49, reduce 59) on FLIT
-79: shift/reduce conflict (shift 50, reduce 59) on STRINGLIT
 state 79
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : PRINT expr .  (59)
+	formals : LPAREN . formals_opt RPAREN  (67)
+	formals_opt : .  (68)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 59
-	RBRACE  reduce 59
-	RBRACKET  reduce 59
-	COMMA  reduce 59
-	IN  reduce 59
-	LAND  reduce 59
-	THEN  reduce 59
-	ELSE  reduce 59
-	BAR  reduce 59
-	EOF  reduce 59
+	NAME  shift 122
+	RPAREN  reduce 68
 
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	formals_opt  goto 123
+	formal_list  goto 124
 
 
 state 80
-	formals : LPAREN . formals_opt RPAREN  (64)
-	formals_opt : .  (65)
+	expr : FUNCTION fn_def .  (54)
 
-	NAME  shift 126
-	RPAREN  reduce 65
-
-	formals_opt  goto 127
-	formal_list  goto 128
+	.  reduce 54
 
 
 state 81
-	expr : FUNCTION fn_def .  (53)
-
-	.  reduce 53
-
-
-state 82
-	fn_def : formals . expr  (62)
-	fn_def : formals . MATCH formals WITH match  (63)
+	fn_def : formals . expr  (65)
+	fn_def : formals . MATCH formals WITH match_rule END  (66)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -1682,7 +1449,223 @@ state 82
 	IF  shift 42
 	PRINT  shift 43
 	FUNCTION  shift 44
-	MATCH  shift 129
+	MATCH  shift 125
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 126
+	target_conc  goto 53
+
+
+state 82
+	expr : NAME DOT . NAME  (61)
+
+	NAME  shift 127
+	.  error
+
+
+state 83
+	target_conc : ADTNAME LPAREN . target_conc RPAREN  (90)
+	target_conc : ADTNAME LPAREN . expr RPAREN  (91)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	NOT  shift 37
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 128
+	target_conc  goto 129
+
+
+state 84
+	binop : PLUS .  (96)
+
+	.  reduce 96
+
+
+state 85
+	expr : MINUS . expr  (52)
+	binop : MINUS .  (97)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	MINUS  reduce 97
+	GROUP  reduce 97
+	RING  reduce 97
+	FIELD  reduce 97
+	LET  reduce 97
+	IF  reduce 97
+	PRINT  reduce 97
+	FUNCTION  reduce 97
+	LITERAL  reduce 97
+	BLIT  reduce 97
+	NAME  reduce 97
+	ADTNAME  reduce 97
+	FLIT  reduce 97
+	STRINGLIT  reduce 97
+
+	lexpr  goto 51
+	expr  goto 71
+	target_conc  goto 53
+
+
+state 86
+	binop : STAR .  (98)
+
+	.  reduce 98
+
+
+state 87
+	binop : DIVIDE .  (99)
+
+	.  reduce 99
+
+
+state 88
+	binop : EQ .  (100)
+
+	.  reduce 100
+
+
+state 89
+	binop : NEQ .  (101)
+
+	.  reduce 101
+
+
+state 90
+	binop : LT .  (102)
+
+	.  reduce 102
+
+
+state 91
+	binop : LEQ .  (104)
+
+	.  reduce 104
+
+
+state 92
+	binop : GT .  (103)
+
+	.  reduce 103
+
+
+state 93
+	binop : GEQ .  (105)
+
+	.  reduce 105
+
+
+state 94
+	binop : AND .  (106)
+
+	.  reduce 106
+
+
+state 95
+	binop : OR .  (107)
+
+	.  reduce 107
+
+
+state 96
+	binop : CONS .  (108)
+
+	.  reduce 108
+
+
+state 97
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	RPAREN  reduce 55
+	RBRACE  reduce 55
+	COMMA  reduce 55
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IN  reduce 55
+	LAND  reduce 55
+	IF  reduce 55
+	THEN  reduce 55
+	ELSE  reduce 55
+	BAR  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	END  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+	EOF  reduce 55
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 98
+	expr : expr binop . expr  (51)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	NOT  shift 37
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
 	LITERAL  shift 45
 	BLIT  shift 46
 	NAME  shift 47
@@ -1693,294 +1676,47 @@ state 82
 
 	lexpr  goto 51
 	expr  goto 130
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 83
-	expr : NAME DOT . NAME  (58)
-
-	NAME  shift 131
-	.  error
-
-
-state 84
-	target_conc_outer : ADTNAME LPAREN . target_conc_inner RPAREN  (79)
-
-	ADTNAME  shift 132
-	.  error
-
-	target_conc_outer  goto 133
-	target_conc_inner  goto 134
-
-
-state 85
-	binop : PLUS .  (90)
-
-	.  reduce 90
-
-
-86: shift/reduce conflict (shift 33, reduce 91) on LPAREN
-86: shift/reduce conflict (shift 34, reduce 91) on LBRACE
-86: shift/reduce conflict (shift 35, reduce 91) on LBRACKET
-86: shift/reduce conflict (shift 38, reduce 91) on GROUP
-86: shift/reduce conflict (shift 39, reduce 91) on RING
-86: shift/reduce conflict (shift 40, reduce 91) on FIELD
-86: shift/reduce conflict (shift 41, reduce 91) on LET
-86: shift/reduce conflict (shift 42, reduce 91) on IF
-86: shift/reduce conflict (shift 43, reduce 91) on PRINT
-86: shift/reduce conflict (shift 44, reduce 91) on FUNCTION
-86: shift/reduce conflict (shift 45, reduce 91) on LITERAL
-86: shift/reduce conflict (shift 46, reduce 91) on BLIT
-86: shift/reduce conflict (shift 47, reduce 91) on NAME
-86: shift/reduce conflict (shift 48, reduce 91) on ADTNAME
-86: shift/reduce conflict (shift 49, reduce 91) on FLIT
-86: shift/reduce conflict (shift 50, reduce 91) on STRINGLIT
-state 86
-	expr : MINUS . expr  (51)
-	binop : MINUS .  (91)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	MINUS  reduce 91
-
-	lexpr  goto 51
-	expr  goto 72
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 87
-	binop : STAR .  (92)
-
-	.  reduce 92
-
-
-state 88
-	binop : DIVIDE .  (93)
-
-	.  reduce 93
-
-
-state 89
-	binop : EQ .  (94)
-
-	.  reduce 94
-
-
-state 90
-	binop : NEQ .  (95)
-
-	.  reduce 95
-
-
-state 91
-	binop : LT .  (96)
-
-	.  reduce 96
-
-
-state 92
-	binop : LEQ .  (98)
-
-	.  reduce 98
-
-
-state 93
-	binop : GT .  (97)
-
-	.  reduce 97
-
-
-state 94
-	binop : GEQ .  (99)
-
-	.  reduce 99
-
-
-state 95
-	binop : AND .  (100)
-
-	.  reduce 100
-
-
-state 96
-	binop : OR .  (101)
-
-	.  reduce 101
-
-
-97: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-97: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-97: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-97: shift/reduce conflict (shift 85, reduce 54) on PLUS
-97: shift/reduce conflict (shift 86, reduce 54) on MINUS
-97: shift/reduce conflict (shift 87, reduce 54) on STAR
-97: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-97: shift/reduce conflict (shift 89, reduce 54) on EQ
-97: shift/reduce conflict (shift 90, reduce 54) on NEQ
-97: shift/reduce conflict (shift 91, reduce 54) on LT
-97: shift/reduce conflict (shift 92, reduce 54) on LEQ
-97: shift/reduce conflict (shift 93, reduce 54) on GT
-97: shift/reduce conflict (shift 94, reduce 54) on GEQ
-97: shift/reduce conflict (shift 95, reduce 54) on AND
-97: shift/reduce conflict (shift 96, reduce 54) on OR
-97: shift/reduce conflict (shift 37, reduce 54) on NOT
-97: shift/reduce conflict (shift 38, reduce 54) on GROUP
-97: shift/reduce conflict (shift 39, reduce 54) on RING
-97: shift/reduce conflict (shift 40, reduce 54) on FIELD
-97: shift/reduce conflict (shift 41, reduce 54) on LET
-97: shift/reduce conflict (shift 42, reduce 54) on IF
-97: shift/reduce conflict (shift 43, reduce 54) on PRINT
-97: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-97: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-97: shift/reduce conflict (shift 46, reduce 54) on BLIT
-97: shift/reduce conflict (shift 47, reduce 54) on NAME
-97: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-97: shift/reduce conflict (shift 49, reduce 54) on FLIT
-97: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 97
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 54
-	RBRACE  reduce 54
-	RBRACKET  reduce 54
-	COMMA  reduce 54
-	IN  reduce 54
-	LAND  reduce 54
-	THEN  reduce 54
-	ELSE  reduce 54
-	BAR  reduce 54
-	EOF  reduce 54
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 98
-	expr : expr binop . expr  (50)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 135
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 99
-	type_expr : LPAREN RPAREN .  (9)
-
-	.  reduce 9
-
-
-state 100
 	type_expr : type_expr . LIST  (12)
 	type_expr : type_expr . STAR type_expr  (13)
 	type_expr : type_expr . ARROW type_expr  (14)
 	type_expr : type_expr . GROUP  (15)
 	type_expr : type_expr . RING  (16)
 	type_expr : type_expr . FIELD  (17)
-	type_expr : LPAREN type_expr . RPAREN  (18)
+	type_expr : type_expr . POLY  (18)
+	type_expr : LPAREN type_expr . RPAREN  (19)
 
-	RPAREN  shift 136
-	STAR  shift 104
-	ARROW  shift 105
-	GROUP  shift 106
-	RING  shift 107
-	FIELD  shift 108
+	RPAREN  shift 131
+	STAR  shift 103
+	ARROW  shift 104
+	GROUP  shift 105
+	RING  shift 106
+	FIELD  shift 107
+	POLY  shift 108
 	LIST  shift 109
 	.  error
 
 
-state 101
-	struct_decl_body : NAME . COLON type_name  (23)
-	struct_decl_body : NAME . COLON type_name COMMA struct_decl_body  (24)
+state 100
+	struct_decl_body : NAME . COLON type_name  (24)
+	struct_decl_body : NAME . COLON type_name COMMA struct_decl_body  (25)
 
-	COLON  shift 137
+	COLON  shift 132
+	.  error
+
+
+state 101
+	type_expr : LBRACE struct_decl_body . RBRACE  (11)
+
+	RBRACE  shift 133
 	.  error
 
 
 state 102
-	type_expr : LBRACKET struct_decl_body . RBRACKET  (11)
-
-	RBRACKET  shift 138
-	.  error
-
-
-state 103
-	adt_type_expr : NAME OF . type_name  (22)
+	adt_type_expr : NAME OF . type_name  (23)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -1989,59 +1725,67 @@ state 103
 	NAME  shift 14
 	.  error
 
-	type_name  goto 139
+	type_name  goto 134
+
+
+state 103
+	type_expr : type_expr STAR . type_expr  (13)
+
+	LPAREN  shift 54
+	LBRACE  shift 55
+	INT  shift 56
+	BOOL  shift 57
+	FLOAT  shift 58
+	STRING  shift 59
+	VOID  shift 60
+	NAME  shift 61
+	.  error
+
+	type_expr  goto 135
+	adt_opt  goto 63
+	adt_type_expr  goto 64
 
 
 state 104
-	type_expr : type_expr STAR . type_expr  (13)
+	type_expr : type_expr ARROW . type_expr  (14)
 
-	LPAREN  shift 56
-	LBRACKET  shift 57
-	INT  shift 58
-	BOOL  shift 59
-	FLOAT  shift 60
-	STRING  shift 61
-	NAME  shift 62
+	LPAREN  shift 54
+	LBRACE  shift 55
+	INT  shift 56
+	BOOL  shift 57
+	FLOAT  shift 58
+	STRING  shift 59
+	VOID  shift 60
+	NAME  shift 61
 	.  error
 
-	type_expr  goto 140
-	adt_opt  goto 64
-	adt_type_expr  goto 65
+	type_expr  goto 136
+	adt_opt  goto 63
+	adt_type_expr  goto 64
 
 
 state 105
-	type_expr : type_expr ARROW . type_expr  (14)
-
-	LPAREN  shift 56
-	LBRACKET  shift 57
-	INT  shift 58
-	BOOL  shift 59
-	FLOAT  shift 60
-	STRING  shift 61
-	NAME  shift 62
-	.  error
-
-	type_expr  goto 141
-	adt_opt  goto 64
-	adt_type_expr  goto 65
-
-
-state 106
 	type_expr : type_expr GROUP .  (15)
 
 	.  reduce 15
 
 
-state 107
+state 106
 	type_expr : type_expr RING .  (16)
 
 	.  reduce 16
 
 
-state 108
+state 107
 	type_expr : type_expr FIELD .  (17)
 
 	.  reduce 17
+
+
+state 108
+	type_expr : type_expr POLY .  (18)
+
+	.  reduce 18
 
 
 state 109
@@ -2051,16 +1795,16 @@ state 109
 
 
 state 110
-	adt_opt : adt_type_expr BAR . adt_type_expr  (20)
+	adt_opt : adt_type_expr BAR . adt_type_expr  (21)
 
-	NAME  shift 62
+	NAME  shift 61
 	.  error
 
-	adt_type_expr  goto 142
+	adt_type_expr  goto 137
 
 
 state 111
-	letand_opt : type_name NAME ASSIGN expr LAND . letand_opt  (41)
+	letand_opt : type_name NAME ASSIGN expr LAND . letand_opt  (42)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -2070,17 +1814,17 @@ state 111
 	.  error
 
 	type_name  goto 15
-	letand_opt  goto 143
+	letand_opt  goto 138
 
 
 state 112
-	expr : LPAREN expr RPAREN .  (61)
+	expr : LPAREN expr RPAREN .  (64)
 
-	.  reduce 61
+	.  reduce 64
 
 
 state 113
-	expr : LPAREN expr COMMA . expr RPAREN  (47)
+	expr : LPAREN expr COMMA . expr RPAREN  (48)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -2103,15 +1847,13 @@ state 113
 	.  error
 
 	lexpr  goto 51
-	expr  goto 144
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	expr  goto 139
+	target_conc  goto 53
 
 
 state 114
-	struct_init_body : NAME ASSIGN . expr  (85)
-	struct_init_body : NAME ASSIGN . expr COMMA struct_init_body  (86)
+	struct_init_body : NAME ASSIGN . expr  (92)
+	struct_init_body : NAME ASSIGN . expr COMMA struct_init_body  (93)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
@@ -2123,6 +1865,87 @@ state 114
 	FIELD  shift 40
 	LET  shift 41
 	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 140
+	target_conc  goto 53
+
+
+state 115
+	expr : LBRACE struct_init_body RBRACE .  (60)
+
+	.  reduce 60
+
+
+state 116
+	inside_list : expr COMMA . inside_list  (95)
+	inside_list : .  (94)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	NOT  shift 37
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	RBRACKET  reduce 94
+
+	lexpr  goto 51
+	expr  goto 69
+	inside_list  goto 141
+	target_conc  goto 53
+
+
+state 117
+	expr : LBRACKET inside_list RBRACKET .  (49)
+
+	.  reduce 49
+
+
+state 118
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
+	expr : GROUP LBRACE type_name . expr expr expr expr RBRACE  (57)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
+	STAR  shift 19
+	ARROW  shift 20
+	NOT  shift 37
+	GROUP  shift 142
+	RING  shift 143
+	FIELD  shift 144
+	POLY  shift 24
+	LET  shift 41
+	IF  shift 42
+	LIST  shift 25
 	PRINT  shift 43
 	FUNCTION  shift 44
 	LITERAL  shift 45
@@ -2135,234 +1958,33 @@ state 114
 
 	lexpr  goto 51
 	expr  goto 145
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 115
-	expr : LBRACE struct_init_body RBRACE .  (57)
-
-	.  reduce 57
-
-
-116: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-116: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-116: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-116: reduce/reduce conflict (reduce 54, reduce 88) on RBRACKET
-116: shift/reduce conflict (shift 85, reduce 54) on PLUS
-116: shift/reduce conflict (shift 86, reduce 54) on MINUS
-116: shift/reduce conflict (shift 87, reduce 54) on STAR
-116: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-116: shift/reduce conflict (shift 89, reduce 54) on EQ
-116: shift/reduce conflict (shift 90, reduce 54) on NEQ
-116: shift/reduce conflict (shift 91, reduce 54) on LT
-116: shift/reduce conflict (shift 92, reduce 54) on LEQ
-116: shift/reduce conflict (shift 93, reduce 54) on GT
-116: shift/reduce conflict (shift 94, reduce 54) on GEQ
-116: shift/reduce conflict (shift 95, reduce 54) on AND
-116: shift/reduce conflict (shift 96, reduce 54) on OR
-116: shift/reduce conflict (shift 37, reduce 54) on NOT
-116: shift/reduce conflict (shift 38, reduce 54) on GROUP
-116: shift/reduce conflict (shift 39, reduce 54) on RING
-116: shift/reduce conflict (shift 40, reduce 54) on FIELD
-116: shift/reduce conflict (shift 41, reduce 54) on LET
-116: shift/reduce conflict (shift 42, reduce 54) on IF
-116: shift/reduce conflict (shift 43, reduce 54) on PRINT
-116: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-116: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-116: shift/reduce conflict (shift 46, reduce 54) on BLIT
-116: shift/reduce conflict (shift 47, reduce 54) on NAME
-116: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-116: shift/reduce conflict (shift 49, reduce 54) on FLIT
-116: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 116
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	inside_list : expr . inside_list  (89)
-	inside_list : .  (88)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RBRACKET  reduce 54
-
-	lexpr  goto 51
-	expr  goto 116
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-	inside_list  goto 117
-
-
-state 117
-	inside_list : expr inside_list .  (89)
-
-	.  reduce 89
-
-
-state 118
-	list_expr : LBRACKET inside_list RBRACKET .  (87)
-
-	.  reduce 87
-
-
-119: shift/reduce conflict (shift 14, reduce 33) on NAME
 state 119
-	type_name : type_name GROUP .  (33)
-	algebraic_expr : GROUP . type_name expr expr expr expr  (82)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	LPAREN  reduce 33
-	LBRACE  reduce 33
-	LBRACKET  reduce 33
-	MINUS  reduce 33
-	STAR  reduce 33
-	ARROW  reduce 33
-	NOT  reduce 33
-	GROUP  reduce 33
-	RING  reduce 33
-	FIELD  reduce 33
-	LET  reduce 33
-	IF  reduce 33
-	LIST  reduce 33
-	PRINT  reduce 33
-	FUNCTION  reduce 33
-	LITERAL  reduce 33
-	BLIT  reduce 33
-	ADTNAME  reduce 33
-	FLIT  reduce 33
-	STRINGLIT  reduce 33
-
-	type_name  goto 74
-
-
-120: shift/reduce conflict (shift 14, reduce 34) on NAME
-state 120
-	type_name : type_name RING .  (34)
-	algebraic_expr : RING . type_name expr expr expr expr expr expr  (83)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	LPAREN  reduce 34
-	LBRACE  reduce 34
-	LBRACKET  reduce 34
-	MINUS  reduce 34
-	STAR  reduce 34
-	ARROW  reduce 34
-	NOT  reduce 34
-	GROUP  reduce 34
-	RING  reduce 34
-	FIELD  reduce 34
-	LET  reduce 34
-	IF  reduce 34
-	LIST  reduce 34
-	PRINT  reduce 34
-	FUNCTION  reduce 34
-	LITERAL  reduce 34
-	BLIT  reduce 34
-	ADTNAME  reduce 34
-	FLIT  reduce 34
-	STRINGLIT  reduce 34
-
-	type_name  goto 75
-
-
-121: shift/reduce conflict (shift 14, reduce 35) on NAME
-state 121
-	type_name : type_name FIELD .  (35)
-	algebraic_expr : FIELD . type_name expr expr expr expr expr expr expr  (84)
-
-	INT  shift 10
-	BOOL  shift 11
-	FLOAT  shift 12
-	STRING  shift 13
-	NAME  shift 14
-	LPAREN  reduce 35
-	LBRACE  reduce 35
-	LBRACKET  reduce 35
-	MINUS  reduce 35
-	STAR  reduce 35
-	ARROW  reduce 35
-	NOT  reduce 35
-	GROUP  reduce 35
-	RING  reduce 35
-	FIELD  reduce 35
-	LET  reduce 35
-	IF  reduce 35
-	LIST  reduce 35
-	PRINT  reduce 35
-	FUNCTION  reduce 35
-	LITERAL  reduce 35
-	BLIT  reduce 35
-	ADTNAME  reduce 35
-	FLIT  reduce 35
-	STRINGLIT  reduce 35
-
-	type_name  goto 76
-
-
-state 122
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	algebraic_expr : GROUP type_name expr . expr expr expr  (82)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
+	expr : RING LBRACE type_name . expr expr expr expr expr expr RBRACE  (58)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	MINUS  shift 36
+	STAR  shift 19
+	ARROW  shift 20
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
+	GROUP  shift 142
+	RING  shift 143
+	FIELD  shift 144
+	POLY  shift 24
 	LET  shift 41
 	IF  shift 42
+	LIST  shift 25
 	PRINT  shift 43
 	FUNCTION  shift 44
 	LITERAL  shift 45
@@ -2375,38 +1997,33 @@ state 122
 
 	lexpr  goto 51
 	expr  goto 146
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 123
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	algebraic_expr : RING type_name expr . expr expr expr expr expr  (83)
+state 120
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
+	expr : FIELD LBRACE type_name . expr expr expr expr expr expr expr RBRACE  (59)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	MINUS  shift 36
+	STAR  shift 19
+	ARROW  shift 20
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
+	GROUP  shift 142
+	RING  shift 143
+	FIELD  shift 144
+	POLY  shift 24
 	LET  shift 41
 	IF  shift 42
+	LIST  shift 25
 	PRINT  shift 43
 	FUNCTION  shift 44
 	LITERAL  shift 45
@@ -2419,32 +2036,16 @@ state 123
 
 	lexpr  goto 51
 	expr  goto 147
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-state 124
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	algebraic_expr : FIELD type_name expr . expr expr expr expr expr expr  (84)
+state 121
+	expr : IF expr THEN . expr ELSE expr END  (56)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	MINUS  shift 36
 	NOT  shift 37
 	GROUP  shift 38
 	RING  shift 39
@@ -2463,302 +2064,235 @@ state 124
 
 	lexpr  goto 51
 	expr  goto 148
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
+
+
+state 122
+	formal_list : NAME .  (70)
+
+	.  reduce 70
+
+
+state 123
+	formals : LPAREN formals_opt . RPAREN  (67)
+
+	RPAREN  shift 149
+	.  error
+
+
+state 124
+	formals_opt : formal_list .  (69)
+	formal_list : formal_list . NAME  (71)
+
+	NAME  shift 150
+	RPAREN  reduce 69
 
 
 state 125
-	expr : IF expr THEN . expr ELSE expr  (55)
+	fn_def : formals MATCH . formals WITH match_rule END  (66)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	LPAREN  shift 79
 	.  error
 
-	lexpr  goto 51
-	expr  goto 149
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	formals  goto 151
 
 
 state 126
-	formal_list : NAME .  (67)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	fn_def : formals expr .  (65)
 
-	.  reduce 67
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
+	NOT  shift 37
+	CONS  shift 96
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	RPAREN  reduce 65
+	RBRACE  reduce 65
+	COMMA  reduce 65
+	IN  reduce 65
+	LAND  reduce 65
+	THEN  reduce 65
+	ELSE  reduce 65
+	BAR  reduce 65
+	END  reduce 65
+	EOF  reduce 65
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
 
 
 state 127
-	formals : LPAREN formals_opt . RPAREN  (64)
+	expr : NAME DOT NAME .  (61)
 
-	RPAREN  shift 150
-	.  error
+	.  reduce 61
 
 
 state 128
-	formals_opt : formal_list .  (66)
-	formal_list : formal_list . NAME  (68)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	target_conc : ADTNAME LPAREN expr . RPAREN  (91)
 
-	NAME  shift 151
-	RPAREN  reduce 66
+	LPAREN  shift 33
+	RPAREN  shift 152
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
+	NOT  shift 37
+	CONS  shift 96
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
 
 
 state 129
-	fn_def : formals MATCH . formals WITH match  (63)
+	expr : target_conc .  (63)
+	target_conc : ADTNAME LPAREN target_conc . RPAREN  (90)
 
-	LPAREN  shift 80
-	.  error
+	RPAREN  shift 153
+	LPAREN  reduce 63
+	LBRACE  reduce 63
+	LBRACKET  reduce 63
+	PLUS  reduce 63
+	MINUS  reduce 63
+	STAR  reduce 63
+	DIVIDE  reduce 63
+	EQ  reduce 63
+	NEQ  reduce 63
+	LT  reduce 63
+	LEQ  reduce 63
+	GT  reduce 63
+	GEQ  reduce 63
+	AND  reduce 63
+	OR  reduce 63
+	NOT  reduce 63
+	CONS  reduce 63
+	GROUP  reduce 63
+	RING  reduce 63
+	FIELD  reduce 63
+	LET  reduce 63
+	IF  reduce 63
+	PRINT  reduce 63
+	FUNCTION  reduce 63
+	LITERAL  reduce 63
+	BLIT  reduce 63
+	NAME  reduce 63
+	ADTNAME  reduce 63
+	FLIT  reduce 63
+	STRINGLIT  reduce 63
 
-	formals  goto 152
 
-
-130: shift/reduce conflict (shift 33, reduce 62) on LPAREN
-130: shift/reduce conflict (shift 34, reduce 62) on LBRACE
-130: shift/reduce conflict (shift 35, reduce 62) on LBRACKET
-130: shift/reduce conflict (shift 85, reduce 62) on PLUS
-130: shift/reduce conflict (shift 86, reduce 62) on MINUS
-130: shift/reduce conflict (shift 87, reduce 62) on STAR
-130: shift/reduce conflict (shift 88, reduce 62) on DIVIDE
-130: shift/reduce conflict (shift 89, reduce 62) on EQ
-130: shift/reduce conflict (shift 90, reduce 62) on NEQ
-130: shift/reduce conflict (shift 91, reduce 62) on LT
-130: shift/reduce conflict (shift 92, reduce 62) on LEQ
-130: shift/reduce conflict (shift 93, reduce 62) on GT
-130: shift/reduce conflict (shift 94, reduce 62) on GEQ
-130: shift/reduce conflict (shift 95, reduce 62) on AND
-130: shift/reduce conflict (shift 96, reduce 62) on OR
-130: shift/reduce conflict (shift 37, reduce 62) on NOT
-130: shift/reduce conflict (shift 38, reduce 62) on GROUP
-130: shift/reduce conflict (shift 39, reduce 62) on RING
-130: shift/reduce conflict (shift 40, reduce 62) on FIELD
-130: shift/reduce conflict (shift 41, reduce 62) on LET
-130: shift/reduce conflict (shift 42, reduce 62) on IF
-130: shift/reduce conflict (shift 43, reduce 62) on PRINT
-130: shift/reduce conflict (shift 44, reduce 62) on FUNCTION
-130: shift/reduce conflict (shift 45, reduce 62) on LITERAL
-130: shift/reduce conflict (shift 46, reduce 62) on BLIT
-130: shift/reduce conflict (shift 47, reduce 62) on NAME
-130: shift/reduce conflict (shift 48, reduce 62) on ADTNAME
-130: shift/reduce conflict (shift 49, reduce 62) on FLIT
-130: shift/reduce conflict (shift 50, reduce 62) on STRINGLIT
 state 130
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	fn_def : formals expr .  (62)
+	expr : expr . binop expr  (51)
+	expr : expr binop expr .  (51)
+	expr : expr . expr  (55)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 62
-	RBRACE  reduce 62
-	RBRACKET  reduce 62
-	COMMA  reduce 62
-	IN  reduce 62
-	LAND  reduce 62
-	THEN  reduce 62
-	ELSE  reduce 62
-	BAR  reduce 62
-	EOF  reduce 62
+	RPAREN  reduce 51
+	RBRACE  reduce 51
+	COMMA  reduce 51
+	PLUS  reduce 51
+	MINUS  reduce 51
+	STAR  reduce 51
+	DIVIDE  reduce 51
+	EQ  reduce 51
+	NEQ  reduce 51
+	LT  reduce 51
+	LEQ  reduce 51
+	GT  reduce 51
+	GEQ  reduce 51
+	AND  reduce 51
+	OR  reduce 51
+	CONS  reduce 51
+	GROUP  reduce 51
+	RING  reduce 51
+	FIELD  reduce 51
+	LET  reduce 51
+	IN  reduce 51
+	LAND  reduce 51
+	IF  reduce 51
+	THEN  reduce 51
+	ELSE  reduce 51
+	BAR  reduce 51
+	PRINT  reduce 51
+	FUNCTION  reduce 51
+	END  reduce 51
+	LITERAL  reduce 51
+	BLIT  reduce 51
+	NAME  reduce 51
+	ADTNAME  reduce 51
+	FLIT  reduce 51
+	STRINGLIT  reduce 51
+	EOF  reduce 51
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 131
-	expr : NAME DOT NAME .  (58)
+	type_expr : LPAREN type_expr RPAREN .  (19)
 
-	.  reduce 58
+	.  reduce 19
 
 
-132: shift/reduce conflict (shift 153, reduce 78) on LPAREN
 state 132
-	target_conc_outer : ADTNAME .  (78)
-	target_conc_outer : ADTNAME . LPAREN target_conc_inner RPAREN  (79)
-	target_conc_inner : ADTNAME . LPAREN expr RPAREN  (81)
-
-	LPAREN  shift 153
-	RPAREN  reduce 78
-	LBRACE  reduce 78
-	LBRACKET  reduce 78
-	PLUS  reduce 78
-	MINUS  reduce 78
-	STAR  reduce 78
-	DIVIDE  reduce 78
-	EQ  reduce 78
-	NEQ  reduce 78
-	LT  reduce 78
-	LEQ  reduce 78
-	GT  reduce 78
-	GEQ  reduce 78
-	AND  reduce 78
-	OR  reduce 78
-	NOT  reduce 78
-	GROUP  reduce 78
-	RING  reduce 78
-	FIELD  reduce 78
-	LET  reduce 78
-	IF  reduce 78
-	PRINT  reduce 78
-	FUNCTION  reduce 78
-	LITERAL  reduce 78
-	BLIT  reduce 78
-	NAME  reduce 78
-	ADTNAME  reduce 78
-	FLIT  reduce 78
-	STRINGLIT  reduce 78
-
-
-state 133
-	target_conc_inner : target_conc_outer .  (80)
-
-	.  reduce 80
-
-
-state 134
-	target_conc_outer : ADTNAME LPAREN target_conc_inner . RPAREN  (79)
-
-	RPAREN  shift 154
-	.  error
-
-
-135: shift/reduce conflict (shift 33, reduce 50) on LPAREN
-135: shift/reduce conflict (shift 34, reduce 50) on LBRACE
-135: shift/reduce conflict (shift 35, reduce 50) on LBRACKET
-135: shift/reduce conflict (shift 85, reduce 50) on PLUS
-135: shift/reduce conflict (shift 86, reduce 50) on MINUS
-135: shift/reduce conflict (shift 87, reduce 50) on STAR
-135: shift/reduce conflict (shift 88, reduce 50) on DIVIDE
-135: shift/reduce conflict (shift 89, reduce 50) on EQ
-135: shift/reduce conflict (shift 90, reduce 50) on NEQ
-135: shift/reduce conflict (shift 91, reduce 50) on LT
-135: shift/reduce conflict (shift 92, reduce 50) on LEQ
-135: shift/reduce conflict (shift 93, reduce 50) on GT
-135: shift/reduce conflict (shift 94, reduce 50) on GEQ
-135: shift/reduce conflict (shift 95, reduce 50) on AND
-135: shift/reduce conflict (shift 96, reduce 50) on OR
-135: shift/reduce conflict (shift 37, reduce 50) on NOT
-135: shift/reduce conflict (shift 38, reduce 50) on GROUP
-135: shift/reduce conflict (shift 39, reduce 50) on RING
-135: shift/reduce conflict (shift 40, reduce 50) on FIELD
-135: shift/reduce conflict (shift 41, reduce 50) on LET
-135: shift/reduce conflict (shift 42, reduce 50) on IF
-135: shift/reduce conflict (shift 43, reduce 50) on PRINT
-135: shift/reduce conflict (shift 44, reduce 50) on FUNCTION
-135: shift/reduce conflict (shift 45, reduce 50) on LITERAL
-135: shift/reduce conflict (shift 46, reduce 50) on BLIT
-135: shift/reduce conflict (shift 47, reduce 50) on NAME
-135: shift/reduce conflict (shift 48, reduce 50) on ADTNAME
-135: shift/reduce conflict (shift 49, reduce 50) on FLIT
-135: shift/reduce conflict (shift 50, reduce 50) on STRINGLIT
-state 135
-	expr : expr . binop expr  (50)
-	expr : expr binop expr .  (50)
-	expr : expr . expr  (54)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 50
-	RBRACE  reduce 50
-	RBRACKET  reduce 50
-	COMMA  reduce 50
-	IN  reduce 50
-	LAND  reduce 50
-	THEN  reduce 50
-	ELSE  reduce 50
-	BAR  reduce 50
-	EOF  reduce 50
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 136
-	type_expr : LPAREN type_expr RPAREN .  (18)
-
-	.  reduce 18
-
-
-state 137
-	struct_decl_body : NAME COLON . type_name  (23)
-	struct_decl_body : NAME COLON . type_name COMMA struct_decl_body  (24)
+	struct_decl_body : NAME COLON . type_name  (24)
+	struct_decl_body : NAME COLON . type_name COMMA struct_decl_body  (25)
 
 	INT  shift 10
 	BOOL  shift 11
@@ -2767,47 +2301,39 @@ state 137
 	NAME  shift 14
 	.  error
 
-	type_name  goto 155
+	type_name  goto 154
 
 
-state 138
-	type_expr : LBRACKET struct_decl_body RBRACKET .  (11)
+state 133
+	type_expr : LBRACE struct_decl_body RBRACE .  (11)
 
 	.  reduce 11
 
 
-139: shift/reduce conflict (shift 19, reduce 22) on STAR
-139: shift/reduce conflict (shift 20, reduce 22) on ARROW
-139: shift/reduce conflict (shift 21, reduce 22) on GROUP
-139: shift/reduce conflict (shift 22, reduce 22) on RING
-139: shift/reduce conflict (shift 23, reduce 22) on FIELD
-139: shift/reduce conflict (shift 24, reduce 22) on LIST
-state 139
-	adt_type_expr : NAME OF type_name .  (22)
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
+state 134
+	adt_type_expr : NAME OF type_name .  (23)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
 
 	STAR  shift 19
 	ARROW  shift 20
 	GROUP  shift 21
 	RING  shift 22
 	FIELD  shift 23
-	LIST  shift 24
-	RPAREN  reduce 22
-	LET  reduce 22
-	TYPE  reduce 22
-	BAR  reduce 22
+	POLY  shift 24
+	LIST  shift 25
+	RPAREN  reduce 23
+	LET  reduce 23
+	TYPE  reduce 23
+	BAR  reduce 23
 
 
-140: shift/reduce conflict (shift 106, reduce 13) on GROUP
-140: shift/reduce conflict (shift 107, reduce 13) on RING
-140: shift/reduce conflict (shift 108, reduce 13) on FIELD
-140: shift/reduce conflict (shift 109, reduce 13) on LIST
-state 140
+state 135
 	type_expr : type_expr . LIST  (12)
 	type_expr : type_expr . STAR type_expr  (13)
 	type_expr : type_expr STAR type_expr .  (13)
@@ -2815,23 +2341,12 @@ state 140
 	type_expr : type_expr . GROUP  (15)
 	type_expr : type_expr . RING  (16)
 	type_expr : type_expr . FIELD  (17)
+	type_expr : type_expr . POLY  (18)
 
-	GROUP  shift 106
-	RING  shift 107
-	FIELD  shift 108
-	LIST  shift 109
-	RPAREN  reduce 13
-	STAR  reduce 13
-	ARROW  reduce 13
-	LET  reduce 13
-	TYPE  reduce 13
+	.  reduce 13
 
 
-141: shift/reduce conflict (shift 106, reduce 14) on GROUP
-141: shift/reduce conflict (shift 107, reduce 14) on RING
-141: shift/reduce conflict (shift 108, reduce 14) on FIELD
-141: shift/reduce conflict (shift 109, reduce 14) on LIST
-state 141
+state 136
 	type_expr : type_expr . LIST  (12)
 	type_expr : type_expr . STAR type_expr  (13)
 	type_expr : type_expr . ARROW type_expr  (14)
@@ -2839,11 +2354,13 @@ state 141
 	type_expr : type_expr . GROUP  (15)
 	type_expr : type_expr . RING  (16)
 	type_expr : type_expr . FIELD  (17)
+	type_expr : type_expr . POLY  (18)
 
-	STAR  shift 104
-	GROUP  shift 106
-	RING  shift 107
-	FIELD  shift 108
+	STAR  shift 103
+	GROUP  shift 105
+	RING  shift 106
+	FIELD  shift 107
+	POLY  shift 108
 	LIST  shift 109
 	RPAREN  reduce 14
 	ARROW  reduce 14
@@ -2851,86 +2368,219 @@ state 141
 	TYPE  reduce 14
 
 
-state 142
-	adt_opt : adt_type_expr BAR adt_type_expr .  (20)
+state 137
+	adt_opt : adt_type_expr BAR adt_type_expr .  (21)
 
-	.  reduce 20
+	.  reduce 21
+
+
+state 138
+	letand_opt : type_name NAME ASSIGN expr LAND letand_opt .  (42)
+
+	.  reduce 42
+
+
+state 139
+	expr : LPAREN expr COMMA expr . RPAREN  (48)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+
+	LPAREN  shift 33
+	RPAREN  shift 155
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
+	NOT  shift 37
+	CONS  shift 96
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	.  error
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 140
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	struct_init_body : NAME ASSIGN expr .  (92)
+	struct_init_body : NAME ASSIGN expr . COMMA struct_init_body  (93)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	COMMA  shift 156
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
+	NOT  shift 37
+	CONS  shift 96
+	GROUP  shift 38
+	RING  shift 39
+	FIELD  shift 40
+	LET  shift 41
+	IF  shift 42
+	PRINT  shift 43
+	FUNCTION  shift 44
+	LITERAL  shift 45
+	BLIT  shift 46
+	NAME  shift 47
+	ADTNAME  shift 48
+	FLIT  shift 49
+	STRINGLIT  shift 50
+	RBRACE  reduce 92
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 141
+	inside_list : expr COMMA inside_list .  (95)
+
+	.  reduce 95
+
+
+state 142
+	type_name : type_name GROUP .  (34)
+	expr : GROUP . LBRACE type_name expr expr expr expr RBRACE  (57)
+
+	LBRACE  shift 73
+	LPAREN  reduce 34
+	LBRACKET  reduce 34
+	MINUS  reduce 34
+	STAR  reduce 34
+	ARROW  reduce 34
+	NOT  reduce 34
+	GROUP  reduce 34
+	RING  reduce 34
+	FIELD  reduce 34
+	POLY  reduce 34
+	LET  reduce 34
+	IF  reduce 34
+	LIST  reduce 34
+	PRINT  reduce 34
+	FUNCTION  reduce 34
+	LITERAL  reduce 34
+	BLIT  reduce 34
+	NAME  reduce 34
+	ADTNAME  reduce 34
+	FLIT  reduce 34
+	STRINGLIT  reduce 34
 
 
 state 143
-	letand_opt : type_name NAME ASSIGN expr LAND letand_opt .  (41)
+	type_name : type_name RING .  (35)
+	expr : RING . LBRACE type_name expr expr expr expr expr expr RBRACE  (58)
 
-	.  reduce 41
+	LBRACE  shift 74
+	LPAREN  reduce 35
+	LBRACKET  reduce 35
+	MINUS  reduce 35
+	STAR  reduce 35
+	ARROW  reduce 35
+	NOT  reduce 35
+	GROUP  reduce 35
+	RING  reduce 35
+	FIELD  reduce 35
+	POLY  reduce 35
+	LET  reduce 35
+	IF  reduce 35
+	LIST  reduce 35
+	PRINT  reduce 35
+	FUNCTION  reduce 35
+	LITERAL  reduce 35
+	BLIT  reduce 35
+	NAME  reduce 35
+	ADTNAME  reduce 35
+	FLIT  reduce 35
+	STRINGLIT  reduce 35
 
 
 state 144
-	expr : LPAREN expr COMMA expr . RPAREN  (47)
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
+	type_name : type_name FIELD .  (36)
+	expr : FIELD . LBRACE type_name expr expr expr expr expr expr expr RBRACE  (59)
 
-	LPAREN  shift 33
-	RPAREN  shift 156
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	LBRACE  shift 75
+	LPAREN  reduce 36
+	LBRACKET  reduce 36
+	MINUS  reduce 36
+	STAR  reduce 36
+	ARROW  reduce 36
+	NOT  reduce 36
+	GROUP  reduce 36
+	RING  reduce 36
+	FIELD  reduce 36
+	POLY  reduce 36
+	LET  reduce 36
+	IF  reduce 36
+	LIST  reduce 36
+	PRINT  reduce 36
+	FUNCTION  reduce 36
+	LITERAL  reduce 36
+	BLIT  reduce 36
+	NAME  reduce 36
+	ADTNAME  reduce 36
+	FLIT  reduce 36
+	STRINGLIT  reduce 36
 
 
 state 145
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	struct_init_body : NAME ASSIGN expr .  (85)
-	struct_init_body : NAME ASSIGN expr . COMMA struct_init_body  (86)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : GROUP LBRACE type_name expr . expr expr expr RBRACE  (57)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	COMMA  shift 157
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -2944,67 +2594,36 @@ state 145
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RBRACE  reduce 85
+	.  error
 
 	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
+	expr  goto 157
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-146: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-146: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-146: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-146: shift/reduce conflict (shift 85, reduce 54) on PLUS
-146: shift/reduce conflict (shift 86, reduce 54) on MINUS
-146: shift/reduce conflict (shift 87, reduce 54) on STAR
-146: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-146: shift/reduce conflict (shift 89, reduce 54) on EQ
-146: shift/reduce conflict (shift 90, reduce 54) on NEQ
-146: shift/reduce conflict (shift 91, reduce 54) on LT
-146: shift/reduce conflict (shift 92, reduce 54) on LEQ
-146: shift/reduce conflict (shift 93, reduce 54) on GT
-146: shift/reduce conflict (shift 94, reduce 54) on GEQ
-146: shift/reduce conflict (shift 95, reduce 54) on AND
-146: shift/reduce conflict (shift 96, reduce 54) on OR
-146: shift/reduce conflict (shift 37, reduce 54) on NOT
-146: shift/reduce conflict (shift 38, reduce 54) on GROUP
-146: shift/reduce conflict (shift 39, reduce 54) on RING
-146: shift/reduce conflict (shift 40, reduce 54) on FIELD
-146: shift/reduce conflict (shift 41, reduce 54) on LET
-146: shift/reduce conflict (shift 42, reduce 54) on IF
-146: shift/reduce conflict (shift 43, reduce 54) on PRINT
-146: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-146: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-146: shift/reduce conflict (shift 46, reduce 54) on BLIT
-146: shift/reduce conflict (shift 47, reduce 54) on NAME
-146: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-146: shift/reduce conflict (shift 49, reduce 54) on FLIT
-146: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
 state 146
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : GROUP type_name expr expr . expr expr  (82)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : RING LBRACE type_name expr . expr expr expr expr expr RBRACE  (58)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -3018,66 +2637,36 @@ state 146
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
+	.  error
 
 	lexpr  goto 51
 	expr  goto 158
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-147: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-147: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-147: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-147: shift/reduce conflict (shift 85, reduce 54) on PLUS
-147: shift/reduce conflict (shift 86, reduce 54) on MINUS
-147: shift/reduce conflict (shift 87, reduce 54) on STAR
-147: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-147: shift/reduce conflict (shift 89, reduce 54) on EQ
-147: shift/reduce conflict (shift 90, reduce 54) on NEQ
-147: shift/reduce conflict (shift 91, reduce 54) on LT
-147: shift/reduce conflict (shift 92, reduce 54) on LEQ
-147: shift/reduce conflict (shift 93, reduce 54) on GT
-147: shift/reduce conflict (shift 94, reduce 54) on GEQ
-147: shift/reduce conflict (shift 95, reduce 54) on AND
-147: shift/reduce conflict (shift 96, reduce 54) on OR
-147: shift/reduce conflict (shift 37, reduce 54) on NOT
-147: shift/reduce conflict (shift 38, reduce 54) on GROUP
-147: shift/reduce conflict (shift 39, reduce 54) on RING
-147: shift/reduce conflict (shift 40, reduce 54) on FIELD
-147: shift/reduce conflict (shift 41, reduce 54) on LET
-147: shift/reduce conflict (shift 42, reduce 54) on IF
-147: shift/reduce conflict (shift 43, reduce 54) on PRINT
-147: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-147: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-147: shift/reduce conflict (shift 46, reduce 54) on BLIT
-147: shift/reduce conflict (shift 47, reduce 54) on NAME
-147: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-147: shift/reduce conflict (shift 49, reduce 54) on FLIT
-147: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
 state 147
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : RING type_name expr expr . expr expr expr expr  (83)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : FIELD LBRACE type_name expr . expr expr expr expr expr expr RBRACE  (59)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -3091,115 +2680,42 @@ state 147
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
+	.  error
 
 	lexpr  goto 51
 	expr  goto 159
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-148: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-148: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-148: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-148: shift/reduce conflict (shift 85, reduce 54) on PLUS
-148: shift/reduce conflict (shift 86, reduce 54) on MINUS
-148: shift/reduce conflict (shift 87, reduce 54) on STAR
-148: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-148: shift/reduce conflict (shift 89, reduce 54) on EQ
-148: shift/reduce conflict (shift 90, reduce 54) on NEQ
-148: shift/reduce conflict (shift 91, reduce 54) on LT
-148: shift/reduce conflict (shift 92, reduce 54) on LEQ
-148: shift/reduce conflict (shift 93, reduce 54) on GT
-148: shift/reduce conflict (shift 94, reduce 54) on GEQ
-148: shift/reduce conflict (shift 95, reduce 54) on AND
-148: shift/reduce conflict (shift 96, reduce 54) on OR
-148: shift/reduce conflict (shift 37, reduce 54) on NOT
-148: shift/reduce conflict (shift 38, reduce 54) on GROUP
-148: shift/reduce conflict (shift 39, reduce 54) on RING
-148: shift/reduce conflict (shift 40, reduce 54) on FIELD
-148: shift/reduce conflict (shift 41, reduce 54) on LET
-148: shift/reduce conflict (shift 42, reduce 54) on IF
-148: shift/reduce conflict (shift 43, reduce 54) on PRINT
-148: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-148: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-148: shift/reduce conflict (shift 46, reduce 54) on BLIT
-148: shift/reduce conflict (shift 47, reduce 54) on NAME
-148: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-148: shift/reduce conflict (shift 49, reduce 54) on FLIT
-148: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
 state 148
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr . expr expr expr expr expr  (84)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : IF expr THEN expr . ELSE expr END  (56)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
 	LET  shift 41
 	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 160
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 149
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : IF expr THEN expr . ELSE expr  (55)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	ELSE  shift 161
+	ELSE  shift 160
 	PRINT  shift 43
 	FUNCTION  shift 44
 	LITERAL  shift 45
@@ -3212,154 +2728,214 @@ state 149
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
+
+
+state 149
+	formals : LPAREN formals_opt RPAREN .  (67)
+
+	.  reduce 67
 
 
 state 150
-	formals : LPAREN formals_opt RPAREN .  (64)
+	formal_list : formal_list NAME .  (71)
 
-	.  reduce 64
+	.  reduce 71
 
 
 state 151
-	formal_list : formal_list NAME .  (68)
+	fn_def : formals MATCH formals . WITH match_rule END  (66)
 
-	.  reduce 68
+	WITH  shift 161
+	.  error
 
 
 state 152
-	fn_def : formals MATCH formals . WITH match  (63)
+	target_conc : ADTNAME LPAREN expr RPAREN .  (91)
 
-	WITH  shift 162
-	.  error
+	.  reduce 91
 
 
 state 153
-	target_conc_outer : ADTNAME LPAREN . target_conc_inner RPAREN  (79)
-	target_conc_inner : ADTNAME LPAREN . expr RPAREN  (81)
+	target_conc : ADTNAME LPAREN target_conc RPAREN .  (90)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 132
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 163
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 164
-	target_conc_inner  goto 134
+	.  reduce 90
 
 
 state 154
-	target_conc_outer : ADTNAME LPAREN target_conc_inner RPAREN .  (79)
+	struct_decl_body : NAME COLON type_name .  (24)
+	struct_decl_body : NAME COLON type_name . COMMA struct_decl_body  (25)
+	type_name : type_name . LIST  (31)
+	type_name : type_name . STAR type_name  (32)
+	type_name : type_name . ARROW type_name  (33)
+	type_name : type_name . GROUP  (34)
+	type_name : type_name . RING  (35)
+	type_name : type_name . FIELD  (36)
+	type_name : type_name . POLY  (37)
 
-	.  reduce 79
-
-
-state 155
-	struct_decl_body : NAME COLON type_name .  (23)
-	struct_decl_body : NAME COLON type_name . COMMA struct_decl_body  (24)
-	type_name : type_name . LIST  (30)
-	type_name : type_name . STAR type_name  (31)
-	type_name : type_name . ARROW type_name  (32)
-	type_name : type_name . GROUP  (33)
-	type_name : type_name . RING  (34)
-	type_name : type_name . FIELD  (35)
-
-	COMMA  shift 165
+	COMMA  shift 162
 	STAR  shift 19
 	ARROW  shift 20
 	GROUP  shift 21
 	RING  shift 22
 	FIELD  shift 23
-	LIST  shift 24
-	RBRACKET  reduce 23
+	POLY  shift 24
+	LIST  shift 25
+	RBRACE  reduce 24
+
+
+state 155
+	expr : LPAREN expr COMMA expr RPAREN .  (48)
+
+	.  reduce 48
 
 
 state 156
-	expr : LPAREN expr COMMA expr RPAREN .  (47)
+	struct_init_body : NAME ASSIGN expr COMMA . struct_init_body  (93)
 
-	.  reduce 47
+	NAME  shift 67
+	.  error
+
+	struct_init_body  goto 163
 
 
 state 157
-	struct_init_body : NAME ASSIGN expr COMMA . struct_init_body  (86)
-
-	NAME  shift 68
-	.  error
-
-	struct_init_body  goto 166
-
-
-158: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-158: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-158: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-158: shift/reduce conflict (shift 85, reduce 54) on PLUS
-158: shift/reduce conflict (shift 86, reduce 54) on MINUS
-158: shift/reduce conflict (shift 87, reduce 54) on STAR
-158: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-158: shift/reduce conflict (shift 89, reduce 54) on EQ
-158: shift/reduce conflict (shift 90, reduce 54) on NEQ
-158: shift/reduce conflict (shift 91, reduce 54) on LT
-158: shift/reduce conflict (shift 92, reduce 54) on LEQ
-158: shift/reduce conflict (shift 93, reduce 54) on GT
-158: shift/reduce conflict (shift 94, reduce 54) on GEQ
-158: shift/reduce conflict (shift 95, reduce 54) on AND
-158: shift/reduce conflict (shift 96, reduce 54) on OR
-158: shift/reduce conflict (shift 37, reduce 54) on NOT
-158: shift/reduce conflict (shift 38, reduce 54) on GROUP
-158: shift/reduce conflict (shift 39, reduce 54) on RING
-158: shift/reduce conflict (shift 40, reduce 54) on FIELD
-158: shift/reduce conflict (shift 41, reduce 54) on LET
-158: shift/reduce conflict (shift 42, reduce 54) on IF
-158: shift/reduce conflict (shift 43, reduce 54) on PRINT
-158: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-158: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-158: shift/reduce conflict (shift 46, reduce 54) on BLIT
-158: shift/reduce conflict (shift 47, reduce 54) on NAME
-158: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-158: shift/reduce conflict (shift 49, reduce 54) on FLIT
-158: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 158
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : GROUP type_name expr expr expr . expr  (82)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : GROUP LBRACE type_name expr expr . expr expr RBRACE  (57)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 164
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 158
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : RING LBRACE type_name expr expr . expr expr expr expr RBRACE  (58)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 165
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 159
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr . expr expr expr expr expr RBRACE  (59)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 166
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 160
+	expr : IF expr THEN expr ELSE . expr END  (56)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	MINUS  shift 36
 	NOT  shift 37
 	GROUP  shift 38
 	RING  shift 39
@@ -3374,349 +2950,189 @@ state 158
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
+	.  error
 
 	lexpr  goto 51
 	expr  goto 167
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-159: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-159: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-159: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-159: shift/reduce conflict (shift 85, reduce 54) on PLUS
-159: shift/reduce conflict (shift 86, reduce 54) on MINUS
-159: shift/reduce conflict (shift 87, reduce 54) on STAR
-159: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-159: shift/reduce conflict (shift 89, reduce 54) on EQ
-159: shift/reduce conflict (shift 90, reduce 54) on NEQ
-159: shift/reduce conflict (shift 91, reduce 54) on LT
-159: shift/reduce conflict (shift 92, reduce 54) on LEQ
-159: shift/reduce conflict (shift 93, reduce 54) on GT
-159: shift/reduce conflict (shift 94, reduce 54) on GEQ
-159: shift/reduce conflict (shift 95, reduce 54) on AND
-159: shift/reduce conflict (shift 96, reduce 54) on OR
-159: shift/reduce conflict (shift 37, reduce 54) on NOT
-159: shift/reduce conflict (shift 38, reduce 54) on GROUP
-159: shift/reduce conflict (shift 39, reduce 54) on RING
-159: shift/reduce conflict (shift 40, reduce 54) on FIELD
-159: shift/reduce conflict (shift 41, reduce 54) on LET
-159: shift/reduce conflict (shift 42, reduce 54) on IF
-159: shift/reduce conflict (shift 43, reduce 54) on PRINT
-159: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-159: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-159: shift/reduce conflict (shift 46, reduce 54) on BLIT
-159: shift/reduce conflict (shift 47, reduce 54) on NAME
-159: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-159: shift/reduce conflict (shift 49, reduce 54) on FLIT
-159: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 159
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : RING type_name expr expr expr . expr expr expr  (83)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 168
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-160: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-160: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-160: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-160: shift/reduce conflict (shift 85, reduce 54) on PLUS
-160: shift/reduce conflict (shift 86, reduce 54) on MINUS
-160: shift/reduce conflict (shift 87, reduce 54) on STAR
-160: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-160: shift/reduce conflict (shift 89, reduce 54) on EQ
-160: shift/reduce conflict (shift 90, reduce 54) on NEQ
-160: shift/reduce conflict (shift 91, reduce 54) on LT
-160: shift/reduce conflict (shift 92, reduce 54) on LEQ
-160: shift/reduce conflict (shift 93, reduce 54) on GT
-160: shift/reduce conflict (shift 94, reduce 54) on GEQ
-160: shift/reduce conflict (shift 95, reduce 54) on AND
-160: shift/reduce conflict (shift 96, reduce 54) on OR
-160: shift/reduce conflict (shift 37, reduce 54) on NOT
-160: shift/reduce conflict (shift 38, reduce 54) on GROUP
-160: shift/reduce conflict (shift 39, reduce 54) on RING
-160: shift/reduce conflict (shift 40, reduce 54) on FIELD
-160: shift/reduce conflict (shift 41, reduce 54) on LET
-160: shift/reduce conflict (shift 42, reduce 54) on IF
-160: shift/reduce conflict (shift 43, reduce 54) on PRINT
-160: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-160: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-160: shift/reduce conflict (shift 46, reduce 54) on BLIT
-160: shift/reduce conflict (shift 47, reduce 54) on NAME
-160: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-160: shift/reduce conflict (shift 49, reduce 54) on FLIT
-160: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 160
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr expr . expr expr expr expr  (84)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 169
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
 state 161
-	expr : IF expr THEN expr ELSE . expr  (55)
+	fn_def : formals MATCH formals WITH . match_rule END  (66)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	BAR  shift 168
 	.  error
 
-	lexpr  goto 51
-	expr  goto 170
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	match_rule  goto 169
+	match_line  goto 170
 
 
 state 162
-	fn_def : formals MATCH formals WITH . match  (63)
+	struct_decl_body : NAME COLON type_name COMMA . struct_decl_body  (25)
 
-	BAR  shift 171
+	NAME  shift 100
 	.  error
 
-	match  goto 172
-	match_line  goto 173
+	struct_decl_body  goto 171
 
 
 state 163
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	target_conc_inner : ADTNAME LPAREN expr . RPAREN  (81)
+	struct_init_body : NAME ASSIGN expr COMMA struct_init_body .  (93)
+
+	.  reduce 93
+
+
+state 164
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : GROUP LBRACE type_name expr expr expr . expr RBRACE  (57)
 
 	LPAREN  shift 33
-	RPAREN  shift 174
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
 
 	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
+	expr  goto 172
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-164: reduce/reduce conflict (reduce 60, reduce 80) on RPAREN
-state 164
-	expr : target_conc_outer .  (60)
-	target_conc_inner : target_conc_outer .  (80)
-
-	.  reduce 60
+	target_conc  goto 53
 
 
 state 165
-	struct_decl_body : NAME COLON type_name COMMA . struct_decl_body  (24)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : RING LBRACE type_name expr expr expr . expr expr expr RBRACE  (58)
 
-	NAME  shift 101
-	.  error
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
 
-	struct_decl_body  goto 175
+	lexpr  goto 51
+	expr  goto 173
+	binop  goto 98
+	target_conc  goto 53
 
 
 state 166
-	struct_init_body : NAME ASSIGN expr COMMA struct_init_body .  (86)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr expr . expr expr expr expr RBRACE  (59)
 
-	.  reduce 86
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 174
+	binop  goto 98
+	target_conc  goto 53
 
 
-167: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-167: shift/reduce conflict (shift 33, reduce 82) on LPAREN
-167: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-167: shift/reduce conflict (shift 34, reduce 82) on LBRACE
-167: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-167: shift/reduce conflict (shift 35, reduce 82) on LBRACKET
-167: shift/reduce conflict (shift 85, reduce 54) on PLUS
-167: shift/reduce conflict (shift 85, reduce 82) on PLUS
-167: shift/reduce conflict (shift 86, reduce 54) on MINUS
-167: shift/reduce conflict (shift 86, reduce 82) on MINUS
-167: shift/reduce conflict (shift 87, reduce 54) on STAR
-167: shift/reduce conflict (shift 87, reduce 82) on STAR
-167: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-167: shift/reduce conflict (shift 88, reduce 82) on DIVIDE
-167: shift/reduce conflict (shift 89, reduce 54) on EQ
-167: shift/reduce conflict (shift 89, reduce 82) on EQ
-167: shift/reduce conflict (shift 90, reduce 54) on NEQ
-167: shift/reduce conflict (shift 90, reduce 82) on NEQ
-167: shift/reduce conflict (shift 91, reduce 54) on LT
-167: shift/reduce conflict (shift 91, reduce 82) on LT
-167: shift/reduce conflict (shift 92, reduce 54) on LEQ
-167: shift/reduce conflict (shift 92, reduce 82) on LEQ
-167: shift/reduce conflict (shift 93, reduce 54) on GT
-167: shift/reduce conflict (shift 93, reduce 82) on GT
-167: shift/reduce conflict (shift 94, reduce 54) on GEQ
-167: shift/reduce conflict (shift 94, reduce 82) on GEQ
-167: shift/reduce conflict (shift 95, reduce 54) on AND
-167: shift/reduce conflict (shift 95, reduce 82) on AND
-167: shift/reduce conflict (shift 96, reduce 54) on OR
-167: shift/reduce conflict (shift 96, reduce 82) on OR
-167: shift/reduce conflict (shift 37, reduce 54) on NOT
-167: shift/reduce conflict (shift 37, reduce 82) on NOT
-167: shift/reduce conflict (shift 38, reduce 54) on GROUP
-167: shift/reduce conflict (shift 38, reduce 82) on GROUP
-167: shift/reduce conflict (shift 39, reduce 54) on RING
-167: shift/reduce conflict (shift 39, reduce 82) on RING
-167: shift/reduce conflict (shift 40, reduce 54) on FIELD
-167: shift/reduce conflict (shift 40, reduce 82) on FIELD
-167: shift/reduce conflict (shift 41, reduce 54) on LET
-167: shift/reduce conflict (shift 41, reduce 82) on LET
-167: shift/reduce conflict (shift 42, reduce 54) on IF
-167: shift/reduce conflict (shift 42, reduce 82) on IF
-167: shift/reduce conflict (shift 43, reduce 54) on PRINT
-167: shift/reduce conflict (shift 43, reduce 82) on PRINT
-167: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-167: shift/reduce conflict (shift 44, reduce 82) on FUNCTION
-167: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-167: shift/reduce conflict (shift 45, reduce 82) on LITERAL
-167: shift/reduce conflict (shift 46, reduce 54) on BLIT
-167: shift/reduce conflict (shift 46, reduce 82) on BLIT
-167: shift/reduce conflict (shift 47, reduce 54) on NAME
-167: shift/reduce conflict (shift 47, reduce 82) on NAME
-167: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-167: shift/reduce conflict (shift 48, reduce 82) on ADTNAME
-167: shift/reduce conflict (shift 49, reduce 54) on FLIT
-167: shift/reduce conflict (shift 49, reduce 82) on FLIT
-167: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-167: shift/reduce conflict (shift 50, reduce 82) on STRINGLIT
 state 167
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : GROUP type_name expr expr expr expr .  (82)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : IF expr THEN expr ELSE expr . END  (56)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -3724,1091 +3140,650 @@ state 167
 	IF  shift 42
 	PRINT  shift 43
 	FUNCTION  shift 44
+	END  shift 175
 	LITERAL  shift 45
 	BLIT  shift 46
 	NAME  shift 47
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RPAREN  reduce 82
-	RBRACE  reduce 82
-	RBRACKET  reduce 82
-	COMMA  reduce 82
-	IN  reduce 82
-	LAND  reduce 82
-	THEN  reduce 82
-	ELSE  reduce 82
-	BAR  reduce 82
-	EOF  reduce 82
+	.  error
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-168: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-168: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-168: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-168: shift/reduce conflict (shift 85, reduce 54) on PLUS
-168: shift/reduce conflict (shift 86, reduce 54) on MINUS
-168: shift/reduce conflict (shift 87, reduce 54) on STAR
-168: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-168: shift/reduce conflict (shift 89, reduce 54) on EQ
-168: shift/reduce conflict (shift 90, reduce 54) on NEQ
-168: shift/reduce conflict (shift 91, reduce 54) on LT
-168: shift/reduce conflict (shift 92, reduce 54) on LEQ
-168: shift/reduce conflict (shift 93, reduce 54) on GT
-168: shift/reduce conflict (shift 94, reduce 54) on GEQ
-168: shift/reduce conflict (shift 95, reduce 54) on AND
-168: shift/reduce conflict (shift 96, reduce 54) on OR
-168: shift/reduce conflict (shift 37, reduce 54) on NOT
-168: shift/reduce conflict (shift 38, reduce 54) on GROUP
-168: shift/reduce conflict (shift 39, reduce 54) on RING
-168: shift/reduce conflict (shift 40, reduce 54) on FIELD
-168: shift/reduce conflict (shift 41, reduce 54) on LET
-168: shift/reduce conflict (shift 42, reduce 54) on IF
-168: shift/reduce conflict (shift 43, reduce 54) on PRINT
-168: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-168: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-168: shift/reduce conflict (shift 46, reduce 54) on BLIT
-168: shift/reduce conflict (shift 47, reduce 54) on NAME
-168: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-168: shift/reduce conflict (shift 49, reduce 54) on FLIT
-168: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
 state 168
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : RING type_name expr expr expr expr . expr expr  (83)
+	match_line : BAR . LPAREN pattern RPAREN ARROW expr  (74)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 176
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	LPAREN  shift 176
+	.  error
 
 
-169: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-169: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-169: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-169: shift/reduce conflict (shift 85, reduce 54) on PLUS
-169: shift/reduce conflict (shift 86, reduce 54) on MINUS
-169: shift/reduce conflict (shift 87, reduce 54) on STAR
-169: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-169: shift/reduce conflict (shift 89, reduce 54) on EQ
-169: shift/reduce conflict (shift 90, reduce 54) on NEQ
-169: shift/reduce conflict (shift 91, reduce 54) on LT
-169: shift/reduce conflict (shift 92, reduce 54) on LEQ
-169: shift/reduce conflict (shift 93, reduce 54) on GT
-169: shift/reduce conflict (shift 94, reduce 54) on GEQ
-169: shift/reduce conflict (shift 95, reduce 54) on AND
-169: shift/reduce conflict (shift 96, reduce 54) on OR
-169: shift/reduce conflict (shift 37, reduce 54) on NOT
-169: shift/reduce conflict (shift 38, reduce 54) on GROUP
-169: shift/reduce conflict (shift 39, reduce 54) on RING
-169: shift/reduce conflict (shift 40, reduce 54) on FIELD
-169: shift/reduce conflict (shift 41, reduce 54) on LET
-169: shift/reduce conflict (shift 42, reduce 54) on IF
-169: shift/reduce conflict (shift 43, reduce 54) on PRINT
-169: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-169: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-169: shift/reduce conflict (shift 46, reduce 54) on BLIT
-169: shift/reduce conflict (shift 47, reduce 54) on NAME
-169: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-169: shift/reduce conflict (shift 49, reduce 54) on FLIT
-169: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
 state 169
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr expr expr . expr expr expr  (84)
+	fn_def : formals MATCH formals WITH match_rule . END  (66)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 177
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	END  shift 177
+	.  error
 
 
-170: shift/reduce conflict (shift 33, reduce 55) on LPAREN
-170: shift/reduce conflict (shift 34, reduce 55) on LBRACE
-170: shift/reduce conflict (shift 35, reduce 55) on LBRACKET
-170: shift/reduce conflict (shift 85, reduce 55) on PLUS
-170: shift/reduce conflict (shift 86, reduce 55) on MINUS
-170: shift/reduce conflict (shift 87, reduce 55) on STAR
-170: shift/reduce conflict (shift 88, reduce 55) on DIVIDE
-170: shift/reduce conflict (shift 89, reduce 55) on EQ
-170: shift/reduce conflict (shift 90, reduce 55) on NEQ
-170: shift/reduce conflict (shift 91, reduce 55) on LT
-170: shift/reduce conflict (shift 92, reduce 55) on LEQ
-170: shift/reduce conflict (shift 93, reduce 55) on GT
-170: shift/reduce conflict (shift 94, reduce 55) on GEQ
-170: shift/reduce conflict (shift 95, reduce 55) on AND
-170: shift/reduce conflict (shift 96, reduce 55) on OR
-170: shift/reduce conflict (shift 37, reduce 55) on NOT
-170: shift/reduce conflict (shift 38, reduce 55) on GROUP
-170: shift/reduce conflict (shift 39, reduce 55) on RING
-170: shift/reduce conflict (shift 40, reduce 55) on FIELD
-170: shift/reduce conflict (shift 41, reduce 55) on LET
-170: shift/reduce conflict (shift 42, reduce 55) on IF
-170: shift/reduce conflict (shift 43, reduce 55) on PRINT
-170: shift/reduce conflict (shift 44, reduce 55) on FUNCTION
-170: shift/reduce conflict (shift 45, reduce 55) on LITERAL
-170: shift/reduce conflict (shift 46, reduce 55) on BLIT
-170: shift/reduce conflict (shift 47, reduce 55) on NAME
-170: shift/reduce conflict (shift 48, reduce 55) on ADTNAME
-170: shift/reduce conflict (shift 49, reduce 55) on FLIT
-170: shift/reduce conflict (shift 50, reduce 55) on STRINGLIT
 state 170
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : IF expr THEN expr ELSE expr .  (55)
+	match_rule : match_line .  (72)
+	match_rule : match_line . match_rule  (73)
 
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 55
-	RBRACE  reduce 55
-	RBRACKET  reduce 55
-	COMMA  reduce 55
-	IN  reduce 55
-	LAND  reduce 55
-	THEN  reduce 55
-	ELSE  reduce 55
-	BAR  reduce 55
-	EOF  reduce 55
+	BAR  shift 168
+	END  reduce 72
 
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	match_rule  goto 178
+	match_line  goto 170
 
 
 state 171
-	match_line : BAR . LPAREN pattern RPAREN ARROW expr  (71)
+	struct_decl_body : NAME COLON type_name COMMA struct_decl_body .  (25)
 
-	LPAREN  shift 178
-	.  error
+	.  reduce 25
 
 
 state 172
-	fn_def : formals MATCH formals WITH match .  (63)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : GROUP LBRACE type_name expr expr expr expr . RBRACE  (57)
 
-	.  reduce 63
+	LPAREN  shift 33
+	LBRACE  shift 34
+	RBRACE  shift 179
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
 
 
-173: shift/reduce conflict (shift 171, reduce 69) on BAR
 state 173
-	match : match_line .  (69)
-	match : match_line . match  (70)
-
-	BAR  shift 171
-	LPAREN  reduce 69
-	RPAREN  reduce 69
-	LBRACE  reduce 69
-	RBRACE  reduce 69
-	LBRACKET  reduce 69
-	RBRACKET  reduce 69
-	COMMA  reduce 69
-	PLUS  reduce 69
-	MINUS  reduce 69
-	STAR  reduce 69
-	DIVIDE  reduce 69
-	EQ  reduce 69
-	NEQ  reduce 69
-	LT  reduce 69
-	LEQ  reduce 69
-	GT  reduce 69
-	GEQ  reduce 69
-	AND  reduce 69
-	OR  reduce 69
-	NOT  reduce 69
-	GROUP  reduce 69
-	RING  reduce 69
-	FIELD  reduce 69
-	LET  reduce 69
-	IN  reduce 69
-	LAND  reduce 69
-	IF  reduce 69
-	THEN  reduce 69
-	ELSE  reduce 69
-	PRINT  reduce 69
-	FUNCTION  reduce 69
-	LITERAL  reduce 69
-	BLIT  reduce 69
-	NAME  reduce 69
-	ADTNAME  reduce 69
-	FLIT  reduce 69
-	STRINGLIT  reduce 69
-	EOF  reduce 69
-
-	match  goto 179
-	match_line  goto 173
-
-
-state 174
-	target_conc_inner : ADTNAME LPAREN expr RPAREN .  (81)
-
-	.  reduce 81
-
-
-state 175
-	struct_decl_body : NAME COLON type_name COMMA struct_decl_body .  (24)
-
-	.  reduce 24
-
-
-176: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-176: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-176: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-176: shift/reduce conflict (shift 85, reduce 54) on PLUS
-176: shift/reduce conflict (shift 86, reduce 54) on MINUS
-176: shift/reduce conflict (shift 87, reduce 54) on STAR
-176: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-176: shift/reduce conflict (shift 89, reduce 54) on EQ
-176: shift/reduce conflict (shift 90, reduce 54) on NEQ
-176: shift/reduce conflict (shift 91, reduce 54) on LT
-176: shift/reduce conflict (shift 92, reduce 54) on LEQ
-176: shift/reduce conflict (shift 93, reduce 54) on GT
-176: shift/reduce conflict (shift 94, reduce 54) on GEQ
-176: shift/reduce conflict (shift 95, reduce 54) on AND
-176: shift/reduce conflict (shift 96, reduce 54) on OR
-176: shift/reduce conflict (shift 37, reduce 54) on NOT
-176: shift/reduce conflict (shift 38, reduce 54) on GROUP
-176: shift/reduce conflict (shift 39, reduce 54) on RING
-176: shift/reduce conflict (shift 40, reduce 54) on FIELD
-176: shift/reduce conflict (shift 41, reduce 54) on LET
-176: shift/reduce conflict (shift 42, reduce 54) on IF
-176: shift/reduce conflict (shift 43, reduce 54) on PRINT
-176: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-176: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-176: shift/reduce conflict (shift 46, reduce 54) on BLIT
-176: shift/reduce conflict (shift 47, reduce 54) on NAME
-176: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-176: shift/reduce conflict (shift 49, reduce 54) on FLIT
-176: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 176
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : RING type_name expr expr expr expr expr . expr  (83)
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : RING LBRACE type_name expr expr expr expr . expr expr RBRACE  (58)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
 
 	lexpr  goto 51
 	expr  goto 180
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-177: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-177: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-177: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-177: shift/reduce conflict (shift 85, reduce 54) on PLUS
-177: shift/reduce conflict (shift 86, reduce 54) on MINUS
-177: shift/reduce conflict (shift 87, reduce 54) on STAR
-177: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-177: shift/reduce conflict (shift 89, reduce 54) on EQ
-177: shift/reduce conflict (shift 90, reduce 54) on NEQ
-177: shift/reduce conflict (shift 91, reduce 54) on LT
-177: shift/reduce conflict (shift 92, reduce 54) on LEQ
-177: shift/reduce conflict (shift 93, reduce 54) on GT
-177: shift/reduce conflict (shift 94, reduce 54) on GEQ
-177: shift/reduce conflict (shift 95, reduce 54) on AND
-177: shift/reduce conflict (shift 96, reduce 54) on OR
-177: shift/reduce conflict (shift 37, reduce 54) on NOT
-177: shift/reduce conflict (shift 38, reduce 54) on GROUP
-177: shift/reduce conflict (shift 39, reduce 54) on RING
-177: shift/reduce conflict (shift 40, reduce 54) on FIELD
-177: shift/reduce conflict (shift 41, reduce 54) on LET
-177: shift/reduce conflict (shift 42, reduce 54) on IF
-177: shift/reduce conflict (shift 43, reduce 54) on PRINT
-177: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-177: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-177: shift/reduce conflict (shift 46, reduce 54) on BLIT
-177: shift/reduce conflict (shift 47, reduce 54) on NAME
-177: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-177: shift/reduce conflict (shift 49, reduce 54) on FLIT
-177: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 177
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr expr expr expr . expr expr  (84)
+state 174
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr expr expr . expr expr expr RBRACE  (59)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
 	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
 
 	lexpr  goto 51
 	expr  goto 181
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
+
+
+state 175
+	expr : IF expr THEN expr ELSE expr END .  (56)
+
+	.  reduce 56
+
+
+state 176
+	match_line : BAR LPAREN . pattern RPAREN ARROW expr  (74)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	UNDERSCORE  shift 184
+	LITERAL  shift 185
+	BLIT  shift 186
+	ADTNAME  shift 187
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	.  error
+
+	pattern  goto 190
+	target_wild  goto 191
+	literal  goto 192
+
+
+state 177
+	fn_def : formals MATCH formals WITH match_rule END .  (66)
+
+	.  reduce 66
 
 
 state 178
-	match_line : BAR LPAREN . pattern RPAREN ARROW expr  (71)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	UNDERSCORE  shift 182
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 183
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 184
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-	pattern  goto 185
-	target_wild  goto 186
-
-
-state 179
-	match : match_line match .  (70)
-
-	.  reduce 70
-
-
-180: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-180: shift/reduce conflict (shift 33, reduce 83) on LPAREN
-180: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-180: shift/reduce conflict (shift 34, reduce 83) on LBRACE
-180: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-180: shift/reduce conflict (shift 35, reduce 83) on LBRACKET
-180: shift/reduce conflict (shift 85, reduce 54) on PLUS
-180: shift/reduce conflict (shift 85, reduce 83) on PLUS
-180: shift/reduce conflict (shift 86, reduce 54) on MINUS
-180: shift/reduce conflict (shift 86, reduce 83) on MINUS
-180: shift/reduce conflict (shift 87, reduce 54) on STAR
-180: shift/reduce conflict (shift 87, reduce 83) on STAR
-180: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-180: shift/reduce conflict (shift 88, reduce 83) on DIVIDE
-180: shift/reduce conflict (shift 89, reduce 54) on EQ
-180: shift/reduce conflict (shift 89, reduce 83) on EQ
-180: shift/reduce conflict (shift 90, reduce 54) on NEQ
-180: shift/reduce conflict (shift 90, reduce 83) on NEQ
-180: shift/reduce conflict (shift 91, reduce 54) on LT
-180: shift/reduce conflict (shift 91, reduce 83) on LT
-180: shift/reduce conflict (shift 92, reduce 54) on LEQ
-180: shift/reduce conflict (shift 92, reduce 83) on LEQ
-180: shift/reduce conflict (shift 93, reduce 54) on GT
-180: shift/reduce conflict (shift 93, reduce 83) on GT
-180: shift/reduce conflict (shift 94, reduce 54) on GEQ
-180: shift/reduce conflict (shift 94, reduce 83) on GEQ
-180: shift/reduce conflict (shift 95, reduce 54) on AND
-180: shift/reduce conflict (shift 95, reduce 83) on AND
-180: shift/reduce conflict (shift 96, reduce 54) on OR
-180: shift/reduce conflict (shift 96, reduce 83) on OR
-180: shift/reduce conflict (shift 37, reduce 54) on NOT
-180: shift/reduce conflict (shift 37, reduce 83) on NOT
-180: shift/reduce conflict (shift 38, reduce 54) on GROUP
-180: shift/reduce conflict (shift 38, reduce 83) on GROUP
-180: shift/reduce conflict (shift 39, reduce 54) on RING
-180: shift/reduce conflict (shift 39, reduce 83) on RING
-180: shift/reduce conflict (shift 40, reduce 54) on FIELD
-180: shift/reduce conflict (shift 40, reduce 83) on FIELD
-180: shift/reduce conflict (shift 41, reduce 54) on LET
-180: shift/reduce conflict (shift 41, reduce 83) on LET
-180: shift/reduce conflict (shift 42, reduce 54) on IF
-180: shift/reduce conflict (shift 42, reduce 83) on IF
-180: shift/reduce conflict (shift 43, reduce 54) on PRINT
-180: shift/reduce conflict (shift 43, reduce 83) on PRINT
-180: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-180: shift/reduce conflict (shift 44, reduce 83) on FUNCTION
-180: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-180: shift/reduce conflict (shift 45, reduce 83) on LITERAL
-180: shift/reduce conflict (shift 46, reduce 54) on BLIT
-180: shift/reduce conflict (shift 46, reduce 83) on BLIT
-180: shift/reduce conflict (shift 47, reduce 54) on NAME
-180: shift/reduce conflict (shift 47, reduce 83) on NAME
-180: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-180: shift/reduce conflict (shift 48, reduce 83) on ADTNAME
-180: shift/reduce conflict (shift 49, reduce 54) on FLIT
-180: shift/reduce conflict (shift 49, reduce 83) on FLIT
-180: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-180: shift/reduce conflict (shift 50, reduce 83) on STRINGLIT
-state 180
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : RING type_name expr expr expr expr expr expr .  (83)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 83
-	RBRACE  reduce 83
-	RBRACKET  reduce 83
-	COMMA  reduce 83
-	IN  reduce 83
-	LAND  reduce 83
-	THEN  reduce 83
-	ELSE  reduce 83
-	BAR  reduce 83
-	EOF  reduce 83
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-181: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-181: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-181: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-181: shift/reduce conflict (shift 85, reduce 54) on PLUS
-181: shift/reduce conflict (shift 86, reduce 54) on MINUS
-181: shift/reduce conflict (shift 87, reduce 54) on STAR
-181: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-181: shift/reduce conflict (shift 89, reduce 54) on EQ
-181: shift/reduce conflict (shift 90, reduce 54) on NEQ
-181: shift/reduce conflict (shift 91, reduce 54) on LT
-181: shift/reduce conflict (shift 92, reduce 54) on LEQ
-181: shift/reduce conflict (shift 93, reduce 54) on GT
-181: shift/reduce conflict (shift 94, reduce 54) on GEQ
-181: shift/reduce conflict (shift 95, reduce 54) on AND
-181: shift/reduce conflict (shift 96, reduce 54) on OR
-181: shift/reduce conflict (shift 37, reduce 54) on NOT
-181: shift/reduce conflict (shift 38, reduce 54) on GROUP
-181: shift/reduce conflict (shift 39, reduce 54) on RING
-181: shift/reduce conflict (shift 40, reduce 54) on FIELD
-181: shift/reduce conflict (shift 41, reduce 54) on LET
-181: shift/reduce conflict (shift 42, reduce 54) on IF
-181: shift/reduce conflict (shift 43, reduce 54) on PRINT
-181: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-181: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-181: shift/reduce conflict (shift 46, reduce 54) on BLIT
-181: shift/reduce conflict (shift 47, reduce 54) on NAME
-181: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-181: shift/reduce conflict (shift 49, reduce 54) on FLIT
-181: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-state 181
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr expr expr expr expr . expr  (84)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 187
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 182
-	target_wild : UNDERSCORE .  (77)
-
-	.  reduce 77
-
-
-183: shift/reduce conflict (shift 188, reduce 78) on LPAREN
-183: reduce/reduce conflict (reduce 74, reduce 78) on RPAREN
-183: reduce/reduce conflict (reduce 74, reduce 78) on COMMA
-state 183
-	target_wild : ADTNAME .  (74)
-	target_wild : ADTNAME . LPAREN target_wild RPAREN  (76)
-	target_conc_outer : ADTNAME .  (78)
-	target_conc_outer : ADTNAME . LPAREN target_conc_inner RPAREN  (79)
-
-	LPAREN  shift 188
-	RPAREN  reduce 74
-	LBRACE  reduce 78
-	LBRACKET  reduce 78
-	COMMA  reduce 74
-	PLUS  reduce 78
-	MINUS  reduce 78
-	STAR  reduce 78
-	DIVIDE  reduce 78
-	EQ  reduce 78
-	NEQ  reduce 78
-	LT  reduce 78
-	LEQ  reduce 78
-	GT  reduce 78
-	GEQ  reduce 78
-	AND  reduce 78
-	OR  reduce 78
-	NOT  reduce 78
-	GROUP  reduce 78
-	RING  reduce 78
-	FIELD  reduce 78
-	LET  reduce 78
-	IF  reduce 78
-	PRINT  reduce 78
-	FUNCTION  reduce 78
-	LITERAL  reduce 78
-	BLIT  reduce 78
-	NAME  reduce 78
-	ADTNAME  reduce 78
-	FLIT  reduce 78
-	STRINGLIT  reduce 78
-
-
-state 184
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	target_wild : expr .  (75)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 75
-	COMMA  reduce 75
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 185
-	match_line : BAR LPAREN pattern . RPAREN ARROW expr  (71)
-
-	RPAREN  shift 189
-	.  error
-
-
-state 186
-	pattern : target_wild .  (72)
-	pattern : target_wild . COMMA pattern  (73)
-
-	COMMA  shift 190
-	RPAREN  reduce 72
-
-
-187: shift/reduce conflict (shift 33, reduce 54) on LPAREN
-187: shift/reduce conflict (shift 33, reduce 84) on LPAREN
-187: shift/reduce conflict (shift 34, reduce 54) on LBRACE
-187: shift/reduce conflict (shift 34, reduce 84) on LBRACE
-187: shift/reduce conflict (shift 35, reduce 54) on LBRACKET
-187: shift/reduce conflict (shift 35, reduce 84) on LBRACKET
-187: shift/reduce conflict (shift 85, reduce 54) on PLUS
-187: shift/reduce conflict (shift 85, reduce 84) on PLUS
-187: shift/reduce conflict (shift 86, reduce 54) on MINUS
-187: shift/reduce conflict (shift 86, reduce 84) on MINUS
-187: shift/reduce conflict (shift 87, reduce 54) on STAR
-187: shift/reduce conflict (shift 87, reduce 84) on STAR
-187: shift/reduce conflict (shift 88, reduce 54) on DIVIDE
-187: shift/reduce conflict (shift 88, reduce 84) on DIVIDE
-187: shift/reduce conflict (shift 89, reduce 54) on EQ
-187: shift/reduce conflict (shift 89, reduce 84) on EQ
-187: shift/reduce conflict (shift 90, reduce 54) on NEQ
-187: shift/reduce conflict (shift 90, reduce 84) on NEQ
-187: shift/reduce conflict (shift 91, reduce 54) on LT
-187: shift/reduce conflict (shift 91, reduce 84) on LT
-187: shift/reduce conflict (shift 92, reduce 54) on LEQ
-187: shift/reduce conflict (shift 92, reduce 84) on LEQ
-187: shift/reduce conflict (shift 93, reduce 54) on GT
-187: shift/reduce conflict (shift 93, reduce 84) on GT
-187: shift/reduce conflict (shift 94, reduce 54) on GEQ
-187: shift/reduce conflict (shift 94, reduce 84) on GEQ
-187: shift/reduce conflict (shift 95, reduce 54) on AND
-187: shift/reduce conflict (shift 95, reduce 84) on AND
-187: shift/reduce conflict (shift 96, reduce 54) on OR
-187: shift/reduce conflict (shift 96, reduce 84) on OR
-187: shift/reduce conflict (shift 37, reduce 54) on NOT
-187: shift/reduce conflict (shift 37, reduce 84) on NOT
-187: shift/reduce conflict (shift 38, reduce 54) on GROUP
-187: shift/reduce conflict (shift 38, reduce 84) on GROUP
-187: shift/reduce conflict (shift 39, reduce 54) on RING
-187: shift/reduce conflict (shift 39, reduce 84) on RING
-187: shift/reduce conflict (shift 40, reduce 54) on FIELD
-187: shift/reduce conflict (shift 40, reduce 84) on FIELD
-187: shift/reduce conflict (shift 41, reduce 54) on LET
-187: shift/reduce conflict (shift 41, reduce 84) on LET
-187: shift/reduce conflict (shift 42, reduce 54) on IF
-187: shift/reduce conflict (shift 42, reduce 84) on IF
-187: shift/reduce conflict (shift 43, reduce 54) on PRINT
-187: shift/reduce conflict (shift 43, reduce 84) on PRINT
-187: shift/reduce conflict (shift 44, reduce 54) on FUNCTION
-187: shift/reduce conflict (shift 44, reduce 84) on FUNCTION
-187: shift/reduce conflict (shift 45, reduce 54) on LITERAL
-187: shift/reduce conflict (shift 45, reduce 84) on LITERAL
-187: shift/reduce conflict (shift 46, reduce 54) on BLIT
-187: shift/reduce conflict (shift 46, reduce 84) on BLIT
-187: shift/reduce conflict (shift 47, reduce 54) on NAME
-187: shift/reduce conflict (shift 47, reduce 84) on NAME
-187: shift/reduce conflict (shift 48, reduce 54) on ADTNAME
-187: shift/reduce conflict (shift 48, reduce 84) on ADTNAME
-187: shift/reduce conflict (shift 49, reduce 54) on FLIT
-187: shift/reduce conflict (shift 49, reduce 84) on FLIT
-187: shift/reduce conflict (shift 50, reduce 54) on STRINGLIT
-187: shift/reduce conflict (shift 50, reduce 84) on STRINGLIT
-state 187
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	expr : expr expr .  (54)
-	algebraic_expr : FIELD type_name expr expr expr expr expr expr expr .  (84)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	RPAREN  reduce 84
-	RBRACE  reduce 84
-	RBRACKET  reduce 84
-	COMMA  reduce 84
-	IN  reduce 84
-	LAND  reduce 84
-	THEN  reduce 84
-	ELSE  reduce 84
-	BAR  reduce 84
-	EOF  reduce 84
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 188
-	target_wild : ADTNAME LPAREN . target_wild RPAREN  (76)
-	target_conc_outer : ADTNAME LPAREN . target_conc_inner RPAREN  (79)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	UNDERSCORE  shift 182
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 191
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 184
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 164
-	target_wild  goto 192
-	target_conc_inner  goto 134
-
-
-state 189
-	match_line : BAR LPAREN pattern RPAREN . ARROW expr  (71)
-
-	ARROW  shift 193
-	.  error
-
-
-state 190
-	pattern : target_wild COMMA . pattern  (73)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	UNDERSCORE  shift 182
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 183
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 184
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-	pattern  goto 194
-	target_wild  goto 186
-
-
-191: shift/reduce conflict (shift 195, reduce 78) on LPAREN
-191: reduce/reduce conflict (reduce 74, reduce 78) on RPAREN
-state 191
-	target_wild : ADTNAME .  (74)
-	target_wild : ADTNAME . LPAREN target_wild RPAREN  (76)
-	target_conc_outer : ADTNAME .  (78)
-	target_conc_outer : ADTNAME . LPAREN target_conc_inner RPAREN  (79)
-	target_conc_inner : ADTNAME . LPAREN expr RPAREN  (81)
-
-	LPAREN  shift 195
-	RPAREN  reduce 74
-	LBRACE  reduce 78
-	LBRACKET  reduce 78
-	PLUS  reduce 78
-	MINUS  reduce 78
-	STAR  reduce 78
-	DIVIDE  reduce 78
-	EQ  reduce 78
-	NEQ  reduce 78
-	LT  reduce 78
-	LEQ  reduce 78
-	GT  reduce 78
-	GEQ  reduce 78
-	AND  reduce 78
-	OR  reduce 78
-	NOT  reduce 78
-	GROUP  reduce 78
-	RING  reduce 78
-	FIELD  reduce 78
-	LET  reduce 78
-	IF  reduce 78
-	PRINT  reduce 78
-	FUNCTION  reduce 78
-	LITERAL  reduce 78
-	BLIT  reduce 78
-	NAME  reduce 78
-	ADTNAME  reduce 78
-	FLIT  reduce 78
-	STRINGLIT  reduce 78
-
-
-state 192
-	target_wild : ADTNAME LPAREN target_wild . RPAREN  (76)
-
-	RPAREN  shift 196
-	.  error
-
-
-state 193
-	match_line : BAR LPAREN pattern RPAREN ARROW . expr  (71)
-
-	LPAREN  shift 33
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	MINUS  shift 36
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-	.  error
-
-	lexpr  goto 51
-	expr  goto 197
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
-
-
-state 194
-	pattern : target_wild COMMA pattern .  (73)
+	match_rule : match_line match_rule .  (73)
 
 	.  reduce 73
 
 
+state 179
+	expr : GROUP LBRACE type_name expr expr expr expr RBRACE .  (57)
+
+	.  reduce 57
+
+
+state 180
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : RING LBRACE type_name expr expr expr expr expr . expr RBRACE  (58)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 193
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 181
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr expr expr expr . expr expr RBRACE  (59)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 194
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 182
+	literal : LPAREN . literal COMMA literal RPAREN  (85)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	LITERAL  shift 185
+	BLIT  shift 186
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	.  error
+
+	literal  goto 195
+
+
+state 183
+	literal : LBRACKET . inside_lit_list RBRACKET  (86)
+	inside_lit_list : .  (87)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	LITERAL  shift 185
+	BLIT  shift 186
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	RBRACKET  reduce 87
+
+	literal  goto 196
+	inside_lit_list  goto 197
+
+
+state 184
+	target_wild : UNDERSCORE .  (80)
+
+	.  reduce 80
+
+
+state 185
+	literal : LITERAL .  (81)
+
+	.  reduce 81
+
+
+state 186
+	literal : BLIT .  (83)
+
+	.  reduce 83
+
+
+state 187
+	target_wild : ADTNAME .  (77)
+	target_wild : ADTNAME . LPAREN target_wild RPAREN  (79)
+
+	LPAREN  shift 198
+	RPAREN  reduce 77
+	COMMA  reduce 77
+
+
+state 188
+	literal : FLIT .  (82)
+
+	.  reduce 82
+
+
+state 189
+	literal : STRINGLIT .  (84)
+
+	.  reduce 84
+
+
+state 190
+	match_line : BAR LPAREN pattern . RPAREN ARROW expr  (74)
+
+	RPAREN  shift 199
+	.  error
+
+
+state 191
+	pattern : target_wild .  (75)
+	pattern : target_wild . COMMA pattern  (76)
+
+	COMMA  shift 200
+	RPAREN  reduce 75
+
+
+state 192
+	target_wild : literal .  (78)
+
+	.  reduce 78
+
+
+state 193
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : RING LBRACE type_name expr expr expr expr expr expr . RBRACE  (58)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	RBRACE  shift 201
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 194
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr expr expr expr expr . expr RBRACE  (59)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 202
+	binop  goto 98
+	target_conc  goto 53
+
+
 state 195
-	target_wild : ADTNAME LPAREN . target_wild RPAREN  (76)
-	target_conc_outer : ADTNAME LPAREN . target_conc_inner RPAREN  (79)
-	target_conc_inner : ADTNAME LPAREN . expr RPAREN  (81)
+	literal : LPAREN literal . COMMA literal RPAREN  (85)
+
+	COMMA  shift 203
+	.  error
+
+
+state 196
+	inside_lit_list : literal . COMMA inside_lit_list  (88)
+
+	COMMA  shift 204
+	.  error
+
+
+state 197
+	literal : LBRACKET inside_lit_list . RBRACKET  (86)
+
+	RBRACKET  shift 205
+	.  error
+
+
+state 198
+	target_wild : ADTNAME LPAREN . target_wild RPAREN  (79)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	UNDERSCORE  shift 184
+	LITERAL  shift 185
+	BLIT  shift 186
+	ADTNAME  shift 187
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	.  error
+
+	target_wild  goto 206
+	literal  goto 192
+
+
+state 199
+	match_line : BAR LPAREN pattern RPAREN . ARROW expr  (74)
+
+	ARROW  shift 207
+	.  error
+
+
+state 200
+	pattern : target_wild COMMA . pattern  (76)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	UNDERSCORE  shift 184
+	LITERAL  shift 185
+	BLIT  shift 186
+	ADTNAME  shift 187
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	.  error
+
+	pattern  goto 208
+	target_wild  goto 191
+	literal  goto 192
+
+
+state 201
+	expr : RING LBRACE type_name expr expr expr expr expr expr RBRACE .  (58)
+
+	.  reduce 58
+
+
+state 202
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	expr : expr expr .  (55)
+	expr : FIELD LBRACE type_name expr expr expr expr expr expr expr . RBRACE  (59)
+
+	LPAREN  shift 33
+	LBRACE  shift 34
+	RBRACE  shift 209
+	LBRACKET  shift 35
+	NOT  shift 37
+	PLUS  reduce 55
+	MINUS  reduce 55
+	STAR  reduce 55
+	DIVIDE  reduce 55
+	EQ  reduce 55
+	NEQ  reduce 55
+	LT  reduce 55
+	LEQ  reduce 55
+	GT  reduce 55
+	GEQ  reduce 55
+	AND  reduce 55
+	OR  reduce 55
+	CONS  reduce 55
+	GROUP  reduce 55
+	RING  reduce 55
+	FIELD  reduce 55
+	LET  reduce 55
+	IF  reduce 55
+	PRINT  reduce 55
+	FUNCTION  reduce 55
+	LITERAL  reduce 55
+	BLIT  reduce 55
+	NAME  reduce 55
+	ADTNAME  reduce 55
+	FLIT  reduce 55
+	STRINGLIT  reduce 55
+
+	lexpr  goto 51
+	expr  goto 97
+	binop  goto 98
+	target_conc  goto 53
+
+
+state 203
+	literal : LPAREN literal COMMA . literal RPAREN  (85)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	LITERAL  shift 185
+	BLIT  shift 186
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	.  error
+
+	literal  goto 210
+
+
+state 204
+	inside_lit_list : literal COMMA . inside_lit_list  (88)
+	inside_lit_list : .  (87)
+
+	LPAREN  shift 182
+	LBRACKET  shift 183
+	LITERAL  shift 185
+	BLIT  shift 186
+	FLIT  shift 188
+	STRINGLIT  shift 189
+	RBRACKET  reduce 87
+
+	literal  goto 196
+	inside_lit_list  goto 211
+
+
+state 205
+	literal : LBRACKET inside_lit_list RBRACKET .  (86)
+
+	.  reduce 86
+
+
+state 206
+	target_wild : ADTNAME LPAREN target_wild . RPAREN  (79)
+
+	RPAREN  shift 212
+	.  error
+
+
+state 207
+	match_line : BAR LPAREN pattern RPAREN ARROW . expr  (74)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
 	MINUS  shift 36
-	UNDERSCORE  shift 182
 	NOT  shift 37
 	GROUP  shift 38
 	RING  shift 39
@@ -4820,63 +3795,69 @@ state 195
 	LITERAL  shift 45
 	BLIT  shift 46
 	NAME  shift 47
-	ADTNAME  shift 191
+	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
 	.  error
 
 	lexpr  goto 51
-	expr  goto 198
-	list_expr  goto 53
-	algebraic_expr  goto 54
-	target_conc_outer  goto 164
-	target_wild  goto 192
-	target_conc_inner  goto 134
+	expr  goto 213
+	target_conc  goto 53
 
 
-state 196
-	target_wild : ADTNAME LPAREN target_wild RPAREN .  (76)
+state 208
+	pattern : target_wild COMMA pattern .  (76)
 
 	.  reduce 76
 
 
-197: shift/reduce conflict (shift 33, reduce 71) on LPAREN
-197: shift/reduce conflict (shift 34, reduce 71) on LBRACE
-197: shift/reduce conflict (shift 35, reduce 71) on LBRACKET
-197: shift/reduce conflict (shift 38, reduce 71) on GROUP
-197: shift/reduce conflict (shift 39, reduce 71) on RING
-197: shift/reduce conflict (shift 40, reduce 71) on FIELD
-197: shift/reduce conflict (shift 41, reduce 71) on LET
-197: shift/reduce conflict (shift 42, reduce 71) on IF
-197: shift/reduce conflict (shift 43, reduce 71) on PRINT
-197: shift/reduce conflict (shift 44, reduce 71) on FUNCTION
-197: shift/reduce conflict (shift 45, reduce 71) on LITERAL
-197: shift/reduce conflict (shift 46, reduce 71) on BLIT
-197: shift/reduce conflict (shift 47, reduce 71) on NAME
-197: shift/reduce conflict (shift 48, reduce 71) on ADTNAME
-197: shift/reduce conflict (shift 49, reduce 71) on FLIT
-197: shift/reduce conflict (shift 50, reduce 71) on STRINGLIT
-state 197
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	match_line : BAR LPAREN pattern RPAREN ARROW expr .  (71)
+state 209
+	expr : FIELD LBRACE type_name expr expr expr expr expr expr expr RBRACE .  (59)
+
+	.  reduce 59
+
+
+state 210
+	literal : LPAREN literal COMMA literal . RPAREN  (85)
+
+	RPAREN  shift 214
+	.  error
+
+
+state 211
+	inside_lit_list : literal COMMA inside_lit_list .  (88)
+
+	.  reduce 88
+
+
+state 212
+	target_wild : ADTNAME LPAREN target_wild RPAREN .  (79)
+
+	.  reduce 79
+
+
+state 213
+	expr : expr . binop expr  (51)
+	expr : expr . expr  (55)
+	match_line : BAR LPAREN pattern RPAREN ARROW expr .  (74)
 
 	LPAREN  shift 33
 	LBRACE  shift 34
 	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
+	PLUS  shift 84
+	MINUS  shift 85
+	STAR  shift 86
+	DIVIDE  shift 87
+	EQ  shift 88
+	NEQ  shift 89
+	LT  shift 90
+	LEQ  shift 91
+	GT  shift 92
+	GEQ  shift 93
+	AND  shift 94
+	OR  shift 95
 	NOT  shift 37
+	CONS  shift 96
 	GROUP  shift 38
 	RING  shift 39
 	FIELD  shift 40
@@ -4890,114 +3871,20 @@ state 197
 	ADTNAME  shift 48
 	FLIT  shift 49
 	STRINGLIT  shift 50
-	RPAREN  reduce 71
-	RBRACE  reduce 71
-	RBRACKET  reduce 71
-	COMMA  reduce 71
-	IN  reduce 71
-	LAND  reduce 71
-	THEN  reduce 71
-	ELSE  reduce 71
-	BAR  reduce 71
-	EOF  reduce 71
+	BAR  reduce 74
+	END  reduce 74
 
 	lexpr  goto 51
 	expr  goto 97
-	list_expr  goto 53
 	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	target_conc  goto 53
 
 
-198: shift/reduce conflict (shift 174, reduce 75) on RPAREN
-state 198
-	expr : expr . binop expr  (50)
-	expr : expr . expr  (54)
-	target_wild : expr .  (75)
-	target_conc_inner : ADTNAME LPAREN expr . RPAREN  (81)
+state 214
+	literal : LPAREN literal COMMA literal RPAREN .  (85)
 
-	LPAREN  shift 33
-	RPAREN  shift 174
-	LBRACE  shift 34
-	LBRACKET  shift 35
-	PLUS  shift 85
-	MINUS  shift 86
-	STAR  shift 87
-	DIVIDE  shift 88
-	EQ  shift 89
-	NEQ  shift 90
-	LT  shift 91
-	LEQ  shift 92
-	GT  shift 93
-	GEQ  shift 94
-	AND  shift 95
-	OR  shift 96
-	NOT  shift 37
-	GROUP  shift 38
-	RING  shift 39
-	FIELD  shift 40
-	LET  shift 41
-	IF  shift 42
-	PRINT  shift 43
-	FUNCTION  shift 44
-	LITERAL  shift 45
-	BLIT  shift 46
-	NAME  shift 47
-	ADTNAME  shift 48
-	FLIT  shift 49
-	STRINGLIT  shift 50
-
-	lexpr  goto 51
-	expr  goto 97
-	list_expr  goto 53
-	binop  goto 98
-	algebraic_expr  goto 54
-	target_conc_outer  goto 55
+	.  reduce 85
 
 
-State 28 contains 1 reduce/reduce conflict.
-State 30 contains 4 shift/reduce conflicts.
-State 31 contains 4 shift/reduce conflicts.
-State 48 contains 1 shift/reduce conflict.
-State 52 contains 16 shift/reduce conflicts.
-State 66 contains 1 shift/reduce conflict.
-State 72 contains 16 shift/reduce conflicts.
-State 73 contains 16 shift/reduce conflicts.
-State 79 contains 29 shift/reduce conflicts.
-State 86 contains 16 shift/reduce conflicts.
-State 97 contains 29 shift/reduce conflicts.
-State 116 contains 29 shift/reduce conflicts, 1 reduce/reduce conflict.
-State 119 contains 1 shift/reduce conflict.
-State 120 contains 1 shift/reduce conflict.
-State 121 contains 1 shift/reduce conflict.
-State 130 contains 29 shift/reduce conflicts.
-State 132 contains 1 shift/reduce conflict.
-State 135 contains 29 shift/reduce conflicts.
-State 139 contains 6 shift/reduce conflicts.
-State 140 contains 4 shift/reduce conflicts.
-State 141 contains 4 shift/reduce conflicts.
-State 146 contains 29 shift/reduce conflicts.
-State 147 contains 29 shift/reduce conflicts.
-State 148 contains 29 shift/reduce conflicts.
-State 158 contains 29 shift/reduce conflicts.
-State 159 contains 29 shift/reduce conflicts.
-State 160 contains 29 shift/reduce conflicts.
-State 164 contains 1 reduce/reduce conflict.
-State 167 contains 58 shift/reduce conflicts.
-State 168 contains 29 shift/reduce conflicts.
-State 169 contains 29 shift/reduce conflicts.
-State 170 contains 29 shift/reduce conflicts.
-State 173 contains 1 shift/reduce conflict.
-State 176 contains 29 shift/reduce conflicts.
-State 177 contains 29 shift/reduce conflicts.
-State 180 contains 58 shift/reduce conflicts.
-State 181 contains 29 shift/reduce conflicts.
-State 183 contains 1 shift/reduce conflict, 2 reduce/reduce conflicts.
-State 187 contains 58 shift/reduce conflicts.
-State 191 contains 1 shift/reduce conflict, 1 reduce/reduce conflict.
-State 197 contains 16 shift/reduce conflicts.
-State 198 contains 1 shift/reduce conflict.
-
-
-60 terminals, 29 nonterminals
-103 grammar rules, 199 states
+61 terminals, 28 nonterminals
+110 grammar rules, 215 states

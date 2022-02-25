@@ -24,21 +24,21 @@ type token =
   | AND
   | OR
   | NOT
+  | CONS
   | GROUP
   | RING
   | FIELD
+  | POLY
   | LET
   | IN
   | LAND
   | IF
   | THEN
   | ELSE
-  | END
   | TYPE
   | OF
   | BAR
   | LIST
-  | PAIR
   | INT
   | BOOL
   | FLOAT
@@ -48,6 +48,7 @@ type token =
   | FUNCTION
   | MATCH
   | WITH
+  | END
   | LITERAL of (int)
   | BLIT of (bool)
   | NAME of (string)

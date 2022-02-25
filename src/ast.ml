@@ -1,7 +1,7 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
-          And | Or
+          And | Or | Cons
 
 type uop = Neg | Not
 
@@ -69,7 +69,7 @@ and pattern =
 
 and target_wild = 
     TargetWildName of name
-  | TargetWildExpr of expr
+  | TargetWildLiteral of expr
   | TargetWildApp of name * target_wild
   | CatchAll
 

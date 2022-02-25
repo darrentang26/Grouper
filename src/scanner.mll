@@ -22,6 +22,7 @@ rule token = parse
 | '-'      { MINUS }
 | '*'      { STAR }
 | '/'      { DIVIDE }
+| "::"     { CONS }
 | '='      { ASSIGN }
 | '_'      { UNDERSCORE }
 | "->"     { ARROW }
@@ -34,9 +35,11 @@ rule token = parse
 | "&&"     { AND }
 | "||"     { OR }
 | "!"      { NOT }
+| "::"     { CONS }
 | "group"  { GROUP }
 | "ring"   { RING }
 | "field"  { FIELD }
+| "poly"   { POLY }
 | "let"    { LET }
 | "in"     { IN }
 | "and"    { LAND }
@@ -49,7 +52,6 @@ rule token = parse
 | "of"     { OF }
 | '|'      { BAR }
 | "list"   { LIST }
-| "pair"   { PAIR }
 | "int"    { INT }
 | "bool"   { BOOL }
 | "float"  { FLOAT }
@@ -61,6 +63,7 @@ rule token = parse
 | "lambda" { FUNCTION }
 | "match"  { MATCH }
 | "with"   { WITH }
+| "end"    { END }
 | digits as lxm { LITERAL(int_of_string lxm) }
 | digits '.' digit* as lxm { FLIT(lxm) }
 | '"' _ '"' as lxm { STRINGLIT(lxm) }
