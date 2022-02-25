@@ -1,0 +1,6 @@
+.DS_Store
+
+src/parser.automaton
+src/parser.output
+src/parser.mli
+src/parser.ml
