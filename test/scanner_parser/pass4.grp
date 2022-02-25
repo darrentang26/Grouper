@@ -2,7 +2,7 @@ let int * int -> int add = function (n m) n + m
 and int -> int inverse = function (n) -1 * n 
 and int identity = 0
 and int * int -> bool equals = function (n m) n == m  
-and int group num_group = group add identity inverse equals 
+and int group num_group = group {add identity inverse equals} 
 and int mult_id = 1
 and int * int -> int mult = function (n m) n * m
-and int ring num_ring = ring num_group mult mult_id
+and int ring num_ring = ring {num_group mult mult_id}
