@@ -72,30 +72,30 @@ type_expr:
                     { $2 }
 
 adt_opt:
-    adt_type_expr                   { [$1] }
-  | adt_type_expr BAR adt_type_expr { $1 :: $3 }
+    adt_type_expr             { [$1] }
+  | adt_type_expr BAR adt_opt { $1 :: $3 }
 
 adt_type_expr:
-    NAME              { (Name($1), VoidName) }
-  | NAME OF type_name %prec IN { (Name($1), $3) }
+    ADTNAME                        { ($1, VoidName) }
+  | ADTNAME OF type_name %prec IN  { ($1, $3) }
 
 struct_decl_body:
     NAME COLON type_name                        { [($1, $3)] }
   | NAME COLON type_name COMMA struct_decl_body { ($1, $3) :: $5 }
 
 type_name:
-    INT           { IntName   }
-  | BOOL          { BoolName  }
-  | FLOAT         { FloatName }
-  | STRING        { StringName }
-  | NAME          { UserTypeName($1) } // for adts and structs
-  | type_name LIST      { ListTypeName($1) }
+    INT                       { IntName   }
+  | BOOL                      { BoolName  }
+  | FLOAT                     { FloatName }
+  | STRING                    { StringName }
+  | NAME                      { UserTypeName($1) } // for adts and structs
+  | type_name LIST            { ListTypeName($1) }
   | type_name STAR type_name  { PairTypeName($1, $3) }
   | type_name ARROW type_name { FunTypeName($1, $3) }
-  | type_name GROUP     { GroupTypeName($1) }
-  | type_name RING      { RingTypeName($1) }
-  | type_name FIELD     { FieldTypeName($1) }
-  | type_name POLY      { PolyTypeName($1) }
+  | type_name GROUP           { GroupTypeName($1) }
+  | type_name RING            { RingTypeName($1) }
+  | type_name FIELD           { FieldTypeName($1) }
+  | type_name POLY            { PolyTypeName($1) }
 
 
 //-------------------- LET AND EXPRESSIONS --------------------//
@@ -119,7 +119,7 @@ expr:
   | STRINGLIT             { StringLit($1) }
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
-  | LBRACKET inside_list RBRACKET  { List_Expr($2) }
+  | LBRACKET inside_list RBRACKET  { ListExpr($2) }
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
@@ -131,9 +131,9 @@ expr:
   | GROUP LBRACE type_name expr expr expr expr RBRACE
                       { Group ($3, $4, $5, $6, $7) }        
   | RING LBRACE type_name expr expr expr expr expr expr RBRACE
-                      { Ring  (Group ($3, $4, $5, $6, $7), $8, $9) }
+                      { Ring  ($3, $4, $5, $6, $7, $8, $9) }
   | FIELD LBRACE type_name expr expr expr expr expr expr expr RBRACE
-                      { Field (Ring  (Group ($3, $4, $5, $6, $7), $8, $9,) $10) }
+                      { Field ($3, $4, $5, $6, $7, $8, $9, $10) }
   | LBRACE struct_init_body RBRACE
                           { StructInit($2) }
   | NAME DOT NAME         { StructRef($1, $3) }
@@ -183,6 +183,7 @@ literal:
   | FLIT	                { Fliteral($1) }
   | BLIT                  { BoolLit($1) }
   | STRINGLIT             { StringLit($1) }
+  | NAME                  { Name($1) }
   | LPAREN literal COMMA literal RPAREN
                           { PairExpr($2, $4) }
   | LBRACKET inside_lit_list RBRACKET  { ListExpr($2) }
@@ -193,27 +194,17 @@ inside_lit_list:
 
 
 target_conc:
-    ADTNAME                                 { TargetConcName($1) }
+      ADTNAME                           { TargetConcName($1) }
     | ADTNAME LPAREN target_conc RPAREN { TargetConcApp($1, $3) }
-    | ADTNAME LPAREN expr RPAREN { TargetConcApp($1, TargetConcExpr($3)) }
+    | ADTNAME LPAREN expr RPAREN        { TargetConcApp($1, TargetConcExpr($3)) }
 
 
 //-------------------- MISC RULES --------------------//
-
-/*algebraic_expr:
-    GROUP type_name expr expr expr expr %prec IN
-                      { Group ($2, $3, $4, $5, $6) }        
-  | RING type_name expr expr expr expr expr expr %prec IN
-                      { Ring  (Group ($2, $3, $4, $5, $6), $7, $8) }
-  | FIELD type_name expr expr expr expr expr expr expr %prec IN
-                      { Field (Ring  (Group ($2, $3, $4, $5, $6), $7, $8), $9) }*/
 
 struct_init_body:
     NAME ASSIGN expr                         { [($1, $3)] }
   | NAME ASSIGN expr COMMA struct_init_body { ($1, $3) :: $5 }
 
-/*list_expr:
-  | LBRACKET inside_list RBRACKET  { $2 }*/
 
 inside_list:
     /* nothing */ { [] }
