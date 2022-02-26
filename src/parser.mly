@@ -119,7 +119,7 @@ expr:
   | STRINGLIT             { StringLit($1) }
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
-  | LBRACKET inside_list RBRACKET  { ListExpr($2) }
+  | LBRACKET inside_list RBRACKET  { ListExpr(List.rev $2) }
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
@@ -150,7 +150,7 @@ fn_def:
 
 //---------- formals ----------//
 formals:
-  LPAREN formals_opt RPAREN { $2 }
+  LPAREN formals_opt RPAREN { List.rev $2 }
 
 formals_opt:
     /* nothing */ { [] }

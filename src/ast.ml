@@ -121,25 +121,21 @@ let rec string_of_type_expr = function
 | BoolExpr -> "bool"
 | StringExpr -> "string"
 | VoidExpr -> "void"
-| AdtTypeExpr([]) -> "endAdt"
-| AdtTypeExpr((name, type_name)::adts) -> name ^ string_of_type_name type_name 
-                                              ^ "|" ^ string_of_type_expr (AdtTypeExpr(adts))
-| StructTypeExpr([]) -> "}"
-| StructTypeExpr((name,type_name)::structs) -> "{" ^ name ^ ":" ^ string_of_type_name type_name
-                                                   ^ "," ^ string_of_type_expr (StructTypeExpr(structs))
+| AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_name) -> name ^ " of " ^ string_of_type_name type_name) adts )
+| StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_name) -> name ^ " : " ^ string_of_type_name type_name) structs ) ^ "}"
 | FunType(type_expr, result) -> string_of_type_expr type_expr ^ "->" ^ string_of_type_expr result 
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ string_of_type_expr type_expr2 ^ ")"
-| ListType(type_expr) -> string_of_type_expr type_expr ^ "list"
-| GroupType(type_expr) -> string_of_type_expr type_expr ^ "group"
-| RingType(type_expr) -> string_of_type_expr type_expr ^ "ring"
-| FieldType(type_expr) -> string_of_type_expr type_expr ^ "field"
-| PolyType(type_expr) -> string_of_type_expr type_expr ^ "poly"
+| ListType(type_expr) -> string_of_type_expr type_expr ^ " list"
+| GroupType(type_expr) -> string_of_type_expr type_expr ^ " group"
+| RingType(type_expr) -> string_of_type_expr type_expr ^ " ring"
+| FieldType(type_expr) -> string_of_type_expr type_expr ^ " field"
+| PolyType(type_expr) -> string_of_type_expr type_expr ^ " poly"
 
 let string_of_typ_decl (typ_name, typ_expr) =
-  typ_name ^ string_of_type_expr typ_expr
+  "type " ^ typ_name ^ " = " ^ string_of_type_expr typ_expr ^ "\n"
 
 let string_of_bind (name, typ_name) = 
-  name ^ string_of_type_name typ_name
+  string_of_type_name typ_name ^ " " ^ name
 
 let rec string_of_expr = function
   Literal(lit) -> string_of_int lit
@@ -147,20 +143,17 @@ let rec string_of_expr = function
 | BoolLit(true) -> "true"
 | BoolLit(false) -> "false"
 | StringLit(str) -> "\"" ^ str ^ "\""
-| PairExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ string_of_expr expr2 ^ ")"
-| ListExpr([]) -> "]"
-| ListExpr(expr::exprs) -> "[" ^ string_of_expr expr ^ string_of_expr (ListExpr(exprs))
+| PairExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ "," ^ string_of_expr expr2 ^ ")"
+| ListExpr(elts) -> "[" ^ String.concat ", " (List.map (fun elt -> string_of_expr elt) elts ) ^ "]"
 | Name(name) -> name
-| Binop(expr1,op,expr2) -> string_of_expr expr1 ^ string_of_op op ^ string_of_expr expr2
+| Binop(expr1,op,expr2) -> string_of_expr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_expr expr2
 | Unop(op,expr) -> string_of_uop op ^ string_of_expr expr
 | Let([], body) -> "" ^ string_of_expr body
-| Let((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ "in" ^ string_of_expr (Let(lets, body))
-| Function([], body) -> ")" ^ string_of_expr body
-| Function(arg::args, body) -> "(" ^ arg ^ string_of_expr (Function(args,body))
+| Let((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ " = " ^ string_of_expr expr ^ " in\n" ^ string_of_expr (Let(lets, body))
+| Function(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_expr body 
 | AdtExpr(target) -> string_of_target_concrete target
-| StructInit([]) -> "}"
-| StructInit((name,expr)::attribs) -> "{" ^ name ^ ":" ^ string_of_expr expr ^ string_of_expr (StructInit(attribs))
-| StructRef(name1, name2) -> name1 ^ " " ^ name2
+| StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
+| StructRef(name1, name2) -> name1 ^ "." ^ name2
 | Match(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")"
                                 ^ String.concat "\n|" (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
@@ -204,4 +197,4 @@ and string_of_field(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) =
   string_of_expr expr7
 
 let string_of_program (typ_decls, expr) = 
-  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ string_of_expr expr  
+  String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_expr expr ^ "\n"
