@@ -19,7 +19,8 @@ open Ast
 %type <Ast.program> program
 
 %nonassoc NOIN
-%nonassoc LET IN PRINT FUNCTION IF
+%nonassoc LET IN PRINT
+%nonassoc FUNCTION IF
 %left ARROW
 %nonassoc LIST
 %nonassoc GROUP RING FIELD POLY
@@ -119,7 +120,7 @@ expr:
   | STRINGLIT             { StringLit($1) }
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
-  | LBRACKET inside_list RBRACKET  { ListExpr(List.rev $2) }
+  | LBRACKET inside_list RBRACKET  { ListExpr($2) }
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
@@ -128,12 +129,12 @@ expr:
   | expr expr   %prec NOT { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
-  | GROUP LBRACE type_name expr expr expr expr RBRACE
-                      { Group ($3, $4, $5, $6, $7) }        
-  | RING LBRACE type_name expr expr expr expr expr expr RBRACE
-                      { Ring  ($3, $4, $5, $6, $7, $8, $9) }
-  | FIELD LBRACE type_name expr expr expr expr expr expr expr RBRACE
-                      { Field ($3, $4, $5, $6, $7, $8, $9, $10) }
+  | GROUP LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+                      { Group ($3, $5, $7, $9, $11) }        
+  | RING LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+                      { Ring  ($3, $5, $7, $9, $11, $13, $15) }
+  | FIELD LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+                      { Field ($3, $5, $7, $9, $11, $13, $15, $17) }
   | LBRACE struct_init_body RBRACE
                           { StructInit($2) }
   | NAME DOT NAME         { StructRef($1, $3) }
@@ -145,7 +146,7 @@ expr:
 //-------------------- FUNCTION DEFINITION --------------------//
 
 fn_def:
-    formals expr   %prec IN                           { Function($1, $2)}
+    formals expr END           { Function($1, $2)}
   | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
 
 //---------- formals ----------//
@@ -190,6 +191,7 @@ literal:
 
 inside_lit_list:
     /* nothing */ { [] }
+  | literal       { $1::[] }  
   | literal COMMA inside_lit_list { $1 :: $3 }
 
 
@@ -208,6 +210,7 @@ struct_init_body:
 
 inside_list:
     /* nothing */ { [] }
+  | expr          { $1::[] }
   | expr COMMA inside_list { $1 :: $3 }
 
 binop:

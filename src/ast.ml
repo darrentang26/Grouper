@@ -106,14 +106,13 @@ let rec string_of_type_name = function
 | StringName -> "string"
 | VoidName -> "void"
 | UserTypeName(name) -> name
-| FunTypeName(name1, name2) -> string_of_type_name name1 ^ "->" ^ string_of_type_name name2 
-| PairTypeName(tyname1, tyname2) -> "(" ^ string_of_type_name tyname1 ^ "," 
-                                        ^ string_of_type_name tyname2 ^ ")"
-| ListTypeName(tyname) -> string_of_type_name tyname ^ "list"
-| GroupTypeName(tyname) -> string_of_type_name tyname ^ "group"
-| RingTypeName(tyname) -> string_of_type_name tyname ^ "ring"
-| FieldTypeName(tyname) -> string_of_type_name tyname ^ "field"
-| PolyTypeName(tyname) -> string_of_type_name tyname ^ "poly"
+| FunTypeName(name1, name2) -> string_of_type_name name1 ^ " -> " ^ string_of_type_name name2 
+| PairTypeName(tyname1, tyname2) -> "(" ^ string_of_type_name tyname1 ^ " * " ^ string_of_type_name tyname2 ^ ")"
+| ListTypeName(tyname) -> string_of_type_name tyname ^ " list"
+| GroupTypeName(tyname) -> string_of_type_name tyname ^ " group"
+| RingTypeName(tyname) -> string_of_type_name tyname ^ " ring"
+| FieldTypeName(tyname) -> string_of_type_name tyname ^ " field"
+| PolyTypeName(tyname) -> string_of_type_name tyname ^ " poly"
 
 let rec string_of_type_expr = function
   IntExpr -> "int"
@@ -121,7 +120,7 @@ let rec string_of_type_expr = function
 | BoolExpr -> "bool"
 | StringExpr -> "string"
 | VoidExpr -> "void"
-| AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_name) -> name ^ " of " ^ string_of_type_name type_name) adts )
+| AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_name) -> if type_name == VoidName then name else name ^ " of " ^ string_of_type_name type_name) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_name) -> name ^ " : " ^ string_of_type_name type_name) structs ) ^ "}"
 | FunType(type_expr, result) -> string_of_type_expr type_expr ^ "->" ^ string_of_type_expr result 
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ string_of_type_expr type_expr2 ^ ")"
@@ -154,25 +153,25 @@ let rec string_of_expr = function
 | AdtExpr(target) -> string_of_target_concrete target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
-| Match(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")"
-                                ^ String.concat "\n|" (List.map (fun (pattern, expr) -> string_of_pattern pattern 
+| Match(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")" ^ " with\n  | "
+                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
 | Call(expr1, expr2) -> string_of_expr expr1 ^ " " ^ string_of_expr expr2
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
-                         ^ "then " ^ string_of_expr expr2 
-                         ^ "else " ^ string_of_expr expr3
+                         ^ " then " ^ string_of_expr expr2 
+                         ^ " else " ^ string_of_expr expr3
 | Group(group) -> string_of_group group
 | Ring(ring) -> string_of_ring ring
 | Field(field) -> string_of_field field
 | Print(expr) -> "print: " ^ string_of_expr expr
 
 and string_of_pattern = function
-  Pattern(targets) -> String.concat "\n|" (List.map string_of_target_wild targets)  
+  Pattern(targets) -> "(" ^ String.concat ", " (List.map string_of_target_wild targets) ^ ")"  
 
 and string_of_target_wild = function
   TargetWildName(name) -> name
 | TargetWildLiteral(expr) -> string_of_expr expr
-| TargetWildApp(name,target) -> name ^ " of " ^ string_of_target_wild target
+| TargetWildApp(name,target) -> name ^ "(" ^ string_of_target_wild target ^ ")"
 | CatchAll -> "_"
 
 and string_of_target_concrete = function

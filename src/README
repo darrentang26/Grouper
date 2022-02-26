@@ -1,0 +1,27 @@
+Compile with: ocamlbuild toplevel.native
+
+Run the validation script with: `python3 validation.py`. Note that before this
+script is run, compile the toplevel.native file with the above command. This
+script runs the toplevel.native executable on a curated variety of inputs,
+located in the ../test/scanner_parser directory (along with accompanying
+expected output for passing tests in the corresponding .out files).
+
+We have all of the syntax that we initially set out to implement, including:
+- ADTs
+- Structs (records in OCaml-speak)
+- User-defined types
+- Lambda functions
+- Pattern matching
+- Let variable declarations
+- Literals for ints, floats, booleans, and strings
+- Algebraic structure (groups, rings, fields) support
+- Tuples and lists
+
+Syntax to add:
+- Arbitrary Length Tuples
+- Some/None support
+
+Group members:
+- Michael Simpson (michael.simpson@tufts.edu)
+- Robert Nooney (robert.nooney@tufts.edu)
+- Darren Tang (darren.tang@tufts.edu)
