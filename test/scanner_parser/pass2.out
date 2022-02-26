@@ -1,0 +1,9 @@
+type space_pt = {x : int, y : int, z : int}
+type plane_pt = {x : int, y : int}
+let plane_pt sq_pt1 = {x = 0, y = 0} in
+let plane_pt sq_pt2 = {x = 0, y = 5} in
+let plane_pt sq_pt3 = {x = 5, y = 0} in
+let plane_pt sq_pt4 = {x = 5, y = 5} in
+let space_pt tip1 = {x = 0, y = 2, z = 10} in
+let space_pt tip2 = {x = 5, y = 5, z = 10} in
+sq_pt1.x + sq_pt2.y + sq_pt3.x + sq_pt4.y - tip1.x * tip2.z

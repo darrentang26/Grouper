@@ -1,8 +1,7 @@
-let int * int -> int add = function (n m) n + m
-and int -> int inverse = function (n) -1 * n 
-and int identity = 0
-and int * int -> bool equals = function (n m) n == m  
-and int group num_group = group {add identity inverse equals} 
-and int mult_id = 1
-and int * int -> int mult = function (n m) n * m
-and int ring num_ring = ring {num_group mult mult_id}
+let int * int -> int add = lambda (n m) n + m end
+and int -> int inverse = lambda (n) 1 * n end
+and int * int -> bool equals = lambda (n m) n == m end
+let int group num_group = group {int, add, 0, inverse , equals}
+let int * int -> int mult = lambda (n m) n * m end
+let int ring num_ring = ring {int, add, 0, inverse, equals, 1, mult}
+in num_ring

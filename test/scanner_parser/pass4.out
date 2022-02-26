@@ -1,0 +1,7 @@
+let (int * int) -> int add = (n, m) -> n + m in
+let int -> int inverse = (n) -> 1 * n in
+let (int * int) -> bool equals = (n, m) -> n == m in
+let int group num_group = int add 0 inverse equals in
+let (int * int) -> int mult = (n, m) -> n * m in
+let int ring num_ring = int add 0 inverse equals 1 mult in
+num_ring

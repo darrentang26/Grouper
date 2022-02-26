@@ -1,17 +1,21 @@
-type z2 = Zero | One 
+type z2 = Zero | One
 
-let z2 * z2 -> z2 add = match ((a,b)) with 
-    ((Zero, Zero)) -> Zero
-|   ((One, One))   -> Zero
-|   _  -> One
-and z2 -> z2 inverse = match (a) with 
-    Zero -> One
-|   One  -> Zero
-and z2 identity = Zero
-and z2 * z2 -> bool equals = function (n m) n == m  
-and z2 group mod_2_group = group add identity inverse equals 
+let z2 * z2 -> z2 add = lambda (a b) match (a b) with 
+|   (Zero, One) -> One
+|   (One, Zero)   -> One
+|   (_) -> Zero
+end
+let z2 -> z2 inverse = lambda (a) match (a) with 
+|   (Zero) -> One
+|   (One)  -> Zero
+end
+let z2 identity = Zero
+and z2 * z2 -> bool equals = lambda (n m) n == m  end
+and z2 group mod_2_group = group {z2, add, identity, inverse, equals}
 and z2 mult_id = One
-and z2 * z2 -> z2 mult = match ((a,b)) with
-    ((One, One))   -> One
-|   _              -> Zero
-and z2 ring mod_2_ring = ring mod_2_group mult mult_id
+and z2 * z2 -> z2 mult = lambda (a b) match (a b) with
+|   (One, One)   -> One
+|   (_)          -> Zero 
+end
+and z2 ring mod_2_ring = ring {z2, add, identity, inverse, equals, mult, mult_id}
+in Zero + One == Zero

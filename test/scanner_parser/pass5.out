@@ -1,0 +1,17 @@
+type z2 = Zero | One
+let (z2 * z2) -> z2 add = (a, b) -> match (a b) with
+  | (Zero, One) -> One
+  | (One, Zero) -> One
+  | (_) -> Zero in
+let z2 -> z2 inverse = (a) -> match (a) with
+  | (Zero) -> One
+  | (One) -> Zero in
+let z2 identity = Zero in
+let (z2 * z2) -> bool equals = (n, m) -> n == m in
+let z2 group mod_2_group = z2 add identity inverse equals in
+let z2 mult_id = One in
+let (z2 * z2) -> z2 mult = (a, b) -> match (a b) with
+  | (One, One) -> One
+  | (_) -> Zero in
+let z2 ring mod_2_ring = z2 add identity inverse equals mult mult_id in
+Zero + One == Zero
