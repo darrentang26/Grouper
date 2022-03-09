@@ -22,6 +22,7 @@ rule token = parse
 | '-'      { MINUS }
 | '*'      { STAR }
 | '/'      { DIVIDE }
+| "mod"    { MOD }
 | "::"     { CONS }
 | '='      { ASSIGN }
 | '_'      { UNDERSCORE }
