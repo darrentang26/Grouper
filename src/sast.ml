@@ -87,10 +87,10 @@ and string_of_starget_wild = function
 | STargetWildApp(name,target) -> name ^ "(" ^ string_of_target_wild target ^ ")"
 | SCatchAll -> "_"
 
-and string_of_target_concrete = function
+and string_of_starget_concrete = function
   STargetConcName(name) -> name
 | STargetConcExpr(expr) -> string_of_sexpr expr
-| STargetConcApp(name, target) -> name ^ string_of_target_concrete target  
+| STargetConcApp(name, target) -> name ^ string_of_starget_concrete target  
 
 and string_of_sgroup (name, expr1, expr2, expr3, expr4) = 
   string_of_type_name name ^ " " ^
