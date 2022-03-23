@@ -1,7 +1,7 @@
-let int * int -> int add = lambda (n m) n + m end
-and int -> int inverse = lambda (n) 1 * n end
-and int * int -> bool equals = lambda (n m) n == m end
-let int group num_group = group {int, add, 0, inverse , equals}
-let int * int -> int mult = lambda (n m) n * m end
-let int ring num_ring = ring {int, add, 0, inverse, equals, 1, mult}
+let Int * Int -> Int add = lambda (n m) n + m end
+and Int -> Int inverse = lambda (n) 1 * n end
+and Int * Int -> Bool equals = lambda (n m) n == m end
+let Int group num_group = group {Int, add, 0, inverse , equals}
+let Int * Int -> Int mult = lambda (n m) n * m end
+let Int ring num_ring = ring {Int, add, 0, inverse, equals, 1, mult}
 in num_ring

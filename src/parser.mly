@@ -12,7 +12,7 @@ open Ast
 %token FUNCTION MATCH WITH END
 %token <int> LITERAL
 %token <bool> BLIT
-%token <string> NAME ADTNAME FLIT STRINGLIT
+%token <string> NAME ADTNAME TYPNAME FLIT STRINGLIT
 %token EOF
 
 %start program
@@ -49,14 +49,14 @@ tdecls:
   | tdecls tdecl  { $2 :: $1 }
 
 tdecl:
-  TYPE NAME ASSIGN type_expr { ($2, $4) }
+  TYPE TYPNAME ASSIGN type_expr { ($2, $4) }
 
 type_expr:
     INT             { IntExpr }
   | BOOL            { BoolExpr }
   | FLOAT           { FloatExpr }
   | STRING          { StringExpr }
-  | VOID            { VoidExpr }
+  | TYPNAME         { TypNameExpr($1) }
   | adt_opt         { AdtTypeExpr($1) }
   | LBRACE struct_decl_body RBRACE
                     { StructTypeExpr($2) }
@@ -77,26 +77,12 @@ adt_opt:
   | adt_type_expr BAR adt_opt { $1 :: $3 }
 
 adt_type_expr:
-    ADTNAME                        { ($1, VoidName) }
-  | ADTNAME OF type_name %prec IN  { ($1, $3) }
+    ADTNAME                                     { ($1, VoidExpr) }
+  | ADTNAME OF LPAREN type_expr RPAREN %prec IN { ($1, $4) }
 
 struct_decl_body:
-    NAME COLON type_name                        { [($1, $3)] }
-  | NAME COLON type_name COMMA struct_decl_body { ($1, $3) :: $5 }
-
-type_name:
-    INT                       { IntName   }
-  | BOOL                      { BoolName  }
-  | FLOAT                     { FloatName }
-  | STRING                    { StringName }
-  | NAME                      { UserTypeName($1) } // for adts and structs
-  | type_name LIST            { ListTypeName($1) }
-  | type_name STAR type_name  { PairTypeName($1, $3) }
-  | type_name ARROW type_name { FunTypeName($1, $3) }
-  | type_name GROUP           { GroupTypeName($1) }
-  | type_name RING            { RingTypeName($1) }
-  | type_name FIELD           { FieldTypeName($1) }
-  | type_name POLY            { PolyTypeName($1) }
+    NAME COLON type_expr                        { [($1, $3)] }
+  | NAME COLON type_expr COMMA struct_decl_body { ($1, $3) :: $5 }
 
 
 //-------------------- LET AND EXPRESSIONS --------------------//
@@ -109,8 +95,8 @@ lexpr:
   LET letand_opt IN expr  { Let($2, $4) }
 
 letand_opt:
-    type_name NAME ASSIGN expr                  { [(($2, $1), $4)] }
-  | type_name NAME ASSIGN expr LAND letand_opt  { (($2, $1), $4) :: $6 }
+    type_expr NAME ASSIGN expr                  { [(($2, $1), $4)] }
+  | type_expr NAME ASSIGN expr LAND letand_opt  { (($2, $1), $4) :: $6 }
     
 expr:
     lexpr                 { $1 }
@@ -129,11 +115,11 @@ expr:
   | expr expr   %prec NOT { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
-  | GROUP LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+  | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
                       { Group ($3, $5, $7, $9, $11) }        
-  | RING LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+  | RING LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
                       { Ring  ($3, $5, $7, $9, $11, $13, $15) }
-  | FIELD LBRACE type_name COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+  | FIELD LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
                       { Field ($3, $5, $7, $9, $11, $13, $15, $17) }
   | LBRACE struct_init_body RBRACE
                           { StructInit($2) }

@@ -1,10 +1,10 @@
-type language = C | Java | Ocaml | Rust | Other of string
-let language -> string hasObjects = (lang) -> match (lang) with
+type Language = C | JAVA | OCAML | RUST | OTHER of String
+let Language -> String hasObjects = (lang) -> match (lang) with
   | (C) -> "nah"
-  | (Java) -> "heck yeah"
-  | (Ocaml) -> "apparently"
-  | (Rust) -> "no idea"
-  | (Other("Grouper")) -> "heck no"
-  | (Other(s)) -> s + "++" in
-let language js = "JavaScript" in
+  | (JAVA) -> "heck yeah"
+  | (OCAML) -> "apparently"
+  | (RUST) -> "no idea"
+  | (OTHER("Grouper")) -> "heck no"
+  | (OTHER(s)) -> s + "++" in
+let Language js = "JavaScript" in
 print: hasObjects js
