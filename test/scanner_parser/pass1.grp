@@ -1,4 +1,4 @@
-type Fruit = Apples | Bananas | Oranges
+type Fruit = APPLE | BANANA | ORANGE
 
 let Int z = 4 
 and Int x = 3
