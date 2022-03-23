@@ -49,7 +49,7 @@ type sprogram = typ_decl list * sexpr
 (* Pretty-printing functions *)
 
 let rec string_of_sexpr (t, e) =
-  "(" ^ string_of_typ t ^ " : " ^ (match e with 
+  "(" ^ string_of_type_expr t ^ " : " ^ (match e with 
   SLiteral(lit) -> string_of_int lit
 | SFliteral(str) -> str
 | SBoolLit(true) -> "true"
