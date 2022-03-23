@@ -56,7 +56,7 @@ type_expr:
   | BOOL            { BoolExpr }
   | FLOAT           { FloatExpr }
   | STRING          { StringExpr }
-  | VOID            { VoidExpr }
+  | TYPNAME         { TypNameExpr($1) }
   | adt_opt         { AdtTypeExpr($1) }
   | LBRACE struct_decl_body RBRACE
                     { StructTypeExpr($2) }
