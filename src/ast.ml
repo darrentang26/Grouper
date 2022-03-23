@@ -9,6 +9,7 @@ type name = string
 
 type type_expr = 
     IntExpr | BoolExpr | FloatExpr | VoidExpr | StringExpr
+  | TypNameExpr of name
   | AdtTypeExpr of (name * type_expr) list
   | StructTypeExpr of (name * type_expr) list
   | FunType of type_expr * type_expr
@@ -94,7 +95,8 @@ let rec string_of_type_expr = function
 | BoolExpr -> "bool"
 | StringExpr -> "string"
 | VoidExpr -> "void"
-| AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> name ^ " of " ^ string_of_type_expr type_expr) adts )
+| TypNameExpr(name) -> name
+| AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
 | FunType(type_expr, result) -> string_of_type_expr type_expr ^ "->" ^ string_of_type_expr result 
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ string_of_type_expr type_expr2 ^ ")"
