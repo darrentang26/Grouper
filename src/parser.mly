@@ -77,8 +77,8 @@ adt_opt:
   | adt_type_expr BAR adt_opt { $1 :: $3 }
 
 adt_type_expr:
-    ADTNAME                        { ($1, VoidName) }
-  | ADTNAME OF type_expr %prec IN  { ($1, $3) }
+    ADTNAME                                     { ($1, VoidExpr) }
+  | ADTNAME OF LPAREN type_expr RPAREN %prec IN { ($1, $4) }
 
 struct_decl_body:
     NAME COLON type_expr                        { [($1, $3)] }

@@ -1,4 +1,4 @@
-type language = C | Java | Ocaml | Rust | Other of string
+type language = C | Java | Ocaml | Rust | Other of (string)
 let language -> string hasObjects = (lang) -> match (lang) with
   | (C) -> "nah"
   | (Java) -> "heck yeah"

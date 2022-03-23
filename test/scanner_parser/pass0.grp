@@ -1,0 +1,3 @@
+type Fruit = APPLE
+
+let Int x = 3 in x

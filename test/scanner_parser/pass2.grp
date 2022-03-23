@@ -1,10 +1,10 @@
-type plane_pt = {x : int, y : int}
-type space_pt = {x : int, y : int, z : int}
+type Plane_pt = {x : Int, y : Int}
+type space_pt = {x : Int, y : Int, z : Int}
 
-let plane_pt sq_pt1 = {x = 0, y = 0}
-let plane_pt sq_pt2 = {x = 0, y = 5}
-let plane_pt sq_pt3 = {x = 5, y = 0}
-and plane_pt sq_pt4 = {x = 5, y = 5}
-and space_pt tip1 = {x = 0, y = 2, z = 10}
-and space_pt tip2 = {x = 5, y = 5, z = 10} in
+let Plane_pt sq_pt1 = {x = 0, y = 0}
+let Plane_pt sq_pt2 = {x = 0, y = 5}
+let Plane_pt sq_pt3 = {x = 5, y = 0}
+and Plane_pt sq_pt4 = {x = 5, y = 5}
+and Space_pt tip1 = {x = 0, y = 2, z = 10}
+and Space_pt tip2 = {x = 5, y = 5, z = 10} in
     sq_pt1.x + sq_pt2.y + sq_pt3.x + sq_pt4.y - tip1.x * tip2.z
