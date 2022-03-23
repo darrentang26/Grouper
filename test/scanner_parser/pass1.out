@@ -1,7 +1,7 @@
-type fruit = Apples | Bananas | Oranges
-let int z = 4 in
-let int x = 3 in
-let int list xs = [] in
-let int list ys = 4 :: [1, 2, 3] in
-let int y = 5 in
+type fruit = APPLE | BANANA | ORANGE
+let Int z = 4 in
+let Int x = 3 in
+let Int list xs = [] in
+let Int list ys = 4 :: [1, 2, 3] in
+let Int y = 5 in
 if x + y / z > z then "yay" else "no"

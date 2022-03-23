@@ -90,11 +90,11 @@ let string_of_uop = function
 | Not -> "!"
 
 let rec string_of_type_expr = function
-  IntExpr -> "int"
-| FloatExpr -> "float"
-| BoolExpr -> "bool"
-| StringExpr -> "string"
-| VoidExpr -> "void"
+  IntExpr -> "Int"
+| FloatExpr -> "Float"
+| BoolExpr -> "Bool"
+| StringExpr -> "String"
+| VoidExpr -> "Void"
 | TypNameExpr(name) -> name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
