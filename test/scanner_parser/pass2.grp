@@ -1,5 +1,5 @@
 type Plane_pt = {x : Int, y : Int}
-type space_pt = {x : Int, y : Int, z : Int}
+type Space_pt = {x : Int, y : Int, z : Int}
 
 let Plane_pt sq_pt1 = {x = 0, y = 0}
 let Plane_pt sq_pt2 = {x = 0, y = 5}

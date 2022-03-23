@@ -1,4 +1,4 @@
-type fruit = APPLE | BANANA | ORANGE
+type Fruit = APPLE | BANANA | ORANGE
 let Int z = 4 in
 let Int x = 3 in
 let Int list xs = [] in

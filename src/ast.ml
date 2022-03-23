@@ -98,8 +98,8 @@ let rec string_of_type_expr = function
 | TypNameExpr(name) -> name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
-| FunType(type_expr, result) -> string_of_type_expr type_expr ^ "->" ^ string_of_type_expr result 
-| PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ string_of_type_expr type_expr2 ^ ")"
+| FunType(type_expr, result) -> string_of_type_expr type_expr ^ " -> " ^ string_of_type_expr result 
+| PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ " * " ^ string_of_type_expr type_expr2 ^ ")"
 | ListType(type_expr) -> string_of_type_expr type_expr ^ " list"
 | GroupType(type_expr) -> string_of_type_expr type_expr ^ " group"
 | RingType(type_expr) -> string_of_type_expr type_expr ^ " ring"
