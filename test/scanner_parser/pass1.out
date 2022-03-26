@@ -2,6 +2,6 @@ type Fruit = APPLE | BANANA | ORANGE
 let Int z = 4 in
 let Int x = 3 in
 let Int list xs = [] in
-let Int list ys = 4 :: [1, 2, 3] in
+let Int list ys = (4 :: (1 :: (2 :: (3 :: [])))) in
 let Int y = 5 in
 if x + y / z > z then "yay" else "no"

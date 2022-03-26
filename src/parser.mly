@@ -106,7 +106,8 @@ expr:
   | STRINGLIT             { StringLit($1) }
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
-  | LBRACKET inside_list RBRACKET  { ListExpr($2) }
+  | LBRACKET inside_list RBRACKET  { $2 }
+  | expr CONS expr        { ConsExpr ($1, $3)}
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
@@ -173,13 +174,6 @@ literal:
   | NAME                  { Name($1) }
   | LPAREN literal COMMA literal RPAREN
                           { PairExpr($2, $4) }
-  | LBRACKET inside_lit_list RBRACKET  { ListExpr($2) }
-
-inside_lit_list:
-    /* nothing */ { [] }
-  | literal       { $1::[] }  
-  | literal COMMA inside_lit_list { $1 :: $3 }
-
 
 target_conc:
       ADTNAME                           { TargetConcName($1) }
@@ -195,9 +189,9 @@ struct_init_body:
 
 
 inside_list:
-    /* nothing */ { [] }
-  | expr          { $1::[] }
-  | expr COMMA inside_list { $1 :: $3 }
+    /* nothing */           { EmptyListExpr }
+  | expr                    { ConsExpr ($1, EmptyListExpr) }
+  | expr COMMA inside_list  { ConsExpr ($1, $3) }
 
 binop:
     PLUS    { Add }
@@ -212,5 +206,4 @@ binop:
   | GEQ     { Geq }
   | AND     { And}
   | OR      { Or }
-  | CONS    { Cons }
   | MOD     { Mod }
