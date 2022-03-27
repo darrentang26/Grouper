@@ -15,10 +15,17 @@ let translate (types, letb) =
   and void_t    = L.void_type   context
   and string_t  = L.pointer_type i8_t
 
-  and the_module = L.create_module context "Grouper" in
+  and grp_module = L.create_module context "Grouper" in
 
+  let printf_t : L.lltype = 
+    L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
 
-  let rec expr ((_,e) : sexpr) = match e with
+  let rec expr builder ((_,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i 
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
+  | SStringLit str -> Failure "Figure out strings in LLVM"
+  | SPrint pexpr -> 
+      let _ =
+      in expr pexpr 
+  | SName 
