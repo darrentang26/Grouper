@@ -2,7 +2,7 @@
 
 open Ast
 
-type sexpr = typ * sx     
+type sexpr = type_expr * sx     
 and sx =
     SLiteral of int
   | SFliteral of string
