@@ -40,9 +40,9 @@ and starget_concrete =
   | STargetConcExpr of sexpr
   | STargetConcApp of name * starget_concrete
   
-and sgroup = type_name * sexpr * sexpr * sexpr * sexpr
-and sring = type_name * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
-and sfield = type_name * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
+and sgroup = type_expr * sexpr * sexpr * sexpr * sexpr
+and sring = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
+and sfield = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
 
 type sprogram = typ_decl list * sexpr
 
@@ -93,7 +93,7 @@ and string_of_starget_concrete = function
 | STargetConcApp(name, target) -> name ^ string_of_starget_concrete target  
 
 and string_of_sgroup (name, expr1, expr2, expr3, expr4) = 
-  string_of_type_name name ^ " " ^
+  string_of_type_expr name ^ " " ^
   string_of_sexpr expr1 ^ " " ^
   string_of_sexpr expr2 ^ " " ^
   string_of_sexpr expr3 ^ " " ^
