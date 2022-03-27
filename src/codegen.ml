@@ -18,14 +18,19 @@ let translate (types, letb) =
   and grp_module = L.create_module context "Grouper" in
 
   let printf_t : L.lltype = 
-    L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
+    L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
+  let printf_func : L.llvalue = 
+    L.declare_function "printf" printf_t grp_module in 
 
   let rec expr builder ((_,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i 
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
-  | SStringLit str -> Failure "Figure out strings in LLVM"
+  | SStringLit str -> L.const_string context str
   | SPrint pexpr -> 
-      let _ =
+      let _ = L.build_call printf_func 
+                           [| (L.const_stringz context (Ast.string_of_expr pexpr)) |]
+                           "printf"
+                           builder
       in expr pexpr 
-  | SName 
+  | _ -> Failure "expr " ^ (Ast.string_of_expr expr) ^ " not yet implemented"
