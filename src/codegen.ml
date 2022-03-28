@@ -34,5 +34,3 @@ let translate (types, letb) =
                            builder
       in expr pexpr 
   | _ -> Failure "expr " ^ (Ast.string_of_expr expr) ^ " not yet implemented"
-
-  in grp_module 
