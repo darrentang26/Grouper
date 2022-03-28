@@ -27,16 +27,15 @@ let translate (types, letb) =
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.const_stringz context str
-  | SPrint pexpr -> 
+  | SPrint sexpr -> 
       let _ = L.build_call printf_func 
                            [| (L.const_stringz context (Ast.string_of_expr pexpr)) |]
                            "printf"
                            builder
-      in expr builder (t, pexpr) 
-  | SLet (binds, body) -> 
-    List.map (fun (_, bexpr) -> expr builder bexpr) binds
+      in expr builder (t, sexpr) 
+  | SLet (binds, body) -> (* Ignores bindings for now, just builds the body basic block *)
+      expr body
     
-    (* Ignores bindings for now, just builds the body basic block *)
-  | _ -> Failure "expr " ^ (Ast.string_of_expr expr) ^ " not yet implemented"
+  | _ -> Failure "sexpr " ^ (Sast.string_of_sexpr e) ^ " not yet implemented"
 
   in grp_module 
