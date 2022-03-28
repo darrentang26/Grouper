@@ -5,12 +5,11 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+exception Failure of string
 
 let pre_check (types, letb) = match letb with
     (Let (bs, e)) -> check ((Let (bs, e)))
     _ -> raise (Failure "illegal toplevel expression")
-
-let check = function
 
 let lookup_type name Gamma = 
     try StringMap.find name Gamma
@@ -57,4 +56,8 @@ let rec semant Gamma expr = function
                 Gamma
                 binds
                 in semant Gamma' body
+      | Print expr -> let
+            (t, sexpr) = semant Gamma expr
+                in (t, SPrint (sexpr))
+      | _ -> raise (Failure "Not yet implemented")
 
