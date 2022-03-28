@@ -19,10 +19,10 @@ let lookup_type name Gamma =
 let type_eq ty1 ty2 = function
 
 let rec semant Gamma expr = function
-        Literal  l  -> (Int, SLiteral l)
-      | Fliteral l  -> (Float, SFliteral l)
-      | BoolLit l   -> (Bool, SBoolLit l)
-      | StringLit l -> (String, SStringLit l)
+        Literal  l  -> (IntExpr, SLiteral l)
+      | Fliteral l  -> (FloatExpr, SFliteral l)
+      | BoolLit l   -> (BoolExpr, SBoolLit l)
+      | StringLit l -> (StringExpr, SStringLit l)
       | PairExpr (e1, e2) -> let
             (t1, s1) = semant Gamma e1 and
             (t2, s2) = semant Gamma e2
