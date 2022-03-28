@@ -21,17 +21,22 @@ let translate (types, letb) =
   let printf_func : L.llvalue = 
     L.declare_function "printf" printf_t grp_module in 
 
-  let rec expr builder ((_,e) : sexpr) = match e with
+  
+  let rec expr builder ((t,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i 
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
-  | SStringLit str -> L.const_string context str
+  | SStringLit str -> L.const_stringz context str
   | SPrint pexpr -> 
       let _ = L.build_call printf_func 
                            [| (L.const_stringz context (Ast.string_of_expr pexpr)) |]
                            "printf"
                            builder
-      in expr pexpr 
+      in expr builder (t, pexpr) 
+  | SLet (binds, body) -> 
+    List.map (fun (_, bexpr) -> expr builder bexpr) binds
+    
+    (* Ignores bindings for now, just builds the body basic block *)
   | _ -> Failure "expr " ^ (Ast.string_of_expr expr) ^ " not yet implemented"
 
   in grp_module 
