@@ -9,7 +9,8 @@ and sx =
   | SBoolLit of bool
   | SStringLit of string
   | SPairExpr of sexpr * sexpr
-  | SListExpr of sexpr list
+  | SConsExpr of sexpr * sexpr
+  | SEmptyListExpr
   | SName of name
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
