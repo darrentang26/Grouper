@@ -65,7 +65,7 @@ let check (typ_decls, body) = let
       | _ -> raise (Failure "Not yet implemented")
 
         in match body with
-        Let _ -> semant gamma epsilon body
+        Let _ -> (typ_decls, semant gamma epsilon body)
         | _ -> raise (Failure "top-level expression must be a let expression")
     
 
