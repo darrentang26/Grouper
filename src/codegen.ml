@@ -21,21 +21,23 @@ let translate (types, letb) =
   let printf_func : L.llvalue = 
     L.declare_function "printf" printf_t grp_module in 
 
+  let expr_builder = L.build_at_end context (L.entry_block "main_body")
   
   let rec expr builder ((t,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i 
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.const_stringz context str
-  | SPrint sexpr -> 
+  | SPrint pexpr -> 
       let _ = L.build_call printf_func 
                            [| (L.const_stringz context (Ast.string_of_expr pexpr)) |]
                            "printf"
                            builder
-      in expr builder (t, sexpr) 
+      in expr builder (t, pexpr) 
   | SLet (binds, body) -> (* Ignores bindings for now, just builds the body basic block *)
       expr body
     
   | _ -> Failure "sexpr " ^ (Sast.string_of_sexpr e) ^ " not yet implemented"
 
-  in grp_module 
+  in expr expr_builder letb;
+  grp_module 
