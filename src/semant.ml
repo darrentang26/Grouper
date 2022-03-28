@@ -8,13 +8,13 @@ module StringMap = Map.Make(String)
 
 let pre_check (types, letb) = match letb with
     (Let (bs, e)) -> check ((Let (bs, e)))
-    _ -> Failure "illegal toplevel expression"
+    _ -> raise (Failure "illegal toplevel expression")
 
 let check = function
 
 let lookup_type name Gamma = 
     try StringMap.find name Gamma
-        with Not_found -> Failure ("unbound identifier " ^ name)
+        with Not_found -> raise (Failure, "unbound identifier " ^ name)
 
 let rec Gamma expr = function
         Literal  l  -> (Int, SLiteral l)
