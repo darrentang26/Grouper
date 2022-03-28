@@ -1,1 +1,2 @@
-let String hello = print "Hello " in print "world!"
+let String hello_world = "This string isn't getting printed!"
+in print "Hello world!"
