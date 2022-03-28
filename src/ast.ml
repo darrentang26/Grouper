@@ -1,7 +1,7 @@
 (* Abstract Syntax Tree and functions for printing it *)
 
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
-          And | Or | Cons | Mod
+          And | Or | Mod
 
 type uop = Neg | Not
 
@@ -15,6 +15,7 @@ type type_expr =
   | FunType of type_expr * type_expr
   | PairType of type_expr * type_expr
   | ListType of type_expr
+  | EmptyListType
   | GroupType of type_expr
   | RingType of type_expr
   | FieldType of type_expr
@@ -30,7 +31,8 @@ type expr =
   | BoolLit of bool
   | StringLit of string
   | PairExpr of expr * expr
-  | ListExpr of expr list
+  | ConsExpr of expr * expr
+  | EmptyListExpr
   | Name of name
   | Binop of expr * op * expr
   | Unop of uop * expr
@@ -81,7 +83,6 @@ let string_of_op = function
 | Geq -> ">=" 
 | And -> "&&"
 | Or -> "||"
-| Cons -> "::"
 | Mod -> "mod"
 
 
@@ -101,6 +102,7 @@ let rec string_of_type_expr = function
 | FunType(type_expr, result) -> string_of_type_expr type_expr ^ " -> " ^ string_of_type_expr result 
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ " * " ^ string_of_type_expr type_expr2 ^ ")"
 | ListType(type_expr) -> string_of_type_expr type_expr ^ " list"
+| EmptyListType -> "[]"
 | GroupType(type_expr) -> string_of_type_expr type_expr ^ " group"
 | RingType(type_expr) -> string_of_type_expr type_expr ^ " ring"
 | FieldType(type_expr) -> string_of_type_expr type_expr ^ " field"
@@ -119,7 +121,8 @@ let rec string_of_expr = function
 | BoolLit(false) -> "false"
 | StringLit(str) -> "\"" ^ str ^ "\""
 | PairExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ "," ^ string_of_expr expr2 ^ ")"
-| ListExpr(elts) -> "[" ^ String.concat ", " (List.map (fun elt -> string_of_expr elt) elts ) ^ "]"
+| ConsExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " :: " ^ string_of_expr expr2 ^ ")"
+| EmptyListExpr -> "[]"
 | Name(name) -> name
 | Binop(expr1,op,expr2) -> string_of_expr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_expr expr2
 | Unop(op,expr) -> string_of_uop op ^ string_of_expr expr
