@@ -24,9 +24,9 @@ let rec semant Gamma expr = function
       | BoolLit l   -> (Bool, SBoolLit l)
       | StringLit l -> (String, SStringLit l)
       | PairExpr (e1, e2) -> let
-            (t1, node1) = semant Gamma e1 and
-            (t2, node2) = semant Gamma e2
-                in (PairType (t1, t2), SPairExpr (node1, node2))
+            (t1, s1) = semant Gamma e1 and
+            (t2, s2) = semant Gamma e2
+                in (PairType (t1, t2), SPairExpr (s1, s2))
       | ConsExpr (expr, EmptyListExpr) -> let
             (t, sexpr) = semant Gamma expr
                 in match t with
@@ -42,6 +42,19 @@ let rec semant Gamma expr = function
                             else raise (Failure "must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2)
                     | _ -> raise (Failure "must cons onto a list type, not " ^ string_of_type_expr t2)
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      | Name s      -> (lookup_type s Gamma, SName s)
-      | 
+      | Name s      -> (lookup_type s Gamma, SName s, raise (Failure "not implemented-- need to figure out how variable environment works"))
+      | Binop (e1, op, e2) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
+      | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
+      | Let (binds, body) -> let
+            Gamma' = List.fold_left
+                (fun (Gamma, ((tl, name), expr)) -> let
+                    (tr, sexpr) = semant Gamma expr and
+                    Gamma' = if type_eq tl tr
+                        then StringMap.add name tl Gamma
+                        else raise (Failure "the left- and right-hand sides of bindings must mach") and
+                    _ = raise (Failure "not implemented-- need to figure out out how variable environment works")
+                        in Gamma')
+                Gamma
+                binds
+                in semant Gamma' body
 
