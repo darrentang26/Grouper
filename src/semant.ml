@@ -57,8 +57,10 @@ let check (typ_decls, body) = let
                             then (StringMap.add name tl gamma)
                             else raise (Failure "the left- and right-hand sides of bindings must mach"))
                 gamma
-                binds
-                in semant gamma' epsilon body
+                binds and
+            sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
+                in let (t, sx) = semant gamma' epsilon body
+                    in (t, SLet (sbinds, (t, sx)))
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
