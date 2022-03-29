@@ -25,7 +25,11 @@ let translate ((* types *) _, letb) =
   let main_defn = L.define_function "main" main_type grp_module in 
   let main_builder = L.builder_at_end context (L.entry_block main_defn) in
 
-  
+  let add_terminal builder instr =
+    match L.block_terminator (L.insertion_block builder) with
+      Some _ -> ()
+    | None -> ignore (instr builder) in
+
   let rec expr builder ((t,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i 
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
@@ -43,6 +47,25 @@ let translate ((* types *) _, letb) =
     | _ -> raise (Failure "not yet implemented-- print only expects strings"))
   | SLet ((*binds*) _, body) -> (* Ignores bindings for now, just builds the body basic block *)
       expr builder body
+  | SIf cond_sexpr then_sexpr else_sexpr ->
+      let cond_value = expr builder cond_sexpr and
+
+      (* create the basic block for combining the branches *)
+      merge_bb = L.append_block context "merge" main_defn
+      in let branch_instr = L.build_br merge_bb and
+
+      (* create the basic block for the then branch *)
+      then_bb = L.append_block context "then" main_defn
+      in let then_builder = expr (L.builder_at_end context then_bb) then_sexpr
+      in let () = L.add_terminal then_builder branch_instr and
+
+      (* create the basic block for the else branch *)
+      else_bb = L.append_block context "else" main_defn
+      in let else_builder = expr (L.builder_at_end context else_bb) else_sexpr
+      in let () = L.add_terminal else_builder branch_instr in 
+
+      let _ = L.build_cond_br cond_value then_bb else_bb builder
+        in L.builder_at_end context merge_bb
     
   | _ -> raise (Failure ("sexpr " ^ (Sast.string_of_sexpr (t,e)) ^ " not yet implemented"))
 in let _ = expr main_builder letb
