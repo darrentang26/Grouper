@@ -1,9 +1,9 @@
 .DS_Store
 
-
 # built output
 *.native
 
+_build/
 src/_build/
 
 src/scanner.ml
