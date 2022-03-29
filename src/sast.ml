@@ -2,14 +2,15 @@
 
 open Ast
 
-type sexpr = typ * sx     
+type sexpr = type_expr * sx     
 and sx =
     SLiteral of int
   | SFliteral of string
   | SBoolLit of bool
   | SStringLit of string
   | SPairExpr of sexpr * sexpr
-  | SListExpr of sexpr list
+  | SConsExpr of sexpr * sexpr
+  | SEmptyListExpr
   | SName of name
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
@@ -40,9 +41,9 @@ and starget_concrete =
   | STargetConcExpr of sexpr
   | STargetConcApp of name * starget_concrete
   
-and sgroup = type_name * sexpr * sexpr * sexpr * sexpr
-and sring = type_name * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
-and sfield = type_name * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
+and sgroup = type_expr * sexpr * sexpr * sexpr * sexpr
+and sring = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
+and sfield = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
 
 type sprogram = typ_decl list * sexpr
 
@@ -56,12 +57,12 @@ let rec string_of_sexpr (t, e) =
 | SBoolLit(false) -> "false"
 | SStringLit(str) -> "\"" ^ str ^ "\""
 | SPairExpr(expr1, expr2) -> "(" ^ string_of_sexpr expr1 ^ "," ^ string_of_sexpr expr2 ^ ")"
-| SListExpr(elts) -> "[" ^ String.concat ", " (List.map (fun elt -> string_of_sexpr elt) elts ) ^ "]"
+| SConsExpr(expr1, expr2) -> "(" ^ string_of_sexpr expr1 ^ " :: " ^ string_of_sexpr expr2 ^ ")"
+| SEmptyListExpr -> "[]"
 | SName(name) -> name
 | SBinop(expr1,op,expr2) -> string_of_sexpr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_sexpr expr2
 | SUnop(op,expr) -> string_of_uop op ^ string_of_sexpr expr
-| SLet([], body) -> "" ^ string_of_sexpr body
-| SLet((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ " = " ^ string_of_sexpr expr ^ " in\n" ^ string_of_sexpr (Let(lets, body))
+| SLet(binds, body) -> "let " ^ String.concat " and " (List.map (fun (bind, expr) -> string_of_bind bind ^ " = " ^ string_of_sexpr expr) binds) ^ " in " ^ (string_of_sexpr body)
 | SFunction(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_sexpr body 
 | SAdtExpr(target) -> string_of_target_concrete target
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
@@ -73,9 +74,9 @@ let rec string_of_sexpr (t, e) =
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
                          ^ " then " ^ string_of_sexpr expr2 
                          ^ " else " ^ string_of_sexpr expr3
-| SGroup(group) -> string_of_group group
-| SRing(ring) -> string_of_ring ring
-| SField(field) -> string_of_field field
+| SGroup(group) -> string_of_sgroup group
+| SRing(ring) -> string_of_sring ring
+| SField(field) -> string_of_sfield field
 | SPrint(expr) -> "print: " ^ string_of_sexpr expr
   ) ^ ")"
 and string_of_spattern = function
@@ -84,7 +85,7 @@ and string_of_spattern = function
 and string_of_starget_wild = function
   STargetWildName(name) -> name
 | STargetWildLiteral(expr) -> string_of_sexpr expr
-| STargetWildApp(name,target) -> name ^ "(" ^ string_of_target_wild target ^ ")"
+| STargetWildApp(name,target) -> name ^ "(" ^ string_of_starget_wild target ^ ")"
 | SCatchAll -> "_"
 
 and string_of_starget_concrete = function
@@ -93,7 +94,7 @@ and string_of_starget_concrete = function
 | STargetConcApp(name, target) -> name ^ string_of_starget_concrete target  
 
 and string_of_sgroup (name, expr1, expr2, expr3, expr4) = 
-  string_of_type_name name ^ " " ^
+  string_of_type_expr name ^ " " ^
   string_of_sexpr expr1 ^ " " ^
   string_of_sexpr expr2 ^ " " ^
   string_of_sexpr expr3 ^ " " ^
