@@ -1,0 +1,33 @@
+Run all commands in the current directory.
+
+Compile the Grouper Compiler into an executable with: 
+    `make`
+The executable is `./src/toplevel.native`
+    
+Clean the Grouper Compiler with:
+    `make clean`
+
+Run the "Hello world!" test with:
+    `make hw_test`
+The output will be green if the test passes, and red otherwise
+
+Compile a program and view all stages of compilation with:
+    `make compile in=<Grouper source file>`
+The AST is written to `ast.out`
+The SAST is written to `sast.out`
+The generated LLVM is written to `llvm.out`
+The compiled, executable program is written to `out`
+
+Compile Grouper source code with:
+    `./src/toplevel.native (-a|-s|-l|-c) [filename.grp]`
+    Compiler flags (one of 4 actions):
+    `-a` prints out the AST
+    `-s` prints out the SAST
+    `-l` prints out the generated LLVM
+    `-c` validates the generated LLVM and prints it out if it is valid 
+
+
+Group members:
+- Michael Simpson (michael.simpson@tufts.edu)
+- Robert Nooney (robert.nooney@tufts.edu)
+- Darren Tang (darren.tang@tufts.edu)

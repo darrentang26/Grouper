@@ -18,7 +18,7 @@ let lookup_type name gamma =
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 
 let check (typ_decls, body) = let
-    rho = StringMap.empty and
+    (* rho = StringMap.empty and *)
     gamma = StringMap.empty and
     epsilon = StringMap.empty 
 
@@ -45,13 +45,13 @@ let check (typ_decls, body) = let
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      | Name s      -> raise (Failure "not implemented-- need to figure out how variable environment works")
+      (* | Name s      -> raise (Failure "not implemented-- need to figure out how variable environment works")
       | Binop (e1, op, e2) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
-      | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
+      | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here") *)
       | Let (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
-                    (tr, sexpr) = semant gamma epsilon expr
+                    (tr, (* sexpr *) _) = semant gamma epsilon expr
                     (* Update epsilon *)
                         in if tl = tr
                             then (StringMap.add name tl gamma)
