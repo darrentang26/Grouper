@@ -4,4 +4,4 @@ let Int x = 3 in
 let Int list xs = [] in
 let Int list ys = (4 :: (1 :: (2 :: (3 :: [])))) in
 let Int y = 5 in
-print: if true then "yay" else "no"
+if x + y / z > z then "yay" else "no"
