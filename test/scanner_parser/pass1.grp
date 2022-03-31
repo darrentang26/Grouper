@@ -5,4 +5,4 @@ and Int x = 3
 and Int list xs = []
 and Int list ys = 4::[1,2,3]
 and Int y = 5 in
-   print if true then "yay" else "no" end
+   if x + y / z > z then "yay" else "no" end

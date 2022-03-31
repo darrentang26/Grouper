@@ -55,23 +55,12 @@ let check (typ_decls, body) = let
                     (* Update epsilon *)
                         in if tl = tr
                             then (StringMap.add name tl gamma)
-                            else if tr = EmptyListType then match tl with
-                                      ListType tl' -> (StringMap.add name tl gamma) 
-                                    | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                else raise (Failure "the left- and right-hand sides of bindings must mach"))
+                            else raise (Failure "the left- and right-hand sides of bindings must mach"))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
                 in let (t, sx) = semant gamma' epsilon body
                     in (t, SLet (sbinds, (t, sx)))
-      | If (cond_expr, then_expr, else_expr) -> let
-            (cond_t, cond_s) = semant gamma epsilon cond_expr in
-            if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
-            else let
-            (then_t, then_s) = semant gamma epsilon then_expr and
-            (else_t, else_s) = semant gamma epsilon else_expr in
-            if then_t != else_t then raise (Failure "then and else expressions must have the same type")
-            else (then_t, SIf ((cond_t, cond_s), (then_t, then_s), (else_t, else_s)))
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
