@@ -6,9 +6,7 @@ toplevel:
 
 clean:
 	cd src && ocamlbuild -clean
-	rm *.out
-	rm out
-	rm hello
+	rm *.out out hello
 
 sp_test: toplevel
 	python3 scanner_parser_validation.py
