@@ -46,6 +46,35 @@ let translate ((* types *) _, letb) =
           in let _ = L.build_call print_func [| str |] "printf" builder
             in value
     | _ -> raise (Failure "not yet implemented-- print only expects strings"))
+  | SBinop ((tl, sl), op, (tr, sr)) -> let
+    left = expr builder (tl, sl) and
+    right = expr builder (tr, sr)
+    in (match op, tl with
+      (Add, IntExpr)        -> L.build_add left right "" builder
+    | (Add, FloatExpr)      -> L.build_fadd left right "" builder
+    | (Add, StringExpr)     -> raise (Failure "not yet implemented-- string concatenation")
+    | (Sub, IntExpr)        -> L.build_sub left right "" builder
+    | (Sub, FloatExpr)      -> L.build_fsub left right "" builder
+    | (Mult, IntExpr)       -> L.build_mul left right "" builder
+    | (Mult, FloatExpr)     -> L.build_fmul left right "" builder
+    | (Div, IntExpr)        -> L.build_sdiv left right "" builder
+    | (Div, FloatExpr)      -> L.build_fdiv left right "" builder
+    | (Equal, IntExpr)      -> L.build_icmp L.Icmp.Eq left right "" builder
+    | (Equal, FloatExpr)    -> L.build_fcmp L.Fcmp.Ueq left right "" builder (* not quite sure how this works... *)
+    | (Equal, StringExpr)   -> raise (Failure "not yet implemented-- string equality")
+    | (Neq, IntExpr)        -> L.build_icmp L.Icmp.Ne left right "" builder
+    | (Neq, FloatExpr)      -> L.build_fcmp L.Fcmp.Une left right "" builder (* not quite sure how this works... *)
+    | (Less, IntExpr)       -> L.build_icmp L.Icmp.Slt left right "" builder
+    | (Less, FloatExpr)     -> L.build_fcmp L.Fcmp.Ult left right "" builder (* not quite sure how this works... *)
+    | (Leq, IntExpr)        -> L.build_icmp L.Icmp.Sle left right "" builder
+    | (Leq, FloatExpr)      -> L.build_fcmp L.Fcmp.Ule left right "" builder (* not quite sure how this works... *)
+    | (Greater, IntExpr)    -> L.build_icmp L.Icmp.Sgt left right "" builder
+    | (Greater, FloatExpr)  -> L.build_fcmp L.Fcmp.Ugt left right "" builder (* not quite sure how this works... *)
+    | (Geq, IntExpr)        -> L.build_icmp L.Icmp.Sge left right "" builder
+    | (Geq, FloatExpr)      -> L.build_fcmp L.Fcmp.Uge left right "" builder (* not quite sure how this works... *)
+    | (And, BoolExpr)       -> L.build_and left right "" builder
+    | (Or, BoolExpr)        -> L.build_or left right "" builder
+    | (Mod, IntExpr)        -> L.build_srem left right "" builder)
   | SLet ((*binds*) _, body) -> (* Ignores bindings for now, just builds the body basic block *)
       expr builder body
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
