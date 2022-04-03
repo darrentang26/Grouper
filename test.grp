@@ -1,2 +1,0 @@
-let Bool x = true in 
-print if x then "true" else "false" end

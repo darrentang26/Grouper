@@ -44,8 +44,8 @@ let translate ((* types *) _, letb) =
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.build_global_stringptr str "" builder
   | SPrint sexpr -> (match sexpr with
-      (StringExpr, sexpr') -> let
-        value = expr builder scope (StringExpr, sexpr') 
+      (StringExpr, sx) -> let
+        value = expr builder scope (StringExpr, sx) 
           (* in let sval = match (L.string_of_const value) with
                           Some s -> s
                         | None -> "" *)
@@ -55,11 +55,11 @@ let translate ((* types *) _, letb) =
             in value
     | _ -> raise (Failure "not yet implemented-- print only expects strings"))
   | SName name -> L.build_load (StringMap.find name scope) name builder
-  | SLet (binds, body) -> let (* Ignores bindings for now, just builds the body basic block *)
+  | SLet (binds, body) -> let
     store_val scope ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
       value = expr builder scope sexpr in let
-      _ = L.build_store local value in
+      _ = L.build_store value local builder in
         (StringMap.add name local scope) in let
     scope' = List.fold_left 
         store_val
