@@ -45,7 +45,10 @@ let check (typ_decls, body) = let
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      (* | Name s      -> raise (Failure "not implemented-- need to figure out how variable environment works")
+      | Name s      -> let 
+            ty = lookup_type s gamma
+                in (ty, SName s)
+      (*
       | Binop (e1, op, e2) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
       | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here") *)
       | Let (binds, body) -> let
