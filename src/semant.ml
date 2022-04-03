@@ -40,7 +40,7 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (match t2 with
-                     ListType t2' -> if t1 = t2'
+                      ListType t2' -> if t1 = t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
@@ -48,9 +48,27 @@ let check (typ_decls, body) = let
       | Name s      -> let 
             ty = lookup_type s gamma
                 in (ty, SName s)
-      (*
-      | Binop (e1, op, e2) -> raise (Failure "not implemented-- need to figure out stuff for algebra here")
-      | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here") *)
+      | Binop (e1, op, e2) -> let
+            (t1, s1) = semant gamma epsilon e1 and
+            (t2, s2) = semant gamma epsilon e2
+                in if t1 != t2 then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
+                    (* Need to change this to work with algebra stuff!!!! *)
+                    else (match op, t1 with
+                      (Add, IntExpr) | (Add, FloatExpr) | (Add, StringExpr) -> (t1, SBinop ((t1, s1), Add, (t2, s2)))
+                    | (Sub, IntExpr) | (Sub, FloatExpr) -> (t1, SBinop ((t1, s1), Sub, (t2, s2)))
+                    | (Mult, IntExpr) | (Mult, FloatExpr) -> (t1, SBinop ((t1, s1), Mult, (t2, s2)))
+                    | (Div, IntExpr) | (Div, FloatExpr) -> (t1, SBinop ((t1, s1), Div, (t2, s2)))
+                    | (Equal, IntExpr) | (Equal, FloatExpr) | (Equal, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Equal, (t2, s2)))
+                    | (Neq, IntExpr) | (Neq, FloatExpr) | (Neq, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Neq, (t2, s2)))
+                    | (Less, IntExpr) | (Less, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Less, (t2, s2)))
+                    | (Leq, IntExpr) | (Leq, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Leq, (t2, s2)))
+                    | (Greater, IntExpr) | (Greater, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Greater, (t2, s2)))
+                    | (Geq, IntExpr) | (Geq, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Geq, (t2, s2)))
+                    | (And, BoolExpr) -> (t1, SBinop ((BoolExpr, s1), And, (t2, s2)))
+                    | (Or, BoolExpr) -> (t1, SBinop ((t1, s1), Or, (t2, s2)))
+                    | (Mod, IntExpr) -> (t1, SBinop ((t1, s1), Mod, (t2, s2)))
+                    | _ -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1)))
+      (* | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here") *)
       | Let (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
@@ -83,6 +101,3 @@ let check (typ_decls, body) = let
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
         | _ -> raise (Failure "top-level expression must be a let expression")
-    
-
-

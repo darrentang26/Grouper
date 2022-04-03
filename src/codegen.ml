@@ -55,6 +55,63 @@ let translate ((* types *) _, letb) =
             in value
     | _ -> raise (Failure "not yet implemented-- print only expects strings"))
   | SName name -> L.build_load (StringMap.find name scope) name builder
+  | SBinop ((tl, sl), op, (tr, sr)) -> let
+    left = expr builder scope (tl, sl) and
+    right = expr builder scope (tr, sr)
+    in (match op, tl with
+      (Add, IntExpr)        -> L.build_add left right "" builder
+    | (Add, FloatExpr)      -> L.build_fadd left right "" builder
+    | (Add, StringExpr)     -> raise (Failure "not yet implemented-- string concatenation")
+        (* left = L.build_load left "" builder and
+        right = L.build_load right "" builder in let
+        left_type = L.type_of left and
+        right_type = L.type_of right in let
+        left_length = L.size_of left_type and
+        right_length = L.size_of right_type in let
+
+          combined_length = L.build_add left_length right_length "" builder
+        in let
+          (* dest_length = L.build_sub combined_length (L.const_int i32_t 1) "" builder  *)
+          dest_length = L.const_int i32_t 3
+        in let
+          dest_size = (L.array_length left_type) + (L.array_length right_type) - 1
+        in let
+          dest_type = L.array_type i8_t dest_size
+        in let
+          dest_first_ptr = L.build_array_malloc i8_t dest_length "" builder 
+        in let
+          dest_second_offset = L.build_sub combined_length right_length "" builder 
+        in let
+          dest_first = L.build_store left dest_first_ptr builder 
+        in let dest_second_ptr = L.ptrtoint i8_t dest_first_ptr + 
+        (* in let *)
+          (* dest_second_ptr = L.build_gep dest_second_offset [| dest_first_ptr |] "" builder *)
+        (* in let *)
+          (* dest_second = L.build_store right dest_second_ptr builder *)
+            (* in dest_first_ptr *)
+            in right *)
+    | (Sub, IntExpr)        -> L.build_sub left right "" builder
+    | (Sub, FloatExpr)      -> L.build_fsub left right "" builder
+    | (Mult, IntExpr)       -> L.build_mul left right "" builder
+    | (Mult, FloatExpr)     -> L.build_fmul left right "" builder
+    | (Div, IntExpr)        -> L.build_sdiv left right "" builder
+    | (Div, FloatExpr)      -> L.build_fdiv left right "" builder
+    | (Equal, IntExpr)      -> L.build_icmp L.Icmp.Eq left right "" builder
+    | (Equal, FloatExpr)    -> L.build_fcmp L.Fcmp.Ueq left right "" builder (* not quite sure how this works... *)
+    | (Equal, StringExpr)   -> raise (Failure "not yet implemented-- string equality")
+    | (Neq, IntExpr)        -> L.build_icmp L.Icmp.Ne left right "" builder
+    | (Neq, FloatExpr)      -> L.build_fcmp L.Fcmp.Une left right "" builder (* not quite sure how this works... *)
+    | (Less, IntExpr)       -> L.build_icmp L.Icmp.Slt left right "" builder
+    | (Less, FloatExpr)     -> L.build_fcmp L.Fcmp.Ult left right "" builder (* not quite sure how this works... *)
+    | (Leq, IntExpr)        -> L.build_icmp L.Icmp.Sle left right "" builder
+    | (Leq, FloatExpr)      -> L.build_fcmp L.Fcmp.Ule left right "" builder (* not quite sure how this works... *)
+    | (Greater, IntExpr)    -> L.build_icmp L.Icmp.Sgt left right "" builder
+    | (Greater, FloatExpr)  -> L.build_fcmp L.Fcmp.Ugt left right "" builder (* not quite sure how this works... *)
+    | (Geq, IntExpr)        -> L.build_icmp L.Icmp.Sge left right "" builder
+    | (Geq, FloatExpr)      -> L.build_fcmp L.Fcmp.Uge left right "" builder (* not quite sure how this works... *)
+    | (And, BoolExpr)       -> L.build_and left right "" builder
+    | (Or, BoolExpr)        -> L.build_or left right "" builder
+    | (Mod, IntExpr)        -> L.build_srem left right "" builder)
   | SLet (binds, body) -> let
     store_val scope ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
