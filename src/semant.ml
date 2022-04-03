@@ -45,6 +45,9 @@ let check (typ_decls, body) = let
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
+      | Name s      -> let 
+            ty = lookup_type s gamma
+                in (ty, SName s)
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
