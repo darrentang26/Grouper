@@ -68,7 +68,13 @@ let check (typ_decls, body) = let
                     | (Or, BoolExpr) -> (t1, SBinop ((t1, s1), Or, (t2, s2)))
                     | (Mod, IntExpr) -> (t1, SBinop ((t1, s1), Mod, (t2, s2)))
                     | _ -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1)))
-      (* | Unop (uop, expr) -> raise (Failure "not implemented-- need to figure out stuff for algebra here") *)
+      | Unop (uop, expr) -> let
+            (ty, sx) = semant gamma epsilon expr
+                in (match uop, ty with
+                      (Neg, IntExpr) | (Neg, FloatExpr) -> (ty, SUnop (Neg, (ty, sx)))
+                    | (Not, BoolExpr) -> (ty, SUnop (Not, (ty, sx)))
+                    | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
+                    (* This needs to have algebra added to it *)
       | Let (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
