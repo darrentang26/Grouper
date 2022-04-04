@@ -19,7 +19,9 @@ let lookup_type name gamma =
 
 let check (typ_decls, body) = let
     (* rho = StringMap.empty and *)
-    gamma = StringMap.empty and
+    gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+        StringMap.empty 
+        typ_decls and
     epsilon = StringMap.empty 
 
     in let rec semant gamma epsilon = function
