@@ -112,6 +112,12 @@ let translate ((* types *) _, letb) =
     | (And, BoolExpr)       -> L.build_and left right "" builder
     | (Or, BoolExpr)        -> L.build_or left right "" builder
     | (Mod, IntExpr)        -> L.build_srem left right "" builder)
+  | SUnop (uop, (ty, sx)) -> let
+    value = expr builder scope (ty, sx)
+    in (match uop, ty with
+      (Neg, IntExpr)  -> L.build_neg value "" builder
+    | (Neg, FloatExpr)-> L.build_fneg value "" builder
+    | (Not, BoolExpr) -> L.build_not value "" builder)
   | SLet (binds, body) -> let
     store_val scope ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
