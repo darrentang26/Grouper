@@ -78,7 +78,7 @@ let check (typ_decls, body) = let
       | Let (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
-                    (tr, (* sexpr *) _) = semant gamma epsilon expr
+                    (tr, (* sexpr *) _) = semant gamma epsilon expr (* need to change order here to support recursion *)
                     (* Update epsilon *)
                         in if tl = tr
                             then (StringMap.add name tl gamma)
