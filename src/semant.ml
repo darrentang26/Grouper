@@ -91,6 +91,21 @@ let check (typ_decls, body) = let
             sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
                 in let (t, sx) = semant gamma' epsilon body
                     in (t, SLet (sbinds, (t, sx)))
+      | Function ([(name, ty)], body) -> let
+            gamma' = StringMap.add name ty gamma in let
+            (bodyty, sbody) = semant gamma' epsilon body
+                in (FunType (ty, bodyty), SFunction ((name, ty), (bodyty, sbody)))
+      | Function (args, body) -> let
+            (name, ty) = List.hd args in let
+            gamma' = StringMap.add name ty gamma in let
+            (bodyty, sbody) = semant gamma' epsilon (Function (List.tl args, body))
+                in (FunType (ty, bodyty), SFunction ((name, ty), (bodyty, sbody)))
+      | Call (e1, e2) -> let
+            (t1, s1) = semant gamma epsilon e1 and
+            (t2, s2) = semant gamma epsilon e2
+                in (match t1 with
+                  FunType (t3, t4) when t2 = t3 -> (t4, SCall ((t1, s1), (t2, s2)))
+                | _ -> raise (Failure ("cannot call a non-function of type " ^ string_of_type_expr t1)))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in
             if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
@@ -102,7 +117,7 @@ let check (typ_decls, body) = let
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
-      | _ -> raise (Failure "Not yet implemented")
+      | x -> raise (Failure ("Not yet implemented: " ^ string_of_expr x))
 
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)

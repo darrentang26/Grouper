@@ -134,7 +134,7 @@ expr:
 
 fn_def:
     formals expr END           { Function($1, $2)}
-  | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
+  | formals MATCH formals WITH match_rule END { Function($1, Match(List.map (fun ((name, ty)) -> name) $3, $5)) }
 
 //---------- formals ----------//
 formals:
@@ -145,8 +145,8 @@ formals_opt:
   | formal_list   { $1 }
 
 formal_list:
-    NAME              { [$1] }
-  | formal_list NAME  { $2 :: $1 }
+    type_expr NAME              { [($2, $1)] }
+  | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
 match_rule:

@@ -37,7 +37,7 @@ type expr =
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Let of (bind * expr) list * expr
-  | Function of name list * expr
+  | Function of bind list * expr
   | AdtExpr of target_concrete
   | StructInit of (name * expr) list
   | StructRef of name * name
@@ -128,7 +128,7 @@ let rec string_of_expr = function
 | Unop(op,expr) -> string_of_uop op ^ string_of_expr expr
 | Let([], body) -> "" ^ string_of_expr body
 | Let((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ " = " ^ string_of_expr expr ^ " in\n" ^ string_of_expr (Let(lets, body))
-| Function(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_expr body 
+| Function(args,body) -> "(" ^ String.concat ", " (List.map (fun (name, ty) -> string_of_type_expr ty ^ " " ^ name) args) ^ ") -> " ^ string_of_expr body 
 | AdtExpr(target) -> string_of_target_concrete target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
