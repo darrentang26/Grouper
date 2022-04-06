@@ -76,22 +76,24 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) -> let
-            (gamma', sbinds) = List.fold_left
-                (fun (gamma, sbinds) ((name, tl), expr) -> match tl with
-                    FunType _ -> let
-                        gamma'' = StringMap.add name tl gamma in let
-                        (tr, sx) = semant gamma'' epsilon expr in
-                            if tl = tr then (gamma'', ((name, tl), (tr, sx)) :: sbinds)
+            sbinds = List.map
+                (fun ((name, tl), expr) -> match tl with
+                      FunType _ -> let
+                        gamma' = StringMap.add name tl gamma in let
+                        (tr, sx) = semant gamma' epsilon expr in
+                            if tl = tr then ((name, tl), (tr, sx))
                                 else raise (Failure "the left- and right-hand sides of bindings must mach")
-                    | _ -> let
-                        (tr, sx) = semant gamma epsilon expr
-                            in if tl = tr
-                                then ((StringMap.add name tl gamma), ((name, tl), (tr, sx)) :: sbinds)
-                                else if tr = EmptyListType then match tl with
-                                        ListType tl' -> ((StringMap.add name tl gamma), ((name, tl), (tr, sx)) :: sbinds)
-                                        | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                    else raise (Failure "the left- and right-hand sides of bindings must mach"))
-                (gamma, [])
+                    | _ -> let 
+                        (tr, sx) = semant gamma epsilon expr in
+                            if tl = tr then ((name, tl), (tr, sx))
+                            else if tr = EmptyListType then match tl with
+                                  ListType tl' -> ((name, tl), (tr, sx))
+                                | _ -> raise (Failure ("cannot bind a non-list to a list"))
+                                else raise (Failure ("the left- and right-hand sides of bindings must mach")))
+                binds in let
+            gamma' = List.fold_left
+                (fun gamma ((name, tl), expr) -> StringMap.add name tl gamma)
+                gamma
                 binds in let
             (t, sx) = semant gamma' epsilon body
                 in (t, SLet (sbinds, (t, sx)))
