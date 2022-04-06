@@ -107,10 +107,23 @@ let check (typ_decls, body) = let
       | StructInit bindsList -> let
             typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
-                                   bindsList in
-            (StructTypeExpr(List.map (fun (name, sexpr) -> (name, fst sexpr)) typed_binds), 
-             SStructInit(typed_binds))
-
+                                   bindsList in let
+            comparable = List.map (fun (name,(typ, expr)) -> (name, typ)) typed_binds in let rec
+            struct_type = function
+                (name, StructTypeExpr(fields))::binds -> if fields = comparable then
+                                                                  name else struct_type binds
+             |  _::binds -> struct_type binds
+             |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
+                in
+            (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
+      | StructRef (var, field) -> (match (semant gamma epsilon (Name(var))) with 
+           (typ_name, SStructInit(fields)) -> (match (List.find (fun (name, _) -> name = field) 
+                                                                (StringMap.bindings gamma)) with
+               (_, expr) -> let
+                  (typ, _) = semant gamma epsilon expr in
+                  (typ, SStructRef(var, field))
+            |  _ -> raise (Failure ("struct " ^ var ^ " does not have field " ^ field))) 
+        |  _ -> raise (Failure (var ^ " is not a struct")))
       | _ -> raise (Failure "Not yet implemented")
 
         in match body with
