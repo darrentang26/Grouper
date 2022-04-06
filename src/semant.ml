@@ -76,28 +76,25 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) -> let
-            gamma' = List.fold_left
-                (fun gamma ((name, tl), expr) -> match tl with
+            (gamma', sbinds) = List.fold_left
+                (fun (gamma, sbinds) ((name, tl), expr) -> match tl with
                     FunType _ -> let
                         gamma'' = StringMap.add name tl gamma in let
-                        (* _ = raise (Failure ("function mapped to gamma?: " ^ if (StringMap.mem name gamma'') then "yes" else "no")) in let *)
-                        (tr, _) = semant gamma'' epsilon expr in
-                            if tl = tr then gamma''
+                        (tr, sx) = semant gamma'' epsilon expr in
+                            if tl = tr then (gamma'', ((name, tl), (tr, sx)) :: sbinds)
                                 else raise (Failure "the left- and right-hand sides of bindings must mach")
                     | _ -> let
-                        (* _ = raise (Failure ("non-function type: " ^ string_of_type_expr tl ^ "\n")) and *)
-                        (tr, (* sexpr *) _) = semant gamma epsilon expr
+                        (tr, sx) = semant gamma epsilon expr
                             in if tl = tr
-                                then (StringMap.add name tl gamma)
+                                then ((StringMap.add name tl gamma), ((name, tl), (tr, sx)) :: sbinds)
                                 else if tr = EmptyListType then match tl with
-                                        ListType tl' -> (StringMap.add name tl gamma) 
+                                        ListType tl' -> ((StringMap.add name tl gamma), ((name, tl), (tr, sx)) :: sbinds)
                                         | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
                                     else raise (Failure "the left- and right-hand sides of bindings must mach"))
-                gamma
-                binds and
-            sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
-                in let (t, sx) = semant gamma' epsilon body
-                    in (t, SLet (sbinds, (t, sx)))
+                (gamma, [])
+                binds in let
+            (t, sx) = semant gamma' epsilon body
+                in (t, SLet (sbinds, (t, sx)))
       | Function ([(name, ty)], body) -> let
             gamma' = StringMap.add name ty gamma in let
             (bodyty, sbody) = semant gamma' epsilon body

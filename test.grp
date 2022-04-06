@@ -1,2 +1,0 @@
-let Int -> Int f = lambda (Int x) if x <= 0 then 0 else f (x - 1) end end
-in f 1
