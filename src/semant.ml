@@ -77,15 +77,22 @@ let check (typ_decls, body) = let
                     (* This needs to have algebra added to it *)
       | Let (binds, body) -> let
             gamma' = List.fold_left
-                (fun gamma ((name, tl), expr) -> let
-                    (tr, (* sexpr *) _) = semant gamma epsilon expr (* need to change order here to support recursion *)
-                    (* Update epsilon *)
-                        in if tl = tr
-                            then (StringMap.add name tl gamma)
-                            else if tr = EmptyListType then match tl with
-                                      ListType tl' -> (StringMap.add name tl gamma) 
-                                    | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                else raise (Failure "the left- and right-hand sides of bindings must mach"))
+                (fun gamma ((name, tl), expr) -> match tl with
+                    FunType _ -> let
+                        gamma'' = StringMap.add name tl gamma in let
+                        (* _ = raise (Failure ("function mapped to gamma?: " ^ if (StringMap.mem name gamma'') then "yes" else "no")) in let *)
+                        (tr, _) = semant gamma'' epsilon expr in
+                            if tl = tr then gamma''
+                                else raise (Failure "the left- and right-hand sides of bindings must mach")
+                    | _ -> let
+                        (* _ = raise (Failure ("non-function type: " ^ string_of_type_expr tl ^ "\n")) and *)
+                        (tr, (* sexpr *) _) = semant gamma epsilon expr
+                            in if tl = tr
+                                then (StringMap.add name tl gamma)
+                                else if tr = EmptyListType then match tl with
+                                        ListType tl' -> (StringMap.add name tl gamma) 
+                                        | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
+                                    else raise (Failure "the left- and right-hand sides of bindings must mach"))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
