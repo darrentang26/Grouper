@@ -116,14 +116,16 @@ let check (typ_decls, body) = let
              |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
                 in
             (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
-      | StructRef (var, field) -> (match (semant gamma epsilon (Name(var))) with 
-           (typ_name, SStructInit(fields)) -> (match (List.find (fun (name, _) -> name = field) 
-                                                                (StringMap.bindings gamma)) with
-               (_, expr) -> let
-                  (typ, _) = semant gamma epsilon expr in
-                  (typ, SStructRef(var, field))
-            |  _ -> raise (Failure ("struct " ^ var ^ " does not have field " ^ field))) 
-        |  _ -> raise (Failure (var ^ " is not a struct")))
+      | StructRef (var, field) -> let 
+        (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
+           TypNameExpr(typ) -> let
+             accessed_type = lookup_type typ gamma in (match accessed_type with
+                StructTypeExpr(binds) -> let 
+                   (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
+                     (found_type, SStructRef(var,field))
+             |  _ -> raise (Failure (var ^ "is not a struct")))
+        |  _ -> raise (Failure "What was accessed was not a name"))
+
       | _ -> raise (Failure "Not yet implemented")
 
         in match body with
