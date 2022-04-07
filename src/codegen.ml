@@ -11,14 +11,16 @@ let translate ((* types *) _, letb) =
   and i8_t      = L.i8_type     context 
   and i1_t      = L.i1_type     context
   and float_t   = L.double_type context
-  and void_t    = L.void_type   context in
+  and void_t    = L.void_type   context 
+  and struct_t fields = L.struct_type context fields in
   (* and string_t  = L.pointer_type (L.i8_type context)  *)
 
-  let ltype_of_typ = function
+  let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
+    | StructTypeExpr(fields) -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
 
