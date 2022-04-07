@@ -21,7 +21,7 @@ open Ast
 %nonassoc NOIN
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
-%left ARROW
+%right ARROW
 %nonassoc LIST
 %nonassoc GROUP RING FIELD POLY
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
