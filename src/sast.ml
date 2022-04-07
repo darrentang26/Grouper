@@ -15,7 +15,7 @@ and sx =
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
   | SLet of (bind * sexpr) list * sexpr
-  | SFunction of bind * sexpr (* After semanting, functions are all curried *)
+  | SFunction of bind list * sexpr (* After semanting, functions are all curried *)
   | SAdtExpr of target_concrete
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
@@ -62,8 +62,8 @@ let rec string_of_sexpr (t, e) =
 | SName(name) -> name
 | SBinop(expr1,op,expr2) -> string_of_sexpr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_sexpr expr2
 | SUnop(op,expr) -> string_of_uop op ^ string_of_sexpr expr
-| SLet(binds, body) -> "let " ^ String.concat " and " (List.map (fun (bind, expr) -> string_of_bind bind ^ " = " ^ string_of_sexpr expr) binds) ^ " in " ^ (string_of_sexpr body)
-| SFunction((name, ty), body) -> "(" ^ string_of_type_expr ty ^ " " ^ name ^ ") -> " ^ string_of_sexpr body 
+| SLet(binds, body) -> "let " ^ String.concat " and " (List.map (fun (bind, expr) -> string_of_bind bind ^ " = " ^ string_of_sexpr expr) binds) ^ "\nin " ^ (string_of_sexpr body)
+| SFunction(binds, body) -> "(" ^ (String.concat ", " (List.map (fun bind -> string_of_bind bind) binds)) ^ ") ->\n" ^ string_of_sexpr body 
 | SAdtExpr(target) -> string_of_target_concrete target
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
 | SStructRef(name1, name2) -> name1 ^ "." ^ name2
@@ -72,8 +72,8 @@ let rec string_of_sexpr (t, e) =
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
 | SCall(expr1, expr2) -> string_of_sexpr expr1 ^ " " ^ string_of_sexpr expr2
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
-                         ^ " then " ^ string_of_sexpr expr2 
-                         ^ " else " ^ string_of_sexpr expr3
+                         ^ "\nthen " ^ string_of_sexpr expr2 
+                         ^ "\nelse " ^ string_of_sexpr expr3
 | SGroup(group) -> string_of_sgroup group
 | SRing(ring) -> string_of_sring ring
 | SField(field) -> string_of_sfield field

@@ -82,7 +82,7 @@ let check (typ_decls, body) = let
                         gamma' = StringMap.add name tl gamma in let
                         (tr, sx) = semant gamma' epsilon expr in
                             if tl = tr then ((name, tl), (tr, sx))
-                                else raise (Failure "the left- and right-hand sides of bindings must mach")
+                                else raise (Failure ("the left-hand [" ^ string_of_type_expr tl ^ "] and right-hand [" ^ string_of_type_expr tr ^ "] sides of bindings must mach"))
                     | _ -> let 
                         (tr, sx) = semant gamma epsilon expr in
                             if tl = tr then ((name, tl), (tr, sx))
@@ -100,12 +100,12 @@ let check (typ_decls, body) = let
       | Function ([(name, ty)], body) -> let
             gamma' = StringMap.add name ty gamma in let
             (bodyty, sbody) = semant gamma' epsilon body
-                in (FunType (ty, bodyty), SFunction ((name, ty), (bodyty, sbody)))
+                in (FunType (ty, bodyty), SFunction ([(name, ty)], (bodyty, sbody)))
       | Function (args, body) -> let
             (name, ty) = List.hd args in let
             gamma' = StringMap.add name ty gamma in let
             (bodyty, sbody) = semant gamma' epsilon (Function (List.tl args, body))
-                in (FunType (ty, bodyty), SFunction ((name, ty), (bodyty, sbody)))
+                in (FunType (ty, bodyty), SFunction ([(name, ty)], (bodyty, sbody)))
       | Call (e1, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
