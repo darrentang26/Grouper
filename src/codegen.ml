@@ -45,10 +45,7 @@ let translate ((* types *) _, letb) =
   | SStringLit str -> L.build_global_stringptr str "" builder
   | SPrint sexpr -> (match sexpr with
       (StringExpr, sx) -> let
-        value = expr builder scope (StringExpr, sx) 
-          (* in let sval = match (L.string_of_const value) with
-                          Some s -> s
-                        | None -> "" *)
+        value = expr builder scope (StringExpr, sx)
           in let sval = value
           in let str = L.build_in_bounds_gep sval [| (L.const_int i32_t 0) |] "" builder
           in let _ = L.build_call print_func [| str |] "printf" builder
@@ -62,34 +59,6 @@ let translate ((* types *) _, letb) =
       (Add, IntExpr)        -> L.build_add left right "" builder
     | (Add, FloatExpr)      -> L.build_fadd left right "" builder
     | (Add, StringExpr)     -> raise (Failure "not yet implemented-- string concatenation")
-        (* left = L.build_load left "" builder and
-        right = L.build_load right "" builder in let
-        left_type = L.type_of left and
-        right_type = L.type_of right in let
-        left_length = L.size_of left_type and
-        right_length = L.size_of right_type in let
-
-          combined_length = L.build_add left_length right_length "" builder
-        in let
-          (* dest_length = L.build_sub combined_length (L.const_int i32_t 1) "" builder  *)
-          dest_length = L.const_int i32_t 3
-        in let
-          dest_size = (L.array_length left_type) + (L.array_length right_type) - 1
-        in let
-          dest_type = L.array_type i8_t dest_size
-        in let
-          dest_first_ptr = L.build_array_malloc i8_t dest_length "" builder 
-        in let
-          dest_second_offset = L.build_sub combined_length right_length "" builder 
-        in let
-          dest_first = L.build_store left dest_first_ptr builder 
-        in let dest_second_ptr = L.ptrtoint i8_t dest_first_ptr + 
-        (* in let *)
-          (* dest_second_ptr = L.build_gep dest_second_offset [| dest_first_ptr |] "" builder *)
-        (* in let *)
-          (* dest_second = L.build_store right dest_second_ptr builder *)
-            (* in dest_first_ptr *)
-            in right *)
     | (Sub, IntExpr)        -> L.build_sub left right "" builder
     | (Sub, FloatExpr)      -> L.build_fsub left right "" builder
     | (Mult, IntExpr)       -> L.build_mul left right "" builder
