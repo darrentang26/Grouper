@@ -51,10 +51,6 @@ let rec get_free (t, sx) = match sx with
 | SFunction ([(name, ty)], body) -> let
   body_frees = get_free body
     in []
-    (* List.fold_left
-      (fun (free_variables) (n, t) -> if n = "*" ^ name then free_variables else (n, t) :: free_variables)
-      []
-      body_frees *)
 | SCall (s1, s2) -> get_free s1 @ get_free s2
 | SIf (s1, s2, s3) -> get_free s1 @ get_free s2 @ get_free s3
 | SPrint sexpr -> get_free sexpr
@@ -101,32 +97,13 @@ let name_all sexpr =
                 free_variables in let
               with_free_params = (bind_type, SFunction (free_variables @ [(name, ty)], body))
                 in (t, SLet ([((("funname_" ^ name), bind_type), with_free_params)], letbody))
-  (* | SFunction ([(name, ty)], body) -> (match t with FunType (_, rt) -> if named
-      then (t, SFunction ([(name, ty)], name_all' body false))
-      else let
-        free_variables = get_free body in let
-        free_variables = List.rev (List.fold_left
-          (fun (free_variables) (name, ty) -> if List.exists (fun (n, t) -> n = name) free_variables then free_variables else (name, ty) :: free_variables)
-          []
-          free_variables) in let
-        call = List.fold_left
-          (fun (ft, sx) (free, free_type') ->
-            (* raise (Failure ("free variables:\n[" ^ String.concat ", " (List.map string_of_bind free_variables) ^ "]"))) *)
-            match ft with 
-              FunType (free_type, ret_type) ->
-                (ret_type, SCall((ft, sx), (free_type, SName free)))
-            | _ -> (ft, sx))
-          (t, SName "funname")
-          free_variables
-          in (t, SLet ([(("funname", t), (t, SFunction ([(name, ty)], name_all' body false)))],
-            call))) *)
   | SCall (s1, s2) -> (t, SCall (name_all' s1 false, name_all' s2 false))
   | SIf (s1, s2, s3) -> (t, SIf (name_all' s1 false, name_all' s2 false, name_all' s3 false))
   | SPrint sexpr -> (t, SPrint (name_all' sexpr false))
   in name_all' sexpr false
 
 (* lift free variables in to function definitions *)
-let rec lift_free (t, sx) = match sx with
+(* let rec lift_free (t, sx) = match sx with
   SLiteral _ | SFliteral _ | SBoolLit _ | SStringLit _ -> (t, sx)
 | SPairExpr (sexpr1, sexpr2) -> (t, SPairExpr (lift_free sexpr1, lift_free sexpr2))
 | SConsExpr (sexpr1, sexpr2) -> (t, SConsExpr (lift_free sexpr1, lift_free sexpr2))
@@ -149,7 +126,7 @@ let rec lift_free (t, sx) = match sx with
   in (t, SFunction (free_variables @ [(name, ty)], lift_free body))
 | SCall (s1, s2) -> (t, SCall (lift_free s1, lift_free s2))
 | SIf (s1, s2, s3) -> (t, SIf (lift_free s1, lift_free s2, lift_free s3))
-| SPrint sexpr -> (t, SPrint (lift_free sexpr))
+| SPrint sexpr -> (t, SPrint (lift_free sexpr)) *)
 
 (* extract all local functions and create a sprogram_lifted *)
 let lift_functions sexpr =
