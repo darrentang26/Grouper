@@ -204,7 +204,7 @@ let lift_functions sexpr =
     in lift_functions' sexpr
   
 let lift_program (typ_decls, sexpr) = let
-  (sexpr, functions) = lift_functions (lift_free (name_all (mark_free sexpr)))
+  (sexpr, functions) = lift_functions (name_all (mark_free sexpr))
   in (typ_decls, functions, sexpr)
 
 (* ------- lifting finished *)
