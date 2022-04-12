@@ -4,8 +4,12 @@ open Ast
 open Sast
 
 module StringMap = Map.Make(String)
-let translate ((* types *) _, letb) =
+let translate (typ_decls, letb) =
   let context = L.global_context () in 
+
+  let gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+  StringMap.empty 
+  typ_decls in 
 
   let i32_t     = L.i32_type    context 
   and i8_t      = L.i8_type     context 
@@ -15,12 +19,14 @@ let translate ((* types *) _, letb) =
   and struct_t fields = L.struct_type context fields in
   (* and string_t  = L.pointer_type (L.i8_type context)  *)
 
+  
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
-    | StructTypeExpr(fields) -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
+    | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
 
@@ -45,6 +51,19 @@ let translate ((* types *) _, letb) =
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.build_global_stringptr str "" builder
+  | SStructInit binds -> L.const_struct context 
+                           (Array.of_list (List.map (fun (_, bound) -> expr builder scope bound) binds))
+  | SStructRef (var, field) -> let
+      struct_def = StringMap.find var gamma in let rec
+      idx_finder curr_idx = function
+        (curr_field, _)::binds -> if field = curr_field then curr_idx else 
+                                   idx_finder (curr_idx + 1) binds
+      | [] -> raise (Failure "Should not happen, invalid field lookup should be caught in semant") in let
+      field_idx = match struct_def with 
+                    StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds
+                  | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
+        L.build_struct_gep (expr builder scope (struct_def, (SName var))) field_idx (var ^ "." ^ field) builder
+                                
   | SPrint sexpr -> (match sexpr with
       (StringExpr, sx) -> let
         value = expr builder scope (StringExpr, sx) 
