@@ -87,7 +87,7 @@ let check (typ_decls, body) = let
                             else if tr = EmptyListType then match tl with
                                       ListType tl' -> (StringMap.add name tl gamma) 
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                else raise (Failure "the left- and right-hand sides of bindings must mach"))
+                                else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
@@ -104,6 +104,28 @@ let check (typ_decls, body) = let
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
+      | StructInit bindsList -> let
+            typed_binds = List.map (fun (name, expr) -> 
+                                     (name, semant gamma epsilon expr)) 
+                                   bindsList in let
+            comparable = List.map (fun (name,(typ, expr)) -> (name, typ)) typed_binds in let rec
+            struct_type = function
+                (name, StructTypeExpr(fields))::binds -> if fields = comparable then
+                                                                  name else struct_type binds
+             |  _::binds -> struct_type binds
+             |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
+                in
+            (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
+      | StructRef (var, field) -> let 
+        (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
+           TypNameExpr(typ) -> let
+             accessed_type = lookup_type typ gamma in (match accessed_type with
+                StructTypeExpr(binds) -> let 
+                   (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
+                     (found_type, SStructRef(var,field))
+             |  _ -> raise (Failure (var ^ "is not a struct")))
+        |  _ -> raise (Failure "What was accessed was not a name"))
+
       | _ -> raise (Failure "Not yet implemented")
 
         in match body with
