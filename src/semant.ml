@@ -110,7 +110,7 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (match t1 with
-                  FunType (t3, t4) when t2 = t3 -> (t4, SCall ((t1, s1), (t2, s2)))
+                  FunType (t3, t4) when t2 = t3 -> (t4, SCall ((t1, s1), [(t2, s2)]))
                 | _ -> raise (Failure ("cannot call a non-function of type " ^ string_of_type_expr t1)))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in

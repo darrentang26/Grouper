@@ -20,7 +20,7 @@ and sx =
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
   | SMatch of name list * (pattern * sexpr) list
-  | SCall of sexpr * sexpr
+  | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SGroup of sgroup
   | SRing of sring
@@ -72,7 +72,7 @@ let rec string_of_sexpr (t, e) =
 | SMatch(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
-| SCall(expr1, expr2) -> string_of_sexpr expr1 ^ " " ^ string_of_sexpr expr2
+| SCall(expr1, [expr2]) -> string_of_sexpr expr1 ^ " " ^ string_of_sexpr expr2
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
                          ^ "\nthen " ^ string_of_sexpr expr2 
                          ^ "\nelse " ^ string_of_sexpr expr3

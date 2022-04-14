@@ -30,6 +30,7 @@
             (* (match sast with (typ_decls, sexpr) ->
               let lifted_sexpr = (Lifting.name_all (Lifting.mark_free sexpr))
               in let (sexpr, functions) = Lifting.lift_functions lifted_sexpr
+                (* in print_string (Sast.string_of_sprogram (typ_decls, lifted_sexpr))) *)
                 in print_string (Sast.string_of_sprogram_lifted (typ_decls, functions, sexpr))) *)
        | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))
        | Compile -> let m = Codegen.translate sast in
