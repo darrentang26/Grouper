@@ -4,21 +4,30 @@ open Ast
 open Sast
 
 module StringMap = Map.Make(String)
-let translate ((* types *) _, letb) =
+
+let translate (typ_decls, letb) =
   let context = L.global_context () in 
+
+  let gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+  StringMap.empty 
+  typ_decls in 
 
   let i32_t     = L.i32_type    context 
   and i8_t      = L.i8_type     context 
   and i1_t      = L.i1_type     context
   and float_t   = L.double_type context
-  and void_t    = L.void_type   context in
+  and void_t    = L.void_type   context 
+  and struct_t fields = L.struct_type context fields in
   (* and string_t  = L.pointer_type (L.i8_type context)  *)
 
-  let ltype_of_typ = function
+  
+  let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
+    | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
 
@@ -38,14 +47,32 @@ let translate ((* types *) _, letb) =
       Some _ -> ()
     | None -> ignore (instr builder) in
 
-  let rec expr builder scope ((t,e) : sexpr) = match e with
+  let rec expr builder scope gamma ((t,e) : sexpr) = match e with
     SLiteral i -> L.const_int i32_t i
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.build_global_stringptr str "" builder
+  | SStructInit binds -> L.const_struct context 
+                           (Array.of_list (List.map (fun (_, bound) -> expr builder scope gamma bound) binds))
+  | SStructRef (var, field) -> let
+      struct_name = match (StringMap.find var gamma ) with 
+                       TypNameExpr(typ_name) -> typ_name 
+                    |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in let
+      struct_def = StringMap.find struct_name gamma in let rec
+      idx_finder curr_idx = function
+        (curr_field, _)::binds -> if field = curr_field then curr_idx else 
+                                   idx_finder (curr_idx + 1) binds
+      | [] -> raise (Failure "Should not happen, invalid field lookup should be caught in semant") in let
+      field_idx = match struct_def with 
+                    StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds
+                  | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
+        let lstruct = (StringMap.find var scope) in
+        L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
+        
+                             
   | SPrint sexpr -> (match sexpr with
       (StringExpr, sx) -> let
-        value = expr builder scope (StringExpr, sx) 
+        value = expr builder scope gamma (StringExpr, sx) 
           (* in let sval = match (L.string_of_const value) with
                           Some s -> s
                         | None -> "" *)
@@ -56,8 +83,8 @@ let translate ((* types *) _, letb) =
     | _ -> raise (Failure "not yet implemented-- print only expects strings"))
   | SName name -> L.build_load (StringMap.find name scope) name builder
   | SBinop ((tl, sl), op, (tr, sr)) -> let
-    left = expr builder scope (tl, sl) and
-    right = expr builder scope (tr, sr)
+    left = expr builder scope gamma (tl, sl) and
+    right = expr builder scope gamma (tr, sr)
     in (match op, tl with
       (Add, IntExpr)        -> L.build_add left right "" builder
     | (Add, FloatExpr)      -> L.build_fadd left right "" builder
@@ -113,35 +140,38 @@ let translate ((* types *) _, letb) =
     | (Or, BoolExpr)        -> L.build_or left right "" builder
     | (Mod, IntExpr)        -> L.build_srem left right "" builder)
   | SUnop (uop, (ty, sx)) -> let
-    value = expr builder scope (ty, sx)
+    value = expr builder scope gamma (ty, sx)
     in (match uop, ty with
       (Neg, IntExpr)  -> L.build_neg value "" builder
     | (Neg, FloatExpr)-> L.build_fneg value "" builder
     | (Not, BoolExpr) -> L.build_not value "" builder)
   | SLet (binds, body) -> let
+    store_typ gamma ((name, ty), sexpr) = (StringMap.add name ty gamma) in let
     store_val scope ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
-      value = expr builder scope sexpr in let
+      value = expr builder scope gamma sexpr in let
       _ = L.build_store value local builder in
         (StringMap.add name local scope) in let
     scope' = List.fold_left 
         store_val
         scope
-        binds
-      in expr builder scope' body
+        binds in let 
+    gamma' = List.fold_left store_typ gamma binds
+      in   
+      expr builder scope' gamma' body
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
-    let cond_value = expr builder scope cond_sexpr
+    let cond_value = expr builder scope gamma cond_sexpr
     in let start_bb = L.insertion_block builder
     in let the_function = L.block_parent start_bb
 
     in let then_bb = L.append_block context "then" the_function
     in let _ = L.position_at_end then_bb builder
-    in let then_value = expr builder scope then_sexpr
+    in let then_value = expr builder scope gamma then_sexpr
     in let then_bb = L.insertion_block builder
 
     in let else_bb = L.append_block context "else" the_function
     in let _ = L.position_at_end else_bb builder
-    in let else_value = expr builder scope else_sexpr
+    in let else_value = expr builder scope gamma else_sexpr
     in let else_bb = L.insertion_block builder
 
     in let merge_bb = L.append_block context "ifcont" the_function
@@ -160,6 +190,6 @@ let translate ((* types *) _, letb) =
 
     in let _ = L.position_at_end merge_bb builder in phi
   | _ -> raise (Failure ("sexpr " ^ (Sast.string_of_sexpr (t,e)) ^ " not yet implemented"))
-in let _ = expr main_builder StringMap.empty letb
+in let _ = expr main_builder StringMap.empty gamma letb
 in let _ = L.build_ret (L.const_int i32_t 0) main_builder
 in grp_module 
