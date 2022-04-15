@@ -87,7 +87,11 @@ let check (typ_decls, body) = let
                             else if tr = EmptyListType then match tl with
                                       ListType tl' -> (StringMap.add name tl gamma) 
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
+                                else match tl with 
+                                  TypNameExpr(alias) -> if (StringMap.find alias gamma) = tr 
+                                                          then (StringMap.add name tl gamma)
+                                                          else raise (Failure "Type alias result does not match right hand side") 
+                                | _ -> raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
