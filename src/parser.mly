@@ -21,7 +21,7 @@ open Ast
 %nonassoc NOIN
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
-%left ARROW
+%right ARROW
 %nonassoc LIST
 %nonassoc GROUP RING FIELD POLY
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
@@ -145,8 +145,8 @@ formals_opt:
   | formal_list   { $1 }
 
 formal_list:
-    NAME              { [$1] }
-  | formal_list NAME  { $2 :: $1 }
+    type_expr NAME              { [($2, $1)] }
+  | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
 match_rule:

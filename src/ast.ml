@@ -37,11 +37,11 @@ type expr =
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Let of (bind * expr) list * expr
-  | Function of name list * expr
+  | Function of bind list * expr
   | AdtExpr of target_concrete
   | StructInit of (name * expr) list
   | StructRef of name * name
-  | Match of name list * (pattern * expr) list
+  | Match of bind list * (pattern * expr) list
   | Call of expr * expr
   | If of expr * expr * expr
   | Group of group
@@ -99,7 +99,7 @@ let rec string_of_type_expr = function
 | TypNameExpr(name) -> name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
-| FunType(type_expr, result) -> string_of_type_expr type_expr ^ " -> " ^ string_of_type_expr result 
+| FunType(type_expr, result) -> "(" ^ string_of_type_expr type_expr ^ " -> " ^ string_of_type_expr result  ^ ")"
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ " * " ^ string_of_type_expr type_expr2 ^ ")"
 | ListType(type_expr) -> string_of_type_expr type_expr ^ " list"
 | EmptyListType -> "[]"
@@ -128,11 +128,11 @@ let rec string_of_expr = function
 | Unop(op,expr) -> string_of_uop op ^ string_of_expr expr
 | Let([], body) -> "" ^ string_of_expr body
 | Let((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ " = " ^ string_of_expr expr ^ " in\n" ^ string_of_expr (Let(lets, body))
-| Function(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_expr body 
+| Function(args,body) -> "(" ^ String.concat ", " (List.map string_of_bind args) ^ ") -> " ^ string_of_expr body 
 | AdtExpr(target) -> string_of_target_concrete target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
-| Match(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")" ^ " with\n  | "
+| Match(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
 | Call(expr1, expr2) -> string_of_expr expr1 ^ " " ^ string_of_expr expr2
