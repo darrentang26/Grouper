@@ -17,7 +17,7 @@ let add_to_previous prev_names name =
     name :: prev_names
 
 (* names all functions *)
-let name_all sexpr =
+let name_all (typ_decls, sexpr) =
   let rec name_all' (ty, sx) prev_names is_named = match sx with
     SLiteral _ | SFliteral _ | SBoolLit _ | SStringLit _ -> ((ty, sx), prev_names)
   | SPairExpr (s1, s2) ->
@@ -86,4 +86,76 @@ let name_all sexpr =
       in ((ty, SPrint sexpr'), prev_names')
 
   in let (named, _) = name_all' sexpr [] false
-    in named
+    in (typ_decls, named)
+
+(* lift lambda/let pairs *)
+let lift_lambdas (typ_decls, sexpr) =
+    let rec lift_lambdas' (ty, sx) = match sx with
+      SLiteral _ | SFliteral _ | SBoolLit _ | SStringLit _ -> ((ty, sx), [])
+    | SPairExpr (s1, s2) ->
+        let (s1', fs1) = lift_lambdas' s1
+        and (s2', fs2) = lift_lambdas' s2
+          in ((ty, SPairExpr (s1', s2')), fs1 @ fs2)
+    | SConsExpr (s1, s2) ->
+        let (s1', fs1) = lift_lambdas' s1
+        and (s2', fs2) = lift_lambdas' s2
+          in ((ty, SConsExpr (s1', s2')), fs1 @ fs2)
+    | SEmptyListExpr -> ((ty, SEmptyListExpr), [])
+    | SName n -> ((ty, SName n), [])
+    | SBinop (s1, op, s2) ->
+        let (s1', fs1) = lift_lambdas' s1
+        and (s2', fs2) = lift_lambdas' s2
+          in ((ty, SBinop (s1', op, s2')), fs1 @ fs2)
+    | SUnop (op, sexpr) ->
+        let (sexpr', fs) = lift_lambdas' sexpr
+          in ((ty, SUnop (op, sexpr')), fs)
+    | SLet (bound_vars, body) ->
+        let (bound_vars, fs) = List.fold_left
+          (fun (bound_vars, fs) ((name, ty), sexpr) ->
+            let (sexpr', fs') = lift_lambdas' sexpr
+              in match ty with
+                FunType _ -> 
+                  (bound_vars, ((name, ty), sexpr') :: fs' @ fs)
+              | _ -> (((name, ty), sexpr) :: bound_vars, fs))
+          ([], [])
+          bound_vars
+        and (body', fs') = lift_lambdas' body
+          in if bound_vars = []
+            then (body', fs @ fs')
+            else ((ty, SLet (bound_vars, body')), fs @ fs')
+    | SFunction (params, body) ->
+        let (body', fs) = lift_lambdas' body
+          in ((ty, SFunction (params, body')), fs)
+    | SStructInit (inits) ->
+        let (inits', fs) = List.fold_left
+          (fun (inits, fs) (name, sexpr) ->
+            let (sexpr', fs') = lift_lambdas' sexpr
+              in ((name, sexpr') :: inits, fs' @ fs))
+          ([], [])
+          inits
+          in ((ty, SStructInit (inits')), fs)
+    | SStructRef (struct_name, field) -> ((ty, SStructRef (struct_name, field)), [])
+    | SCall (fsexpr, sexprs) ->
+        let (fsexpr', fs1) = lift_lambdas' fsexpr
+        in let (sexprs', fs2) = List.fold_left
+          (fun (sexprs, fs) sexpr ->
+            let (sexpr', fs') = lift_lambdas' sexpr
+              in (sexpr' :: sexprs, fs' @ fs))
+          ([], fs1)
+          sexprs
+          in ((ty, SCall (fsexpr', List.rev sexprs')), fs2)
+    | SIf (cond, s1, s2) ->
+        let (cond', fs') = lift_lambdas' cond
+        and (s1', fs1) = lift_lambdas' s1
+        and (s2', fs2) = lift_lambdas' s2
+          in ((ty, SIf (cond', s1', s2')), fs2 @ fs1 @ fs')
+    | SPrint sexpr ->
+        let (sexpr', fs) = lift_lambdas' sexpr
+          in ((ty, SPrint sexpr'), fs)
+
+    in let (named, fs) = lift_lambdas' sexpr
+      in (typ_decls, fs, named)
+      
+let lift_program sast = 
+  lift_lambdas (name_all sast)
+  (* match (name_all sast) with (typ_decls, sexpr) -> (typ_decls, [], sexpr) *)

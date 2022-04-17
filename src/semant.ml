@@ -163,7 +163,7 @@ let check (typ_decls, body) = let
                                 then if pts = []
                                     then ((rt, SCall ((t1, s1), [(t2, s2)])), true, [], rt)
                                     else ((t1, s1), false, [(t2, s2)], FunType (ParamType pts, rt))
-                                else raise (Failure ("cannot apply " ^ string_of_type_expr t2 ^ " to " ^ string_of_type_expr pt))
+                                else raise (Failure ("cannot appyly " ^ string_of_type_expr t2 ^ " to " ^ string_of_type_expr pt))
                       | _ -> raise (Failure ("cannot call a non-function with type " ^ string_of_type_expr t1)))
           | _ -> raise (Failure "Cannot call a non-function")
 

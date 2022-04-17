@@ -24,7 +24,7 @@
        match !action with
          Ast     -> ()
        | Sast    -> print_string (Sast.string_of_sprogram sast)
-       | Lifting -> print_string (Sast.string_of_sprogram (match sast with (typ_decls, sexpr) -> (typ_decls, (Lifting.name_all sexpr))))
+       | Lifting -> print_string (Sast.string_of_sprogram_lifted (Lifting.lift_program sast))
        | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))
        | Compile -> let m = Codegen.translate sast in
      Llvm_analysis.assert_valid_module m;
