@@ -15,12 +15,12 @@ and sx =
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
   | SLet of (bind * sexpr) list * sexpr
-  | SFunction of name list * sexpr
+  | SFunction of bind list * sexpr
   | SAdtExpr of target_concrete
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
-  | SMatch of name list * (pattern * sexpr) list
-  | SCall of sexpr * sexpr
+  | SMatch of bind list * (pattern * sexpr) list
+  | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SGroup of sgroup
   | SRing of sring
@@ -62,15 +62,15 @@ let rec string_of_sexpr (t, e) =
 | SName(name) -> name
 | SBinop(expr1,op,expr2) -> string_of_sexpr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_sexpr expr2
 | SUnop(op,expr) -> string_of_uop op ^ string_of_sexpr expr
-| SLet(binds, body) -> "let " ^ String.concat " and " (List.map (fun (bind, expr) -> string_of_bind bind ^ " = " ^ string_of_sexpr expr) binds) ^ " in " ^ (string_of_sexpr body)
-| SFunction(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_sexpr body 
+| SLet(binds, body) -> "let " ^ String.concat "\nand " (List.map (fun (bind, expr) -> string_of_bind bind ^ " =\n" ^ string_of_sexpr expr) binds) ^ "\nin " ^ (string_of_sexpr body)
+| SFunction(args,body) -> "(" ^ String.concat ", " (List.map string_of_bind args) ^ ") -> " ^ string_of_sexpr body 
 | SAdtExpr(target) -> string_of_target_concrete target
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
 | SStructRef(name1, name2) -> name1 ^ "." ^ name2
-| SMatch(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")" ^ " with\n  | "
+| SMatch(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
-| SCall(expr1, expr2) -> string_of_sexpr expr1 ^ " " ^ string_of_sexpr expr2
+| SCall(expr1, expr2s) -> string_of_sexpr expr1 ^ ": {" ^ String.concat ", " (List.map string_of_sexpr expr2s) ^ "}"
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
                          ^ " then " ^ string_of_sexpr expr2 
                          ^ " else " ^ string_of_sexpr expr3

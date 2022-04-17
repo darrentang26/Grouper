@@ -104,6 +104,18 @@ let check (typ_decls, body) = let
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
+      | Function (binds, body) -> let
+            gamma' = List.fold_left
+                (fun gamma (name, tl) -> StringMap.add name tl gamma)
+                StringMap.empty
+                binds in let
+            (* _ = raise (Failure (String.concat ", " (List.map string_of_bind binds))) and *)
+            param_types = List.map
+                (fun (name, tl) -> tl)
+                binds and
+            (rt, sbody) = semant gamma' epsilon body
+                in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
+      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
       | StructInit bindsList -> let
             typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
@@ -128,6 +140,38 @@ let check (typ_decls, body) = let
 
       | _ -> raise (Failure "Not yet implemented")
 
+    and semant_call gamma epsilon call =
+        let rec semant_call_inner = function
+            (* subsequent calls *)
+            Call (Call (e1', e2'), e2) ->
+                let ((oft, fs), valid, sexpr_list, cft) = semant_call_inner (Call (e1', e2'))
+                and (t2, s2) = semant gamma epsilon e2
+                    in (match cft with
+                        FunType (ParamType (pt :: pts), rt) ->
+                            if pt = t2
+                                then if pts = []
+                                    then ((rt, SCall ((oft, fs), sexpr_list @ [(t2, s2)])), true, [], rt)
+                                    else ((oft, fs), false, sexpr_list @ [(t2, s2)], FunType (ParamType pts, rt))
+                                else raise (Failure ("cannot apply " ^ string_of_type_expr t2 ^ " to " ^ string_of_type_expr pt))
+                      | _ -> raise (Failure ("cannot call a non-function with type " ^ string_of_type_expr cft)))
+            (* function expression *)
+          | Call (e1, e2) ->
+                let (t1, s1) = semant gamma epsilon e1
+                and (t2, s2) = semant gamma epsilon e2
+                    in (match t1 with
+                        FunType (ParamType (pt :: pts), rt) ->
+                            if pt = t2
+                                then if pts = []
+                                    then ((rt, SCall ((t1, s1), [(t2, s2)])), true, [], rt)
+                                    else ((t1, s1), false, [(t2, s2)], FunType (ParamType pts, rt))
+                                else raise (Failure ("cannot apply " ^ string_of_type_expr t2 ^ " to " ^ string_of_type_expr pt))
+                      | _ -> raise (Failure ("cannot call a non-function with type " ^ string_of_type_expr t1)))
+          | _ -> raise (Failure "Cannot call a non-function")
+
+            in let ((ty, sx), valid, _, _) = semant_call_inner call in
+                if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
+                    
+    
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
         | _ -> raise (Failure "top-level expression must be a let expression")

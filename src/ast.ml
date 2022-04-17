@@ -12,6 +12,7 @@ type type_expr =
   | TypNameExpr of name
   | AdtTypeExpr of (name * type_expr) list
   | StructTypeExpr of (name * type_expr) list
+  | ParamType of type_expr list
   | FunType of type_expr * type_expr
   | PairType of type_expr * type_expr
   | ListType of type_expr
@@ -99,6 +100,7 @@ let rec string_of_type_expr = function
 | TypNameExpr(name) -> name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
+| ParamType(type_exprs) -> "[" ^ String.concat ", " (List.map string_of_type_expr type_exprs) ^ "]"
 | FunType(type_expr, result) -> "(" ^ string_of_type_expr type_expr ^ " -> " ^ string_of_type_expr result  ^ ")"
 | PairType(type_expr1, type_expr2) -> "(" ^ string_of_type_expr type_expr1 ^ " * " ^ string_of_type_expr type_expr2 ^ ")"
 | ListType(type_expr) -> string_of_type_expr type_expr ^ " list"
@@ -135,7 +137,7 @@ let rec string_of_expr = function
 | Match(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
-| Call(expr1, expr2) -> string_of_expr expr1 ^ " " ^ string_of_expr expr2
+| Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
                          ^ " then " ^ string_of_expr expr2 
                          ^ " else " ^ string_of_expr expr3
