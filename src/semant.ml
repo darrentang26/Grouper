@@ -109,7 +109,6 @@ let check (typ_decls, body) = let
                 (fun gamma (name, tl) -> StringMap.add name tl gamma)
                 StringMap.empty
                 binds in let
-            (* _ = raise (Failure (String.concat ", " (List.map string_of_bind binds))) and *)
             param_types = List.map
                 (fun (name, tl) -> tl)
                 binds and
