@@ -56,7 +56,6 @@ let name_all (typ_decls, sexpr) =
           and right = (ty, SFunction (params, body'))
           and body = (ty, SName function_name)
             in ((ty, SLet ([(bind, right)], body)), add_to_previous prev_names' function_name)
-            (* this is not right!!! *)
   | SStructInit (inits) ->
     let (inits', prev_names') = List.fold_left
       (fun (inits, prev_names) (name, sexpr) ->
