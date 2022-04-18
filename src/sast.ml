@@ -15,12 +15,12 @@ and sx =
   | SBinop of sexpr * op * sexpr
   | SUnop of uop * sexpr
   | SLet of (bind * sexpr) list * sexpr
-  | SFunction of name list * sexpr
+  | SFunction of bind list * sexpr
   | SAdtExpr of target_concrete
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
-  | SMatch of name list * (pattern * sexpr) list
-  | SCall of sexpr * sexpr
+  | SMatch of bind list * (pattern * sexpr) list
+  | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SGroup of sgroup
   | SRing of sring
@@ -46,6 +46,7 @@ and sring = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
 and sfield = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
 
 type sprogram = typ_decl list * sexpr
+type sprogram_lifted = typ_decl list * (bind * sexpr) list * sexpr
 
 (* Pretty-printing functions *)
 
@@ -62,15 +63,15 @@ let rec string_of_sexpr (t, e) =
 | SName(name) -> name
 | SBinop(expr1,op,expr2) -> string_of_sexpr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_sexpr expr2
 | SUnop(op,expr) -> string_of_uop op ^ string_of_sexpr expr
-| SLet(binds, body) -> "let " ^ String.concat " and " (List.map (fun (bind, expr) -> string_of_bind bind ^ " = " ^ string_of_sexpr expr) binds) ^ " in " ^ (string_of_sexpr body)
-| SFunction(args,body) -> "(" ^ String.concat ", " args ^ ") -> " ^ string_of_sexpr body 
+| SLet(binds, body) -> "let " ^ String.concat "\nand " (List.map (fun (bind, expr) -> string_of_bind bind ^ " =\n" ^ string_of_sexpr expr) binds) ^ "\nin " ^ (string_of_sexpr body)
+| SFunction(args,body) -> "(" ^ String.concat ", " (List.map string_of_bind args) ^ ") -> " ^ string_of_sexpr body 
 | SAdtExpr(target) -> string_of_target_concrete target
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
 | SStructRef(name1, name2) -> name1 ^ "." ^ name2
-| SMatch(namelist, patexprlist) -> "match (" ^ String.concat " " (List.map (fun (name) -> name) namelist) ^ ")" ^ " with\n  | "
+| SMatch(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
-| SCall(expr1, expr2) -> string_of_sexpr expr1 ^ " " ^ string_of_sexpr expr2
+| SCall(expr1, expr2s) -> string_of_sexpr expr1 ^ ": {" ^ String.concat ", " (List.map string_of_sexpr expr2s) ^ "}"
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
                          ^ " then " ^ string_of_sexpr expr2 
                          ^ " else " ^ string_of_sexpr expr3
@@ -110,4 +111,9 @@ and string_of_sfield(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) =
   string_of_sexpr expr7
 
 let string_of_sprogram (typ_decls, expr) = 
-  String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
+  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
+
+let string_of_sprogram_lifted (typ_decls, fs, expr) =
+  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ "\n\n" ^
+  String.concat "\n" (List.map (fun (bind, sexpr) -> string_of_bind bind ^ ": " ^ string_of_sexpr sexpr) fs) ^ "\n\n" ^
+  string_of_sexpr expr ^ "\n"
