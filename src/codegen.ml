@@ -17,7 +17,9 @@ let translate (typ_decls, letb) =
   and i1_t      = L.i1_type     context
   and float_t   = L.double_type context
   and void_t    = L.void_type   context 
-  and struct_t fields = L.struct_type context fields in
+  and pointer_t typ = L.pointer_type typ 
+  and struct_t fields = L.struct_type context fields 
+  and array_t typ size = L.array_type typ size in
   (* and string_t  = L.pointer_type (L.i8_type context)  *)
 
   
@@ -28,6 +30,7 @@ let translate (typ_decls, letb) =
     | VoidExpr -> void_t
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
+    | PairType (ty1, ty2) -> array_t (pointer_t (ltype_of_typ ty1)) 2
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
 
@@ -68,7 +71,13 @@ let translate (typ_decls, letb) =
                   | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
-        
+  
+  (*| SPairExpr(car, cdr) -> let 
+      car_val = expr builder scope gamma car in let
+      cdr_val = expr builder scope gamma cdr in let
+        L.const_array (ltype_of_typ t) 
+          [| L.build_alloca (ltype_of_typ car_t) (expr builder scope gamma car) ; 
+             L.build_alloca                (expr builder scope gamma cdr) |]*)
                              
   | SPrint sexpr -> (match sexpr with
       (StringExpr, sx) -> let
