@@ -1,0 +1,3 @@
+let (Int * Int) xs = (1,2) in
+let Int x = car xs in
+if x == 1 then print: "1" else print: "no"

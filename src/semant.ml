@@ -33,11 +33,6 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (PairType (t1, t2), SPairExpr ((t1, s1), (t2, s2)))
-      | ConsExpr (expr, EmptyListExpr) -> let
-            (t, sx) = semant gamma epsilon expr
-                in (match t with
-                      ListType EmptyListType -> raise (Failure "cannot hae a list of empty lists")
-                    | _ -> (ListType t, SConsExpr ((t, sx), (EmptyListType, SEmptyListExpr))))
       | ConsExpr (e1, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -45,7 +40,17 @@ let check (typ_decls, body) = let
                       ListType t2' -> if t1 = t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
+                    | EmptyListType -> (ListType t1, SConsExpr((t1, s1), (t2, s2)))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
+      | CarExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t', SCarExpr((t, s)))
+                |   PairType (t1, t2) -> (t1, SCarExpr((t, s))))
+      | CdrExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t, SCdrExpr((t, s))))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
       | Name s      -> let 
             ty = lookup_type s gamma

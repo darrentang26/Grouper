@@ -1,0 +1,5 @@
+type Pt = {x : Int, y : Int}
+
+let Pt pt_1 = {x = 3, y = 5} in
+let Int bar = pt_1.x in
+bar

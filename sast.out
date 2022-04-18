@@ -1,0 +1,1 @@
+(String : let (Int * Int) xs = ((Int * Int) : ((Int : 1),(Int : 2))) in (String : let Int x = (Int : car ((Int * Int) : xs)) in (String : if (Bool : (Int : x) == (Int : 1)) then (String : print: (String : "1")) else (String : print: (String : "no")))))
