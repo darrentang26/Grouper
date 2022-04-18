@@ -25,8 +25,8 @@
          Ast     -> ()
        | Sast    -> print_string (Sast.string_of_sprogram sast)
        | Lifting -> print_string (Sast.string_of_sprogram_lifted (Lifting.lift_program sast))
-       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))
-       | Compile -> let m = Codegen.translate sast in
+       | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate (Lifting.lift_program sast)))
+       | Compile -> let m = Codegen.translate (Lifting.lift_program sast) in
      Llvm_analysis.assert_valid_module m;
      print_string (Llvm.string_of_llmodule m)
    

@@ -112,11 +112,15 @@ let lift_lambdas (typ_decls, sexpr) =
     | SLet (bound_vars, body) ->
         let (bound_vars, fs) = List.fold_left
           (fun (bound_vars, fs) ((name, ty), sexpr) ->
-            let (sexpr', fs') = lift_lambdas' sexpr
-              in match ty with
+            let ((ty', sx'), fs') = lift_lambdas' sexpr
+              in match sx' with
+                SFunction _ ->
+                  (bound_vars, ((name, ty), (ty', sx')) :: fs' @ fs)
+              | _ -> (((name, ty), (ty', sx')) :: bound_vars, fs))
+              (* in match ty with
                 FunType _ -> 
-                  (bound_vars, ((name, ty), sexpr') :: fs' @ fs)
-              | _ -> (((name, ty), sexpr) :: bound_vars, fs))
+                  (bound_vars, ((name, ty), (ty', sx')) :: fs' @ fs)
+              | _ -> (((name, ty), (ty', sx')) :: bound_vars, fs)) *)
           ([], [])
           bound_vars
         and (body', fs') = lift_lambdas' body
