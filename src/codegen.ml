@@ -69,18 +69,41 @@ let translate (typ_decls, letb) =
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
         
-                             
-  | SPrint sexpr -> (match sexpr with
-      (StringExpr, sx) -> let
+  | SPrint (typ, sx) -> 
+      let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
+      let float_format_str = L.build_global_stringptr "%g" "fmt" builder in let 
+      value = expr builder scope gamma (typ, sx) in                          
+      (match typ with 
+        StringExpr -> let
+          str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder in let
+          _ = L.build_call print_func [| str |] "printf" builder 
+          in value
+      | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
+      | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
+      | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
+  
+  (*| SPrint sexpr -> (match sexpr with 
+     (StringExpr, sx) -> let
         value = expr builder scope gamma (StringExpr, sx) 
           (* in let sval = match (L.string_of_const value) with
                           Some s -> s
                         | None -> "" *)
-          in let sval = value
-          in let str = L.build_in_bounds_gep sval [| (L.const_int i32_t 0) |] "" builder
+          (*in let sval = value*)
+          in let str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder
           in let _ = L.build_call print_func [| str |] "printf" builder
             in value
-    | _ -> raise (Failure "not yet implemented-- print only expects strings"))
+    | (IntExpr, SLiteral(num)) -> expr builder scope gamma (StringExpr, SPrint (StringExpr, SStringLit(string_of_int num)))
+    | (IntExpr, SName(_)) -> raise (Failure ("what sx looks like : " ^ (string_of_sexpr sexpr)))
+        (*let
+        value = expr builder scope gamma (StringExpr, sx) 
+          (* in let sval = match (L.string_of_const value) with
+                      Some s -> s
+                    | None -> "" *)
+        in let sval = value
+        in let str = L.build_in_bounds_gep sval [| (L.const_int i32_t 0) |] "" builder
+        in let _ = L.build_call print_func [| str |] "printf" builder
+          in value*)
+    | _ -> raise (Failure "not yet implemented-- print only expects strings"))*)
   | SName name -> L.build_load (StringMap.find name scope) name builder
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
