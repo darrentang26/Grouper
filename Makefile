@@ -19,6 +19,7 @@ tests: sp_test hw_test
 compile: toplevel
 	src/toplevel.native -a $(in) > ast.out
 	src/toplevel.native -s $(in) > sast.out
+	src/toplevel.native -f $(in) > lifted.out
 	src/toplevel.native -l $(in) > llvm.out
 	src/toplevel.native -c $(in) | llc -relocation-model=pic | cc -o out -xassembler -
 
