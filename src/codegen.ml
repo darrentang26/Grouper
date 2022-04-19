@@ -116,7 +116,7 @@ let translate (typ_decls, fns, letb) =
           in let str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder
           in let _ = L.build_call print_func [| str |] "printf" builder
             in value
-    | _ -> raise (Failure "not yet implemented-- print only expects strings"))
+    | _ -> raise (Failure "not yet implemented-- print only expects strings"))*)
   | SName name -> (match t with
       FunType _ -> let
         global_lookup = L.lookup_global name grp_module
