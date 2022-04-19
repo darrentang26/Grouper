@@ -17,14 +17,15 @@ let translate (typ_decls, fns, letb) =
   and i1_t      = L.i1_type     context
   and float_t   = L.double_type context
   and void_t    = L.void_type   context 
+  and string_t  = L.pointer_type (L.i8_type context) 
   and struct_t fields = L.struct_type context fields in
-  (* and string_t  = L.pointer_type (L.i8_type context)  *)
 
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
+    | StringExpr -> string_t
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
