@@ -80,6 +80,7 @@ let translate (typ_decls, letb) =
           in value
       | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
       | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
+      | BoolExpr -> raise (Failure ("llvalue for bool is " ^ (L.string_of_llvalue value)))
       | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
   
   (*| SPrint sexpr -> (match sexpr with 
