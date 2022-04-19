@@ -88,18 +88,35 @@ let translate (typ_decls, fns, letb) =
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
         
-                             
-  | SPrint sexpr -> (match sexpr with
-      (StringExpr, sx) -> let
+  | SPrint (typ, sx) -> 
+      let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
+      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in let 
+      value = expr builder scope gamma (typ, sx) in                          
+      (match typ with 
+        StringExpr -> let
+          str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder in let
+          _ = L.build_call print_func [| str |] "printf" builder 
+          in value
+      | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
+      | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
+      | BoolExpr -> let
+          lbool = L.string_of_llvalue value in
+          if lbool = "i1 true" then expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "true"))
+          else expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "false"))
+      (*| StructTypeExpr fields ->*)
+      | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
+  
+  (*| SPrint sexpr -> (match sexpr with 
+     (StringExpr, sx) -> let
         value = expr builder scope gamma (StringExpr, sx) 
           (* in let sval = match (L.string_of_const value) with
                           Some s -> s
                         | None -> "" *)
-          in let sval = value
-          in let str = L.build_in_bounds_gep sval [| (L.const_int i32_t 0) |] "" builder
+          (*in let sval = value*)
+          in let str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder
           in let _ = L.build_call print_func [| str |] "printf" builder
             in value
-    | _ -> raise (Failure "not yet implemented-- print only expects strings"))
+    | _ -> raise (Failure "not yet implemented-- print only expects strings"))*)
   | SName name -> (match t with
       FunType _ -> let
         global_lookup = L.lookup_global name grp_module
