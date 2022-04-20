@@ -19,7 +19,7 @@ and sx =
   | SAdtExpr of target_concrete
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
-  | SMatch of bind list * (pattern * sexpr) list
+  | SMatch of bind list * (spattern * sexpr) list
   | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SGroup of sgroup
@@ -69,7 +69,7 @@ let rec string_of_sexpr (t, e) =
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
 | SStructRef(name1, name2) -> name1 ^ "." ^ name2
 | SMatch(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
-                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
+                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_spattern pattern 
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
 | SCall(expr1, expr2s) -> string_of_sexpr expr1 ^ ": {" ^ String.concat ", " (List.map string_of_sexpr expr2s) ^ "}"
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 

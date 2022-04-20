@@ -136,7 +136,11 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
-
+      | Match (binds, patterns) -> let
+          gamma' = List.fold_left (fun gamma (name, typ) -> (StringMap.add name typ gamma)) gamma binds
+            in (result_type, SMatch(binds, check_patterns gamma' epsilon patterns))
+           
+                  
       | _ -> raise (Failure "Not yet implemented")
 
     and semant_call gamma epsilon call =
@@ -170,7 +174,30 @@ let check (typ_decls, body) = let
             in let ((ty, sx), valid, _, _) = semant_call_inner call in
                 if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
                     
-    
+    and check_patterns gamma epsilon patterns = let
+      (_, fexpr) = List.hd patterns in let
+      (result_type, _) = semant gamma epsilon fexpr in let 
+      _ = List.fold_left (fun curr_type (pattern, expr) -> let 
+      (new_type, _) = semant gamma' epsilon expr in
+        if new_type = curr_type then new_type 
+        else raise (Failure "Individual expressions evaluate to different types in pattern matching")) 
+          result_type patterns
+        let target_type = function
+          TargetWildName name -> StringMap.find name gamma
+        | TargetWildExpr expr -> let (typ, _) = semant expr gamma epsilon in typ
+        | TargetWildApp (name, expr) -> StringMap.find name gamma
+        | CatchAll -> raise (Failure "_ cannot be the first pattern in a match") in
+          let rec check_target gamma epsilon = function
+            TargetWildName name -> raise (Failure "TargetWildName requires ADTs")
+          | TargetWildLiteral expr -> let 
+            (typ, value) = semant gamma epsilon expr in
+              if typ = target_type then (typ, STargetWildLiteral(typ, value))
+              else raise (Failure "Not all targets are of the same type in pattern matching")
+          | TargetWildApp (name, target) -> raise (Failure "TargetWildApp requires ADTs")
+          | CatchAll -> (pattern_type, SCatchAll)
+          in (pattern_type, SPattern (List.map (check_pattern epsilon gamma) patterns))
+    and check_target gamma epsilon target = 
+
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
         | _ -> raise (Failure "top-level expression must be a let expression")
