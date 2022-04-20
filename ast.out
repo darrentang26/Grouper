@@ -1,3 +1,3 @@
-let (Int * Int) xs = (1,2) in
-let Int x = car xs in
-if x == 1 then print: "1" else print: "no"
+let Bool list xs = (true :: (false :: (true :: []))) in
+let Bool x = car cdr cdr xs in
+if x then print: "true" else print: "false"

@@ -1,0 +1,75 @@
+; ModuleID = 'Grouper'
+source_filename = "Grouper"
+
+@0 = private unnamed_addr constant [5 x i8] c"true\00", align 1
+@1 = private unnamed_addr constant [6 x i8] c"false\00", align 1
+
+declare i32 @printf(i8*, ...)
+
+define i32 @main() {
+entry:
+  %0 = alloca { i8*, i8* }*, align 8
+  %malloccall = tail call i8* @malloc(i32 ptrtoint ({ i8*, i8* }* getelementptr ({ i8*, i8* }, { i8*, i8* }* null, i32 1) to i32))
+  %Cons2 = bitcast i8* %malloccall to { i8*, i8* }*
+  %Data_p = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons2, i32 0, i32 0
+  %Next_p = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons2, i32 0, i32 1
+  %Data_c = bitcast i8** %Data_p to i1**
+  %malloccall1 = tail call i8* @malloc(i32 ptrtoint (i1* getelementptr (i1, i1* null, i32 1) to i32))
+  %D_ptr = bitcast i8* %malloccall1 to i1*
+  store i1 true, i1* %D_ptr, align 1
+  store i1* %D_ptr, i1** %Data_c, align 8
+  %Next_c = bitcast i8** %Next_p to { i8*, i8* }**
+  store { i8*, i8* }* null, { i8*, i8* }** %Next_c, align 8
+  %malloccall2 = tail call i8* @malloc(i32 ptrtoint ({ i8*, i8* }* getelementptr ({ i8*, i8* }, { i8*, i8* }* null, i32 1) to i32))
+  %Cons23 = bitcast i8* %malloccall2 to { i8*, i8* }*
+  %Data_p4 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons23, i32 0, i32 0
+  %Next_p5 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons23, i32 0, i32 1
+  %Data_c6 = bitcast i8** %Data_p4 to i1**
+  %malloccall7 = tail call i8* @malloc(i32 ptrtoint (i1* getelementptr (i1, i1* null, i32 1) to i32))
+  %D_ptr8 = bitcast i8* %malloccall7 to i1*
+  store i1 false, i1* %D_ptr8, align 1
+  store i1* %D_ptr8, i1** %Data_c6, align 8
+  %Next_c9 = bitcast i8** %Next_p5 to { i8*, i8* }**
+  store { i8*, i8* }* %Cons2, { i8*, i8* }** %Next_c9, align 8
+  %malloccall10 = tail call i8* @malloc(i32 ptrtoint ({ i8*, i8* }* getelementptr ({ i8*, i8* }, { i8*, i8* }* null, i32 1) to i32))
+  %Cons211 = bitcast i8* %malloccall10 to { i8*, i8* }*
+  %Data_p12 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons211, i32 0, i32 0
+  %Next_p13 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons211, i32 0, i32 1
+  %Data_c14 = bitcast i8** %Data_p12 to i1**
+  %malloccall15 = tail call i8* @malloc(i32 ptrtoint (i1* getelementptr (i1, i1* null, i32 1) to i32))
+  %D_ptr16 = bitcast i8* %malloccall15 to i1*
+  store i1 true, i1* %D_ptr16, align 1
+  store i1* %D_ptr16, i1** %Data_c14, align 8
+  %Next_c17 = bitcast i8** %Next_p13 to { i8*, i8* }**
+  store { i8*, i8* }* %Cons23, { i8*, i8* }** %Next_c17, align 8
+  store { i8*, i8* }* %Cons211, { i8*, i8* }** %0, align 8
+  %1 = alloca i1, align 1
+  %xs = load { i8*, i8* }*, { i8*, i8* }** %0, align 8
+  %List.cdr = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %xs, i32 0, i32 1
+  %Next = load i8*, i8** %List.cdr, align 8
+  %Next_c18 = bitcast i8* %Next to { i8*, i8* }*
+  %List.cdr19 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Next_c18, i32 0, i32 1
+  %Next20 = load i8*, i8** %List.cdr19, align 8
+  %Next_c21 = bitcast i8* %Next20 to { i8*, i8* }*
+  %List.car = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Next_c21, i32 0, i32 0
+  %Data = load i8*, i8** %List.car, align 8
+  %Data_c22 = bitcast i8* %Data to i1*
+  %Data23 = load i1, i1* %Data_c22, align 1
+  store i1 %Data23, i1* %1, align 1
+  %x = load i1, i1* %1, align 1
+  br i1 %x, label %then, label %else
+
+then:                                             ; preds = %entry
+  %printf = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @0, i32 0, i32 0))
+  br label %ifcont
+
+else:                                             ; preds = %entry
+  %printf24 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @1, i32 0, i32 0))
+  br label %ifcont
+
+ifcont:                                           ; preds = %else, %then
+  %iftmp = phi i8* [ getelementptr inbounds ([5 x i8], [5 x i8]* @0, i32 0, i32 0), %then ], [ getelementptr inbounds ([6 x i8], [6 x i8]* @1, i32 0, i32 0), %else ]
+  ret i32 0
+}
+
+declare noalias i8* @malloc(i32)

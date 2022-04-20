@@ -1,0 +1,45 @@
+; ModuleID = 'Grouper'
+source_filename = "Grouper"
+
+@0 = private unnamed_addr constant [2 x i8] c"1\00", align 1
+
+declare i32 @printf(i8*, ...)
+
+define i32 @main() {
+entry:
+  %0 = alloca { i8*, i8* }*, align 8
+  %malloccall = tail call i8* @malloc(i32 ptrtoint ({ i8*, i8* }* getelementptr ({ i8*, i8* }, { i8*, i8* }* null, i32 1) to i32))
+  %Cons2 = bitcast i8* %malloccall to { i8*, i8* }*
+  %Data_p = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons2, i32 0, i32 0
+  %Next_p = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons2, i32 0, i32 1
+  %Data_c = bitcast i8** %Data_p to i32**
+  %malloccall1 = tail call i8* @malloc(i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32))
+  %D_ptr = bitcast i8* %malloccall1 to i32*
+  store i32 2, i32* %D_ptr, align 4
+  store i32* %D_ptr, i32** %Data_c, align 8
+  %Next_c = bitcast i8** %Next_p to { i8*, i8* }**
+  store { i8*, i8* }* null, { i8*, i8* }** %Next_c, align 8
+  %malloccall2 = tail call i8* @malloc(i32 ptrtoint ({ i8*, i8* }* getelementptr ({ i8*, i8* }, { i8*, i8* }* null, i32 1) to i32))
+  %Cons23 = bitcast i8* %malloccall2 to { i8*, i8* }*
+  %Data_p4 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons23, i32 0, i32 0
+  %Next_p5 = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Cons23, i32 0, i32 1
+  %Data_c6 = bitcast i8** %Data_p4 to i32**
+  %malloccall7 = tail call i8* @malloc(i32 ptrtoint (i32* getelementptr (i32, i32* null, i32 1) to i32))
+  %D_ptr8 = bitcast i8* %malloccall7 to i32*
+  store i32 1, i32* %D_ptr8, align 4
+  store i32* %D_ptr8, i32** %Data_c6, align 8
+  %Next_c9 = bitcast i8** %Next_p5 to { i8*, i8* }**
+  store { i8*, i8* }* %Cons2, { i8*, i8* }** %Next_c9, align 8
+  store { i8*, i8* }* %Cons23, { i8*, i8* }** %0, align 8
+  %1 = alloca i32, align 4
+  %Node = load { i8*, i8* }*, { i8*, i8* }** %0, align 8
+  %List.car = getelementptr inbounds { i8*, i8* }, { i8*, i8* }* %Node, i32 0, i32 0
+  %Data = load i8*, i8** %List.car, align 8
+  %Data_c10 = bitcast i8* %Data to i32*
+  %Data11 = load i32, i32* %Data_c10, align 4
+  store i32 %Data11, i32* %1, align 4
+  %printf = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @0, i32 0, i32 0))
+  ret i32 0
+}
+
+declare noalias i8* @malloc(i32)
