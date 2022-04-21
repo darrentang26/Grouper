@@ -136,11 +136,23 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
-      | Match (binds, patterns) -> let
-          gamma' = List.fold_left (fun gamma (name, typ) -> (StringMap.add name typ gamma)) gamma binds
-            in (result_type, SMatch(binds, check_patterns gamma' epsilon patterns))
-           
-                  
+      | Match (binds, matches) -> let
+          gamma' = List.fold_left (fun gamma (name, typ) -> (StringMap.add name typ gamma)) gamma binds in let
+          (fpattern, fexpr) = List.hd matches in let
+          (result_type, _) = semant gamma' epsilon fexpr in let 
+          _ = List.fold_left (fun curr_type (pattern, expr) -> let 
+            (new_type, _) = semant gamma' epsilon expr in
+              if new_type = curr_type then new_type 
+              else raise (Failure "Individual expressions evaluate to different types in pattern matching")) 
+                result_type patterns in 
+            
+      | Match (binds, match_set) -> let
+          gamma' = List.fold_left (fun gamma (name, typ) -> StringMap.add name typ gamma) gamma binds in let
+          (fpattern, fexpr) = List.hd match_set in let
+          (result_type, _) = match fpattern with 
+            TargetWildName(_)::_ | TargetWildExpr(_)::_ -> semant gamma' epsilon fexpr
+          | TargetWildApp(name, target) -> raise (Failure "need to figure out how to extract type from this")  
+          | CatchAll::_  -> raise (Failure "_ case cannot be the first case")               
       | _ -> raise (Failure "Not yet implemented")
 
     and semant_call gamma epsilon call =
@@ -174,14 +186,7 @@ let check (typ_decls, body) = let
             in let ((ty, sx), valid, _, _) = semant_call_inner call in
                 if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
                     
-    and check_patterns gamma epsilon patterns = let
-      (_, fexpr) = List.hd patterns in let
-      (result_type, _) = semant gamma epsilon fexpr in let 
-      _ = List.fold_left (fun curr_type (pattern, expr) -> let 
-      (new_type, _) = semant gamma' epsilon expr in
-        if new_type = curr_type then new_type 
-        else raise (Failure "Individual expressions evaluate to different types in pattern matching")) 
-          result_type patterns
+    and check_targets gamma epsilon patterns = 
         let target_type = function
           TargetWildName name -> StringMap.find name gamma
         | TargetWildExpr expr -> let (typ, _) = semant expr gamma epsilon in typ
@@ -196,7 +201,6 @@ let check (typ_decls, body) = let
           | TargetWildApp (name, target) -> raise (Failure "TargetWildApp requires ADTs")
           | CatchAll -> (pattern_type, SCatchAll)
           in (pattern_type, SPattern (List.map (check_pattern epsilon gamma) patterns))
-    and check_target gamma epsilon target = 
 
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
