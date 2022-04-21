@@ -1,6 +1,1 @@
-Fatal error: exception Sys_error("test/e2e/functions-param-mistmatch.grp: No such file or directory")
-Undefined symbols for architecture arm64:
-  "_main", referenced from:
-     implicit entry/start for main executable
-ld: symbol(s) not found for architecture arm64
-clang: error: linker command failed with exit code 1 (use -v to see invocation)
+Fatal error: exception Semant.Failure("expected parameter of type Int but recieved argument of type String")
