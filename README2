@@ -1,0 +1,47 @@
+Extended Testsuite:
+
+Positive Integration Tests:
+
+- Variable assignment and printing (in test/e2e/let-print.grp)
+    Assigns to and prints a string varaible
+
+- Nested Functions (in test/e2e/functions-nested.grp)
+    Call a function which defines and calls another function inside its body
+
+- Function parameters (in test/e2e/functions-param.grp)
+    Call a function which takes another function as a parameter
+
+- Function returns (in test/e2e/functions-return.grp)
+    Call a function which returns another function, calling the result
+
+- Function pointer assignment (in test/e2e/functions-assign.grp)
+    Assigns a function to a new name, calling that version of the function
+
+- Structs (in test/e2e/struct.grp)
+    Declares a struct type, initializes a struct, then prints the result of adding together
+    two of the struct's fields
+
+- Structs containing other constantly declared Structs (in test/e2e/struct-of-struct-const.grp)
+    Intializes a struct with other structs as its fields and extracts the contents of an
+    inner struct field 
+
+
+Semantically Negative Integration Tests:
+- Type Mismatch (in test/e2e/let-mistmatch.fail.grp)
+    Let binding where the declared type doesn't match the type of the supplied expression
+        Specifically, binding a String to a variable declared as an Int
+    Expect semantic failure for mismatched types
+
+- Duplicate Function Names (in test/e2e/functions-duplicate.fail.grp)
+    Two functions declared with the same name, but in different scopes
+      ***Note: our language requires globally unique functions names, even if the declarations
+         are in different scope
+    Expect semantic failure for duplicate function names
+
+- Incorrect Function Parameter
+    A function is called with a parameter of the wrong type
+    Expect semantic failure for mismatched parameter type
+
+
+
+*** Note - every .grp test has a golden standard output stored in the corresponding .out file
