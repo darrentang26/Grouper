@@ -1,5 +1,7 @@
 Extended Testsuite:
 
+Run all integraton tests with the command "make e2e_test"
+
 Positive Integration Tests:
 
 - Variable assignment and printing (in test/e2e/let-print.grp)
@@ -38,8 +40,9 @@ Semantically Negative Integration Tests:
          are in different scope
     Expect semantic failure for duplicate function names
 
-- Incorrect Function Parameter
-    A function is called with a parameter of the wrong type
+- Incorrect Function Parameter (in test/e2e/functions-param-mismatch.fail.grp)
+    Calls a function with a parameter of the wrong type
+        Specifically, the function expects an Int, but a String is passed in
     Expect semantic failure for mismatched parameter type
 
 

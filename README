@@ -1,5 +1,61 @@
 Run all commands in the current directory.
 
+Extended Testsuite:
+
+Run all integraton tests with the command "make e2e_test"
+    See "General Compilation Notes" below for the other compilation commands
+
+Positive Integration Tests:
+
+- Variable assignment and printing (in test/e2e/let-print.grp)
+    Assigns to and prints a string varaible
+
+- Nested Functions (in test/e2e/functions-nested.grp)
+    Call a function which defines and calls another function inside its body
+
+- Function parameters (in test/e2e/functions-param.grp)
+    Call a function which takes another function as a parameter
+
+- Function returns (in test/e2e/functions-return.grp)
+    Call a function which returns another function, calling the result
+
+- Function pointer assignment (in test/e2e/functions-assign.grp)
+    Assigns a function to a new name, calling that version of the function
+
+- Structs (in test/e2e/struct.grp)
+    Declares a struct type, initializes a struct, then prints the result of adding together
+    two of the struct's fields
+
+- Structs containing other constantly declared Structs (in test/e2e/struct-of-struct-const.grp)
+    Intializes a struct with other structs as its fields and extracts the contents of an
+    inner struct field 
+
+
+Semantically Negative Integration Tests:
+- Type Mismatch (in test/e2e/let-mistmatch.fail.grp)
+    Let binding where the declared type doesn't match the type of the supplied expression
+        Specifically, binding a String to a variable declared as an Int
+    Expect semantic failure for mismatched types
+
+- Duplicate Function Names (in test/e2e/functions-duplicate.fail.grp)
+    Two functions declared with the same name, but in different scopes
+      ***Note: our language requires globally unique functions names, even if the declarations
+         are in different scope
+    Expect semantic failure for duplicate function names
+
+- Incorrect Function Parameter (in test/e2e/functions-param-mismatch.fail.grp)
+    Calls a function with a parameter of the wrong type
+        Specifically, the function expects an Int, but a String is passed in
+    Expect semantic failure for mismatched parameter type
+
+*** Note - every .grp test has a golden standard output stored in the corresponding .out file
+All of these (.grp and .out) files are located in the directory test/e2e
+
+
+
+
+General Compilation Notes:
+
 Compile the Grouper Compiler into an executable with: 
     `make`
 The executable is `./src/toplevel.native`
@@ -7,8 +63,8 @@ The executable is `./src/toplevel.native`
 Clean the Grouper Compiler with:
     `make clean`
 
-Run the "Hello world!" test with:
-    `make hw_test`
+Run the Extended Testsuite with:
+    `make e2e_test`
 The output will be green if the test passes, and red otherwise
 
 Compile a program and view all stages of compilation with:
