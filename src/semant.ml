@@ -125,14 +125,15 @@ let check (typ_decls, body) = let
             (rt, sbody) = semant gamma' epsilon body
                 in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
-      | StructInit bindsList -> (*let rec
+      | StructInit bindsList -> let rec
             check_consec_dupes = function
                 x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
                            else x::(check_consec_dupes (y::rest))
-              | x::[] -> x::[] in let               
+              | x::[] -> x::[] in let rec              
             get_names = function
-                
-            _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+              (name, typ)::binds -> name::(get_names binds)
+            | [] -> [] in let    
+            _ = check_consec_dupes (List.sort String.compare (get_names bindsList)) in
             let typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
                                    bindsList in let
