@@ -1,0 +1,4 @@
+type Coord = {x : Int, x : Int}
+
+let Coord origin = {x = 0, x = 0} in
+print "made origin"
