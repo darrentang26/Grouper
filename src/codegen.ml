@@ -227,12 +227,20 @@ let translate (typ_decls, fns, letb) =
       STargetWildName name ->
         let (enum, _) = StringMap.find name rho in
         let target_type = ltype_of_typ t in
-        let location = L.build_alloca target_type "" builder in
-        (* let enum_label = L.build_in_bounds_gep location [| L.const_int i32_t 0 |] "" builder in *)
-        let enum_label = L.build_struct_gep location 0 "" builder in
-        let store = L.build_store (L.const_int i8_t enum) enum_label builder
+        let location = L.build_alloca target_type name builder in
+        let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
+        let store = L.build_store (L.const_int i8_t enum) enum_location builder
           in L.build_load location "" builder
-    (* | STargetWildApp (name, STargetWildLiteral sexpr) ->  *)
+    | STargetWildApp (name, STargetWildLiteral sexpr) -> 
+        let (enum, ty) = StringMap.find name rho in
+        let target_type = ltype_of_typ t in
+        let location = L.build_alloca target_type name builder in
+        let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
+        let store_enum = L.build_store (L.const_int i8_t enum) enum_location builder in
+        let value_location = L.build_struct_gep location 1 (name ^ "-value") builder in
+        let value_location = L.build_pointercast value_location (L.pointer_type (ltype_of_typ ty)) "" builder in
+        let store_value = L.build_store (expr builder scope gamma sexpr) value_location builder
+          in L.build_load location "" builder
       )
   | SCall (fun_sexpr, params) ->
     let fun_value = expr builder scope gamma fun_sexpr in
