@@ -56,6 +56,11 @@ let name_all (typ_decls, sexpr) =
           and right = (ty, SFunction (params, body'))
           and body = (ty, SName function_name)
             in ((ty, SLet ([(bind, right)], body)), add_to_previous prev_names' function_name)
+  | SAdtExpr starget -> (match starget with
+      STargetWildName name -> ((ty, SAdtExpr (STargetWildName name)), prev_names)
+    | STargetWildApp (name, STargetWildLiteral sexpr) ->
+        let (sexpr', prev_names') = name_all' sexpr prev_names false ""
+          in ((ty, SAdtExpr (STargetWildApp (name, STargetWildLiteral sexpr'))), prev_names'))
   | SStructInit (inits) ->
     let (inits', prev_names') = List.fold_left
       (fun (inits, prev_names) (name, sexpr) ->
@@ -130,6 +135,11 @@ let lift_lambdas (typ_decls, sexpr) =
     | SFunction (params, body) ->
         let (body', fs) = lift_lambdas' body
           in ((ty, SFunction (params, body')), fs)
+    | SAdtExpr starget -> (match starget with
+        STargetWildName name -> ((ty, SAdtExpr (STargetWildName name)), [])
+      | STargetWildApp (name, STargetWildLiteral sexpr) -> let
+          (sexpr', fs) = lift_lambdas' sexpr
+            in ((ty, SAdtExpr (STargetWildApp (name, STargetWildLiteral sexpr'))), fs))
     | SStructInit (inits) ->
         let (inits', fs) = List.fold_left
           (fun (inits, fs) (name, sexpr) ->
