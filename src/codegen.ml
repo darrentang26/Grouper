@@ -21,6 +21,17 @@ let translate (typ_decls, fns, letb) =
     StringMap.empty 
     typ_decls in
 
+  let rho = List.fold_left 
+    (fun env (name, texpr) -> match texpr with
+      AdtTypeExpr (binds) -> (match (List.fold_left
+        (fun (env, enum) (adtname, ty) ->
+          (StringMap.add adtname (enum, ty) env, enum + 1))
+        (env, 0)
+        binds) with (env, _) -> env)
+      | _ -> env)
+    StringMap.empty
+    typ_decls in
+
   let max x1 x2 = if x1 > x2 then x1 else x2 in
   
   let rec ltype_of_typ = function
@@ -35,7 +46,7 @@ let translate (typ_decls, fns, letb) =
           in if cur > max_size then cur else max_size)
         0
         binds
-        in struct_t [| i32_t ; L.array_type i1_t max_size |]
+        in struct_t [| i8_t ; L.array_type i1_t max_size |]
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
@@ -212,6 +223,17 @@ let translate (typ_decls, fns, letb) =
     gamma' = List.fold_left store_typ gamma binds
       in   
       expr builder scope' gamma' body
+  | SAdtExpr target -> (match target with
+      STargetWildName name ->
+        let (enum, _) = StringMap.find name rho in
+        let target_type = ltype_of_typ t in
+        let location = L.build_alloca target_type "" builder in
+        (* let enum_label = L.build_in_bounds_gep location [| L.const_int i32_t 0 |] "" builder in *)
+        let enum_label = L.build_struct_gep location 0 "" builder in
+        let store = L.build_store (L.const_int i8_t enum) enum_label builder
+          in L.build_load location "" builder
+    (* | STargetWildApp (name, STargetWildLiteral sexpr) ->  *)
+      )
   | SCall (fun_sexpr, params) ->
     let fun_value = expr builder scope gamma fun_sexpr in
     let param_values = Array.of_list (List.map (expr builder scope gamma) params)
