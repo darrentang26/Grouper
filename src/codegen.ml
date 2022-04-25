@@ -8,10 +8,6 @@ module StringMap = Map.Make(String)
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
 
-  let gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
-  StringMap.empty 
-  typ_decls in 
-
   let i32_t     = L.i32_type    context 
   and i8_t      = L.i8_type     context 
   and i1_t      = L.i1_type     context
@@ -20,6 +16,13 @@ let translate (typ_decls, fns, letb) =
   and string_t  = L.pointer_type (L.i8_type context) 
   and struct_t fields = L.struct_type context fields in
 
+  let gamma = List.fold_left
+    (fun env (name, texpr) -> StringMap.add name texpr env) 
+    StringMap.empty 
+    typ_decls in
+
+  let max x1 x2 = if x1 > x2 then x1 else x2 in
+  
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
@@ -27,6 +30,12 @@ let translate (typ_decls, fns, letb) =
     | VoidExpr -> void_t
     | StringExpr -> string_t
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | AdtTypeExpr binds -> let max_size = List.fold_left
+        (fun max_size (_, ty) -> let cur : int = (L.integer_bitwidth (ltype_of_typ ty))
+          in if cur > max_size then cur else max_size)
+        0
+        binds
+        in struct_t [| i32_t ; L.array_type i1_t max_size |]
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
