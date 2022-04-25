@@ -185,7 +185,6 @@ literal:
 
 target_conc:
       ADTNAME                           { TargetWildName($1) }
-    | ADTNAME LPAREN target_conc RPAREN { TargetWildApp($1, $3) }
     | ADTNAME LPAREN expr RPAREN        { TargetWildApp($1, TargetWildLiteral($3)) }
 
 

@@ -15,6 +15,10 @@ let lookup_type name gamma =
     try StringMap.find name gamma
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
 
+let lookup_adt name rho = 
+    try StringMap.find name rho
+        with Not_found -> raise (Failure ("unbound identifier " ^ name))
+
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let fun_type_eq ty1 ty2 = match ty1, ty2 with
   FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
@@ -27,8 +31,17 @@ let check (typ_decls, body) = let
         typ_decls and
     epsilon = StringMap.empty
 
-    (* in let rho = List.fold_left 
-        (fun env (_, texpr) -> ) *)
+    (* check adt types for uniqueness *)
+
+    in let rho = List.fold_left 
+        (fun env (name, texpr) -> match texpr with
+          AdtTypeExpr (binds) -> List.fold_left
+            (fun env (adtname, ty) -> StringMap.add adtname (name, ty) env)
+            env
+            binds
+        | _ -> env)
+        StringMap.empty
+        typ_decls
 
     in let rec semant gamma epsilon = function
         Literal  l  -> (IntExpr, SLiteral l)
@@ -126,7 +139,23 @@ let check (typ_decls, body) = let
                 binds and
             (rt, sbody) = semant gamma' epsilon body
                 in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
-      (* | AdtExpr  *)
+      | AdtExpr target -> (match target with
+            TargetWildName target_name -> let
+                (type_name, arg_type) = lookup_adt target_name rho in
+                    if arg_type = VoidExpr
+                        then (TypNameExpr type_name, SAdtExpr (STargetWildName target_name))
+                        else raise (Failure (target_name ^ " does not take any arguments"))
+          | TargetWildApp (target_name, inner_target) -> let
+                (type_name, arg_type) = lookup_adt target_name rho in
+                    if arg_type = VoidExpr
+                        then raise (Failure (target_name ^ " expects nothing as an argument"))
+                        else (match inner_target with
+                            TargetWildLiteral expr -> let
+                                (ty, sx) = semant gamma epsilon expr
+                                    in if arg_type = ty
+                                        then (TypNameExpr type_name, SAdtExpr (STargetWildApp (target_name, STargetWildLiteral (ty, sx))))
+                                        else raise (Failure ("cannot apply " ^ string_of_type_expr ty ^ " to " ^ string_of_type_expr arg_type)))
+          | _ -> raise (Failure ("cannot use " ^ string_of_target target ^ " as a top-level target")))
       | StructInit bindsList -> (*let rec
             check_consec_dupes = function
                 x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
