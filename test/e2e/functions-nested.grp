@@ -1,0 +1,2 @@
+let [Int] -> Int plusOne = lambda (Int x) lambda (Int y) y + 1 end x end
+in print plusOne 0

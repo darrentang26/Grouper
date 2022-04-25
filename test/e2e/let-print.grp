@@ -1,0 +1,2 @@
+let String hello = "Hello, world!"
+in print hello

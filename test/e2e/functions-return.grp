@@ -1,0 +1,5 @@
+let [Int] -> ([Int] -> Int) subtractIfNeg =
+    lambda (Int x) if x < 0
+        then (lambda (Int y) y - 1 end)
+        else (lambda (Int y) y + 1 end) end end
+in print subtractIfNeg 1 0

@@ -14,6 +14,9 @@ sp_test: toplevel
 hw_test: toplevel
 	python3 hello_world_validation.py
 
+e2e_test: toplevel
+	python3 e2e_validation.py
+
 tests: sp_test hw_test
 
 compile: toplevel

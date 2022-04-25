@@ -1,0 +1,3 @@
+let [Int] -> Int square = lambda (Int x)
+    x * x end
+in print (square "hi")
