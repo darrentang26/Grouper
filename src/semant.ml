@@ -1,6 +1,6 @@
 (* Semantic Analysis *)
 
-(* rho = user-type environment *)
+(* rho = ADT environment *)
 (* gamma = name/type environment *)
 (* epsilon = name/value environment *)
 
@@ -22,11 +22,13 @@ let fun_type_eq ty1 ty2 = match ty1, ty2 with
 | _ -> ty1 = ty2
 
 let check (typ_decls, body) = let
-    (* rho = StringMap.empty and *)
     gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
         StringMap.empty 
         typ_decls and
-    epsilon = StringMap.empty 
+    epsilon = StringMap.empty
+
+    (* in let rho = List.fold_left 
+        (fun env (_, texpr) -> ) *)
 
     in let rec semant gamma epsilon = function
         Literal  l  -> (IntExpr, SLiteral l)
@@ -124,7 +126,7 @@ let check (typ_decls, body) = let
                 binds and
             (rt, sbody) = semant gamma' epsilon body
                 in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
-      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
+      (* | AdtExpr  *)
       | StructInit bindsList -> (*let rec
             check_consec_dupes = function
                 x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
@@ -153,6 +155,7 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
+      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
 
       | _ -> raise (Failure "Not yet implemented")
 
