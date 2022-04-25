@@ -184,9 +184,9 @@ literal:
                           { PairExpr($2, $4) }
 
 target_conc:
-      ADTNAME                           { TargetConcName($1) }
-    | ADTNAME LPAREN target_conc RPAREN { TargetConcApp($1, $3) }
-    | ADTNAME LPAREN expr RPAREN        { TargetConcApp($1, TargetConcExpr($3)) }
+      ADTNAME                           { TargetWildName($1) }
+    | ADTNAME LPAREN target_conc RPAREN { TargetWildApp($1, $3) }
+    | ADTNAME LPAREN expr RPAREN        { TargetWildApp($1, TargetWildLiteral($3)) }
 
 
 //-------------------- MISC RULES --------------------//
