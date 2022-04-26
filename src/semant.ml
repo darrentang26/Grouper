@@ -51,9 +51,10 @@ let check (typ_decls, body) = let
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      | Name s      -> let 
-            ty = lookup_type s gamma
-                in (ty, SName s)
+      | Name s      -> let
+            ty = lookup_type s gamma in 
+            (ty, SName s)
+
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -83,16 +84,16 @@ let check (typ_decls, body) = let
                     (* This needs to have algebra added to it *)
       | Let (binds, body) -> let
             gamma' = List.fold_left
-                (fun gamma ((name, tl), expr) -> let
+                (fun gam ((name, tl), expr) -> let
                     gamma' = (match tl with
-                              (FunType _) -> StringMap.add name tl gamma
-                            | _ -> gamma) in let
+                              (FunType _) -> StringMap.add name tl gam
+                            | _ -> gam) in let
                     (tr, (* sexpr *) _) = semant gamma' epsilon expr
-                    (* Update epsilon *)
-                        in if tl = tr
-                            then (StringMap.add name tl gamma)
+                    (* Update epsilon *) in
+                            if tl = tr
+                            then (StringMap.add name tl gamma')
                             else if tr = EmptyListType then match tl with
-                                      ListType tl' -> (StringMap.add name tl gamma) 
+                                      ListType tl' -> (StringMap.add name tl gamma') 
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
                                 else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
@@ -117,7 +118,7 @@ let check (typ_decls, body) = let
       | Function (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma (name, tl) -> StringMap.add name tl gamma)
-                StringMap.empty
+                gamma
                 binds in let
             param_types = List.map
                 (fun (name, tl) -> tl)
