@@ -142,7 +142,8 @@ expr:
 
 fn_def:
     formals expr END           { Function($1, $2)}
-  | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
+  // | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
+  | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
 
 //---------- formals ----------//
 formals:
@@ -157,6 +158,10 @@ formal_list:
   | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
+var_list:
+    NAME                 { [$1] }
+  | var_list COMMA NAME  { $3 :: $1 }
+
 match_rule:
     match_line { [$1] }
   | match_line match_rule { $1 :: $2 }

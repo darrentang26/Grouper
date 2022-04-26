@@ -42,7 +42,7 @@ type expr =
   | AdtExpr of target
   | StructInit of (name * expr) list
   | StructRef of name * name
-  | Match of bind list * (pattern * expr) list
+  | Match of name list * (pattern * expr) list
   | Call of expr * expr
   | If of expr * expr * expr
   | Group of group
@@ -129,7 +129,7 @@ let rec string_of_expr = function
 | AdtExpr(target) -> string_of_target target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
-| Match(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
+| Match(args, patexprlist) -> "match (" ^ String.concat " " args ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
 | Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
