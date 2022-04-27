@@ -1,1 +1,0 @@
-(String : let Bool list xs = (Bool list : ((Bool : true) :: (Bool list : ((Bool : false) :: (Bool list : ((Bool : true) :: ([] : []))))))) in (String : let Bool x = (Bool : car (Bool list : cdr (Bool list : cdr (Bool list : xs)))) in (String : if (Bool : x) then (String : print: (String : "true")) else (String : print: (String : "false")))))

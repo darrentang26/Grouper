@@ -1,3 +1,0 @@
-let Int * Int xs = (1, 2) in
-let Int x = cdr xs in
-if x == 2 then print "1" else print "no" end

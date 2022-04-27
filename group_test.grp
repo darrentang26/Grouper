@@ -1,5 +1,0 @@
-let Int * Int -> Int pl = lambda (a b) a + b + 1 end in
-let Int * Int -> Bool eq = lambda (a b) a = b - 1 end in
-let Int -> Int ne = lambda (a) -a end in
-let Int group grp = group {Int, 0, eq, pl, ne} in
-grp.plus (2, 3)

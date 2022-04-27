@@ -1,3 +1,0 @@
-let Bool list xs = (true :: (false :: (true :: []))) in
-let Bool x = car cdr cdr xs in
-if x then print: "true" else print: "false"
