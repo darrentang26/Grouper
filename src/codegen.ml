@@ -104,8 +104,35 @@ let translate (typ_decls, fns, letb) =
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.build_global_stringptr str "" builder
-  | SStructInit binds -> L.const_struct context 
-                           (Array.of_list (List.map (fun (_, bound) -> expr builder scope gamma bound) binds))
+  (*| SStructInit binds -> L.const_struct context 
+                           (Array.of_list (List.map (fun (_, bound) ->
+                                                       match bound with
+                                                        (typ, SName name) -> StringMap.find name scope
+                                                       | _ -> expr builder scope gamma bound) binds))*)
+  | SStructInit binds ->
+      let struct_name = match t with 
+        TypNameExpr(name) -> name
+      | _ -> raise (Failure "Initializing a non-struct(?)") in
+      let curr_struct_type =  ltype_of_typ (StringMap.find struct_name gamma) in
+      let undef_struct = L.build_malloc curr_struct_type
+                                    struct_name
+                                    builder in
+      let init_struct = L.build_pointercast undef_struct (L.pointer_type curr_struct_type) struct_name builder in
+      let rec add_elem curr_idx = function
+        (typ, value)::rest -> 
+          let _ = add_elem (curr_idx + 1) rest in
+          let field_ptr = L.build_struct_gep init_struct 
+                                             curr_idx 
+                                             (struct_name ^ "." ^ typ) 
+                                             builder in
+            L.build_store (expr builder scope gamma value) field_ptr builder
+                      (*L.build_insertvalue init_struct 
+                                          (expr builder scope gamma value)
+                                          curr_idx
+                                          (struct_name ^ "." ^ typ)
+                                          builder*)
+      | [] -> init_struct in
+        let _ = add_elem 0 binds in L.build_load init_struct "" builder
   | SStructRef (var, field) -> let
       struct_name = match (StringMap.find var gamma ) with 
                        TypNameExpr(typ_name) -> typ_name 
