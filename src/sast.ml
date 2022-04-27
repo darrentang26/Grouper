@@ -10,6 +10,8 @@ and sx =
   | SStringLit of string
   | SPairExpr of sexpr * sexpr
   | SConsExpr of sexpr * sexpr
+  | SCarExpr of sexpr
+  | SCdrExpr of sexpr
   | SEmptyListExpr
   | SName of name
   | SBinop of sexpr * op * sexpr
@@ -59,6 +61,8 @@ let rec string_of_sexpr (t, e) =
 | SStringLit(str) -> "\"" ^ str ^ "\""
 | SPairExpr(expr1, expr2) -> "(" ^ string_of_sexpr expr1 ^ "," ^ string_of_sexpr expr2 ^ ")"
 | SConsExpr(expr1, expr2) -> "(" ^ string_of_sexpr expr1 ^ " :: " ^ string_of_sexpr expr2 ^ ")"
+| SCarExpr(expr) -> "car " ^ string_of_sexpr expr
+| SCdrExpr(expr) -> "cdr " ^ string_of_sexpr expr
 | SEmptyListExpr -> "[]"
 | SName(name) -> name
 | SBinop(expr1,op,expr2) -> string_of_sexpr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_sexpr expr2
