@@ -16,10 +16,15 @@ let lookup_type name gamma =
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
-let fun_type_eq ty1 ty2 = match ty1, ty2 with
+let eq_type ty1 ty2 = (match ty1, ty2 with
   FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
     (ParamType ty1ps) = (ParamType ty2ps) && ty1rt = ty2rt
-| _ -> ty1 = ty2
+| _ -> ty1 = ty2)
+
+let rec eq_types = function
+    t1::t2::ts -> eq_type t1 t2 && eq_types (t1::ts)
+|   _          -> true
+
 
 let check (typ_decls, body) = let
     (* rho = StringMap.empty and *)
@@ -109,7 +114,7 @@ let check (typ_decls, body) = let
             (then_t, then_s) = semant gamma epsilon then_expr and
             (else_t, else_s) = semant gamma epsilon else_expr in
             (* if then_t != else_t then raise (Failure ("then and else expressions must have the same type; then: " ^ string_of_type_expr then_t ^ " else: " ^ string_of_type_expr else_t)) *)
-            if not (fun_type_eq then_t else_t) then raise (Failure ("then and else expressions must have the same type; then: " ^ string_of_type_expr then_t ^ " else: " ^ string_of_type_expr else_t))
+            if not (eq_type then_t else_t) then raise (Failure ("then and else expressions must have the same type; then: " ^ string_of_type_expr then_t ^ " else: " ^ string_of_type_expr else_t))
             else (then_t, SIf ((cond_t, cond_s), (then_t, then_s), (else_t, else_s)))
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
@@ -145,14 +150,40 @@ let check (typ_decls, body) = let
                 in
             (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
-        (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
+        (typ_name, sexp) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
              accessed_type = lookup_type typ gamma in (match accessed_type with
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
-             |  _ -> raise (Failure (var ^ "is not a struct")))
+             |  GroupType ty -> (match sexp with
+                  SStructInit xs -> 
+                    let (n, (t, s)) = try List.find (fun (name, (ty, sexp)) -> name == field) xs
+                                            with Not_Found -> raise (Failure (field ^ " is not a valid group field"))
+
+                    in (t, SStructRef(var, field))
+                | _              -> raise (Failure ("Group is not a struct - this is impossible???"))
+
+             |  _ -> raise (Failure (var ^ " is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
+
+      | Group (texp, zero, eq, plus, neg) -> 
+        let build_group zero eq plus neg =
+            SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg)]
+
+        and (t0, s0) = semant gamma epsilon zero
+        and (teq, seq) = semant gamma epsilon eq
+        and (tpl, spl) = semant gamma epsilon plus
+        and (tneg, sneg) = semant gamma epsilon neg
+        in (match (t0, teq, tpl, tneg) with
+            (t1, FunType (ParamType [t2; t3], BoolExpr), 
+                 FunType (ParamType [t4; t5], t6),
+                 FunType (ParamType [t7], t8)) -> 
+                        if eq_types [texp; t1; t2; t3; t4; t5; t6; t7; t8]
+                        then (GroupType(texp), build_group (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg))
+                        else raise (Failure "Group parameter has inconsistent type")
+        |   _ -> raise (Failure "Equals, plus or negate function had wrong number of arguments"))
+
 
       | _ -> raise (Failure "Not yet implemented")
 

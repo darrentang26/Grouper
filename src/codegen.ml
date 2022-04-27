@@ -5,6 +5,13 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+let group_idx_lookup field =
+  List.fold_right (fun name acc ->
+                      if acc > 0 then acc + 1 
+                                 else if name == field then 1
+                                                       else 0)
+                  ["zero"; "equals"; "plus"; "neg"] 0
+
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
 
@@ -20,6 +27,12 @@ let translate (typ_decls, fns, letb) =
   and string_t  = L.pointer_type (L.i8_type context) 
   and struct_t fields = L.struct_type context fields in
 
+  let group_to_struct ty =
+    StructTypeExpr [("zero", ty); 
+                    ("equals", FunType (ParamType [ty; ty], BoolExpr));
+                    ("plus", FunType (ParamType [ty; ty], ty));
+                    ("neg", FunType (ParamType [ty], ty))] in
+
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
@@ -29,6 +42,7 @@ let translate (typ_decls, fns, letb) =
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
+    | GroupType ty -> ltype_of_typ (group_to_struct ty)
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
 
@@ -84,6 +98,7 @@ let translate (typ_decls, fns, letb) =
       | [] -> raise (Failure "Should not happen, invalid field lookup should be caught in semant") in let
       field_idx = match struct_def with 
                     StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds
+                  | GroupType ty -> group_idx_lookup field
                   | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
