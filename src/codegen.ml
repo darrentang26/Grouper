@@ -5,8 +5,8 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-let translate (typ_decls, letb) =
-  let context = L.global_context () in
+let translate (typ_decls, fns, letb) =
+  let context = L.global_context () in 
 
   let gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
   StringMap.empty 
@@ -17,6 +17,7 @@ let translate (typ_decls, letb) =
   and i1_t      = L.i1_type     context
   and float_t   = L.double_type context
   and void_t    = L.void_type   context 
+  and string_t  = L.pointer_type (L.i8_type context) 
   and struct_t fields = L.struct_type context fields in
   let list_node = L.struct_type context [| L.pointer_type i8_t; L.pointer_type i8_t |] in
   let list_node_p = L.pointer_type list_node in
@@ -24,18 +25,19 @@ let translate (typ_decls, letb) =
   (*let _ = L.struct_set_body list_node [| L.pointer_type i8_t; L.pointer_type i8_t |] in
   and string_t  = L.pointer_type (L.i8_type context)  *)
 
-  
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
+    | StringExpr -> string_t
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> 
                                                         ltype_of_typ typ) fields))
     | ListType tau -> list_node_p
     | EmptyListType -> list_node_p
     | PairType (tau1, tau2) -> struct_t [| (ltype_of_typ tau1); (ltype_of_typ tau2) |]
+    | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
  
@@ -49,12 +51,30 @@ let translate (typ_decls, letb) =
 
 
 
+  and ltype_of_functionty ty = (match ty with
+      FunType (ParamType pts, rt) -> L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts))
+    | _ -> raise (Failure ("cannot create function of non function type " ^ string_of_type_expr ty)))
+
   and grp_module = L.create_module context "Grouper" in
 
   let print_t : L.lltype = 
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let print_func : L.llvalue = 
     L.declare_function "printf" print_t grp_module in 
+
+  (* create user function builders *)
+  let create_function user_functions (((name, ty), (t', body)) : bind * sexpr) =
+    let fun_type = ltype_of_functionty ty in
+    let fun_defn = L.define_function (name ^ ".fun") fun_type grp_module in
+    let fun_builder = L.builder_at_end context (L.entry_block fun_defn)
+      in StringMap.add name (fun_type, fun_defn, fun_builder) user_functions in
+  let user_functions = List.fold_left create_function StringMap.empty fns in
+
+  let create_fp user_fps (((name, ty), (t', body)) : bind * sexpr) =
+    let (_, fun_defn, _) = StringMap.find name user_functions in
+    let gloabl_fp = L.define_global name fun_defn grp_module
+      in StringMap.add name gloabl_fp user_fps in
+  let user_fps = List.fold_left create_fp StringMap.empty fns in
 
   let main_type = L.function_type i32_t (Array.make 0 i32_t) in
   let main_defn = L.define_function "main" main_type grp_module in 
@@ -138,19 +158,44 @@ let translate (typ_decls, letb) =
           let pr = L.build_struct_gep node 1 "List.cdr" builder in
           let next = L.build_load pr "Next" builder in
           L.build_pointercast next list_node_p "Next_c" builder)
-  | SPrint sexpr -> (match sexpr with
-      (StringExpr, sx) -> let
+  | SPrint (typ, sx) -> 
+      let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
+      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in let 
+      value = expr builder scope gamma (typ, sx) in                          
+      (match typ with 
+        StringExpr -> let
+          str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder in let
+          _ = L.build_call print_func [| str |] "printf" builder 
+          in value
+      | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
+      | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
+      | BoolExpr -> let
+          lbool = L.string_of_llvalue value in
+          if lbool = "i1 true" then expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "true"))
+          else expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "false"))
+      (*| StructTypeExpr fields ->*)
+      | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
+  
+  (*| SPrint sexpr -> (match sexpr with 
+     (StringExpr, sx) -> let
         value = expr builder scope gamma (StringExpr, sx) 
           (* in let sval = match (L.string_of_const value) with
                           Some s -> s
                         | None -> "" *)
-          in let sval = value
-          in let str = L.build_in_bounds_gep sval [| (L.const_int i32_t 0) |] "" builder
+          (*in let sval = value*)
+          in let str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder
           in let _ = L.build_call print_func [| str |] "printf" builder
             in value
-    | _ -> raise (Failure "not yet implemented-- print only expects strings"))
-  | SName name -> let ret = (StringMap.find name scope)
-                in L.build_load ret name builder
+    | _ -> raise (Failure "not yet implemented-- print only expects strings"))*)
+  | SName name -> (match t with
+      FunType _ -> let
+        global_lookup = L.lookup_global name grp_module
+          in (match global_lookup with
+            Some global ->
+              (* global *)
+              L.build_load global name builder
+          | None -> L.build_load (StringMap.find name scope) name builder)
+    | _ -> L.build_load (StringMap.find name scope) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
     right = expr builder scope gamma (tr, sr)
@@ -228,6 +273,10 @@ let translate (typ_decls, letb) =
     gamma' = List.fold_left store_typ gamma binds
       in   
       expr builder scope' gamma' body
+  | SCall (fun_sexpr, params) ->
+    let fun_value = expr builder scope gamma fun_sexpr in
+    let param_values = Array.of_list (List.map (expr builder scope gamma) params)
+      in L.build_call fun_value param_values "" builder
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
     let cond_value = expr builder scope gamma cond_sexpr
     in let start_bb = L.insertion_block builder
@@ -259,6 +308,27 @@ let translate (typ_decls, letb) =
 
     in let _ = L.position_at_end merge_bb builder in phi
   | _ -> raise (Failure ("sexpr " ^ (Sast.string_of_sexpr (t,e)) ^ " not yet implemented"))
+
+  
+in let populate_function fun_type fun_defn fun_builder sexpr =
+  let add_formal scope (name, ty) param =
+    let local = L.build_alloca (ltype_of_typ ty) "" fun_builder in
+    let _ = L.build_store param local fun_builder in
+      (StringMap.add name local scope)
+  
+  in match sexpr with (_, SFunction (binds, body)) -> 
+    let params = Array.to_list (L.params fun_defn)
+
+    in let scope = List.fold_left2 add_formal StringMap.empty binds params
+    in let value = expr fun_builder scope gamma body
+      in L.build_ret value fun_builder
+
+in let _ = List.map
+  (fun (((name, _), sexpr) : bind * sexpr) ->
+    let (fun_type, fun_defn, fun_builder) = StringMap.find name user_functions
+      in populate_function fun_type fun_defn fun_builder sexpr)
+  fns
+
 in let _ = expr main_builder StringMap.empty gamma letb
 in let _ = L.build_ret (L.const_int i32_t 0) main_builder
 in grp_module 

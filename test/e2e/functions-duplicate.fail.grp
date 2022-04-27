@@ -1,0 +1,7 @@
+let Int one = 
+    let [Int] -> Int plusOne = lambda (Int x) x + 1 end
+    in plusOne 0
+and Int two = 
+    let [Int] -> Int plusOne = lambda (Int x) x + 1 end
+    in plusOne 1
+in print 1 + 2

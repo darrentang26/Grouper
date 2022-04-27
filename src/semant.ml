@@ -16,6 +16,10 @@ let lookup_type name gamma =
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
+let fun_type_eq ty1 ty2 = match ty1, ty2 with
+  FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
+    (ParamType ty1ps) = (ParamType ty2ps) && ty1rt = ty2rt
+| _ -> ty1 = ty2
 
 let check (typ_decls, body) = let
     (* rho = StringMap.empty and *)
@@ -86,7 +90,10 @@ let check (typ_decls, body) = let
       | Let (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
-                    (tr, (* sexpr *) _) = semant gamma epsilon expr
+                    gamma' = (match tl with
+                              (FunType _) -> StringMap.add name tl gamma
+                            | _ -> gamma) in let
+                    (tr, (* sexpr *) _) = semant gamma' epsilon expr
                     (* Update epsilon *)
                         in if tl = tr
                             then (StringMap.add name tl gamma)
@@ -96,7 +103,9 @@ let check (typ_decls, body) = let
                                 else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
-            sbinds = List.map (fun ((name, tl), expr) -> ((name, tl), semant gamma epsilon expr)) binds
+            sbinds = List.map (fun ((name, tl), expr) -> let
+                gamma = match tl with (FunType _) -> StringMap.add name tl gamma | _ -> gamma
+                    in ((name, tl), semant gamma epsilon expr)) binds
                 in let (t, sx) = semant gamma' epsilon body
                     in (t, SLet (sbinds, (t, sx)))
       | If (cond_expr, then_expr, else_expr) -> let
@@ -105,13 +114,32 @@ let check (typ_decls, body) = let
             else let
             (then_t, then_s) = semant gamma epsilon then_expr and
             (else_t, else_s) = semant gamma epsilon else_expr in
-            if then_t != else_t then raise (Failure "then and else expressions must have the same type")
+            (* if then_t != else_t then raise (Failure ("then and else expressions must have the same type; then: " ^ string_of_type_expr then_t ^ " else: " ^ string_of_type_expr else_t)) *)
+            if not (fun_type_eq then_t else_t) then raise (Failure ("then and else expressions must have the same type; then: " ^ string_of_type_expr then_t ^ " else: " ^ string_of_type_expr else_t))
             else (then_t, SIf ((cond_t, cond_s), (then_t, then_s), (else_t, else_s)))
       | Print expr -> let
             (t, sx) = semant gamma epsilon expr
                 in (t, SPrint (t, sx))
-      | StructInit bindsList -> let
-            typed_binds = List.map (fun (name, expr) -> 
+      | Function (binds, body) -> let
+            gamma' = List.fold_left
+                (fun gamma (name, tl) -> StringMap.add name tl gamma)
+                StringMap.empty
+                binds in let
+            param_types = List.map
+                (fun (name, tl) -> tl)
+                binds and
+            (rt, sbody) = semant gamma' epsilon body
+                in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
+      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
+      | StructInit bindsList -> (*let rec
+            check_consec_dupes = function
+                x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
+                           else x::(check_consec_dupes (y::rest))
+              | x::[] -> x::[] in let               
+            get_names = function
+                
+            _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+            let typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
                                    bindsList in let
             comparable = List.map (fun (name,(typ, expr)) -> (name, typ)) typed_binds in let rec
@@ -162,6 +190,38 @@ let check (typ_decls, body) = let
 
       | _ -> raise (Failure "Not yet implemented")
 
+    and semant_call gamma epsilon call =
+        let rec semant_call_inner = function
+            (* subsequent calls *)
+            Call (Call (e1', e2'), e2) ->
+                let ((oft, fs), valid, sexpr_list, cft) = semant_call_inner (Call (e1', e2'))
+                and (t2, s2) = semant gamma epsilon e2
+                    in (match cft with
+                        FunType (ParamType (pt :: pts), rt) ->
+                            if pt = t2
+                                then if pts = []
+                                    then ((rt, SCall ((oft, fs), sexpr_list @ [(t2, s2)])), true, [], rt)
+                                    else ((oft, fs), false, sexpr_list @ [(t2, s2)], FunType (ParamType pts, rt))
+                                else raise (Failure ("cannot apply " ^ string_of_type_expr t2 ^ " to " ^ string_of_type_expr pt))
+                      | _ -> raise (Failure ("cannot call a non-function with type " ^ string_of_type_expr cft)))
+            (* function expression *)
+          | Call (e1, e2) ->
+                let (t1, s1) = semant gamma epsilon e1
+                and (t2, s2) = semant gamma epsilon e2
+                    in (match t1 with
+                        FunType (ParamType (pt :: pts), rt) ->
+                            if pt = t2
+                                then if pts = []
+                                    then ((rt, SCall ((t1, s1), [(t2, s2)])), true, [], rt)
+                                    else ((t1, s1), false, [(t2, s2)], FunType (ParamType pts, rt))
+                                else raise (Failure ("expected parameter of type " ^ string_of_type_expr pt ^ " but recieved argument of type " ^ string_of_type_expr t2))
+                      | _ -> raise (Failure ("cannot call a non-function with type " ^ string_of_type_expr t1)))
+          | _ -> raise (Failure "Cannot call a non-function")
+
+            in let ((ty, sx), valid, _, _) = semant_call_inner call in
+                if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
+                    
+    
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
         | _ -> raise (Failure "top-level expression must be a let expression")

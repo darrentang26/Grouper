@@ -1,0 +1,5 @@
+type Circle = {x : Int, y : Int, radius : Int}
+
+let Circle c1 = {x = 3, y = 4, radius = 2} in
+let Int top = c1.y + c1.radius
+in print top

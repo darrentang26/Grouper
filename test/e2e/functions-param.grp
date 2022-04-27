@@ -1,0 +1,2 @@
+let [[Int] -> Int, Int] -> Int withNum = lambda ([Int] -> Int f Int n) f n end
+in print withNum lambda (Int x) x + 1 end 0

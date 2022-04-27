@@ -1,0 +1,6 @@
+type Point = {x : Int, y : Int}
+type Triangle = {pt1 : Point, pt2 : Point, pt3 : Point}
+
+let Triangle tri1 = {pt1 = {x = 0, y = 0}, pt2 = {x = 10, y = 0}, pt3 = {x = 5, y = 5}} in
+let Point base2 = tri1.pt2 in
+print base2.x

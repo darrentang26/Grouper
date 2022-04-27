@@ -21,7 +21,7 @@ open Ast
 %nonassoc NOIN
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
-%left ARROW
+%right ARROW
 %nonassoc LIST
 %nonassoc GROUP RING FIELD POLY
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
@@ -34,6 +34,7 @@ open Ast
 %left PLUS MINUS
 %left STAR DIVIDE MOD
 %right NOT
+%nonassoc COMMA
 %nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
 
 %%
@@ -63,6 +64,7 @@ type_expr:
   | type_expr LIST  { ListType($1) }
   | type_expr STAR type_expr
                     { PairType($1, $3) }
+  | param_type_expr { ParamType($1) }
   | type_expr ARROW type_expr
                     { FunType($1, $3) }
   | type_expr GROUP { GroupType($1) }
@@ -84,6 +86,12 @@ struct_decl_body:
     NAME COLON type_expr                        { [($1, $3)] }
   | NAME COLON type_expr COMMA struct_decl_body { ($1, $3) :: $5 }
 
+param_type_expr:
+    LBRACKET type_expr_list RBRACKET            { $2 }
+
+type_expr_list:
+    type_expr                                   { [$1] }
+  | type_expr COMMA type_expr_list              { $1 :: $3 }
 
 //-------------------- LET AND EXPRESSIONS --------------------//
 
@@ -147,8 +155,8 @@ formals_opt:
   | formal_list   { $1 }
 
 formal_list:
-    NAME              { [$1] }
-  | formal_list NAME  { $2 :: $1 }
+    type_expr NAME              { [($2, $1)] }
+  | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
 match_rule:
