@@ -19,6 +19,11 @@ let translate (typ_decls, fns, letb) =
   and void_t    = L.void_type   context 
   and string_t  = L.pointer_type (L.i8_type context) 
   and struct_t fields = L.struct_type context fields in
+  let list_node = L.struct_type context [| L.pointer_type i8_t; L.pointer_type i8_t |] in
+  let list_node_p = L.pointer_type list_node in
+  let double_ptr ty = (L.pointer_type (L.pointer_type ty)) in
+  (*let _ = L.struct_set_body list_node [| L.pointer_type i8_t; L.pointer_type i8_t |] in
+  and string_t  = L.pointer_type (L.i8_type context)  *)
 
   let rec ltype_of_typ = function
       IntExpr -> i32_t
@@ -27,9 +32,23 @@ let translate (typ_decls, fns, letb) =
     | VoidExpr -> void_t
     | StringExpr -> string_t
     | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
-    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
+    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> 
+                                                        ltype_of_typ typ) fields))
+    | ListType tau -> list_node_p
+    | EmptyListType -> list_node_p
+    | PairType (tau1, tau2) -> struct_t [| (ltype_of_typ tau1); (ltype_of_typ tau2) |]
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
+
+ 
+  (*let rec ltype_of_list = function
+      (_, SConsExpr((t1, e1), (t2, e2))) -> 
+        let tau1 = match t1 with 
+          ListType _ -> ltype_of_list (t1, e1)
+          | _        -> ltype_of_typ t1
+        in struct_t [| tau1; L.pointer_type (ltype_of_list (t2, e2)) |]
+    | (_, SEmptyListExpr) -> L.pointer_type i8_t*)
+
 
 
   and ltype_of_functionty ty = (match ty with
@@ -88,6 +107,57 @@ let translate (typ_decls, fns, letb) =
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
         
+  | SConsExpr ((t1, e1), (t2, e2)) ->
+      let v1 = expr builder scope gamma (t1, e1) in
+      let v2 = expr builder scope gamma (t2, e2) in
+      
+      let ptr = L.build_malloc list_node "Cons2" builder in
+      (*let () = print_string "wow " in*)
+      let ptr_cast = L.build_pointercast ptr list_node_p "Cons" builder in
+      let data = L.build_struct_gep ptr_cast 0 "Data_p" builder in
+      let next = L.build_struct_gep ptr_cast 1 "Next_p" builder in
+      (*let data = L.build_load p1 "Data" builder in*)
+      let data_c = L.build_pointercast data (double_ptr (ltype_of_typ t1)) "Data_c" builder in
+      let d_ptr = L.build_malloc (ltype_of_typ t1) "D_ptr" builder in
+      let _ = L.build_store v1 d_ptr builder in
+      let _ = L.build_store d_ptr data_c builder in
+      (*let next = L.build_load p2 "Next" builder in*)
+      let next_c = L.build_pointercast next (L.pointer_type list_node_p) "Next_c" builder in
+      let _ = L.build_store v2 next_c builder in
+      ptr_cast
+      (*L.const_struct context [| v1; ptr|]*)
+  | SEmptyListExpr ->
+      L.const_pointer_null list_node_p 
+  | SPairExpr (sexp1, sexp2) -> L.const_struct context
+                                  (Array.of_list 
+                                    (List.map 
+                                      (fun (sexp) -> expr builder scope gamma sexp) 
+                                    [sexp1; sexp2]))
+  | SCarExpr ((t, e)) -> (match t with
+      PairType (t1, t2) ->
+          let v = (match e with 
+                      SName name -> StringMap.find name scope
+                    | _ -> expr builder scope gamma (t, e)) in
+          let pr = L.build_struct_gep v 0 "pair.fst" builder in
+          L.build_load pr "pair.fst" builder
+    | ListType tau ->
+          let node = expr builder scope gamma (t, e) in
+          let pr = L.build_struct_gep node 0 "List.car" builder in
+          let data = L.build_load pr "Data" builder in
+          let data_c = L.build_pointercast data (L.pointer_type (ltype_of_typ tau)) "Data_c" builder in
+          L.build_load data_c "Data" builder)
+  | SCdrExpr ((t, e)) -> (match t with
+      PairType (t1, t2) ->
+        let v = (match e with
+                    SName name -> StringMap.find name scope
+                  | _ -> expr builder scope gamma (t, e)) in
+        let pr = L.build_struct_gep v 1 "pair.snd" builder in
+        L.build_load pr "pair.fst" builder
+      | ListType _ ->
+          let node = expr builder scope gamma (t, e) in
+          let pr = L.build_struct_gep node 1 "List.cdr" builder in
+          let next = L.build_load pr "Next" builder in
+          L.build_pointercast next list_node_p "Next_c" builder)
   | SPrint (typ, sx) -> 
       let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
       let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in let 

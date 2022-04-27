@@ -37,11 +37,6 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (PairType (t1, t2), SPairExpr ((t1, s1), (t2, s2)))
-      | ConsExpr (expr, EmptyListExpr) -> let
-            (t, sx) = semant gamma epsilon expr
-                in (match t with
-                      ListType EmptyListType -> raise (Failure "cannot hae a list of empty lists")
-                    | _ -> (ListType t, SConsExpr ((t, sx), (EmptyListType, SEmptyListExpr))))
       | ConsExpr (e1, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -49,7 +44,18 @@ let check (typ_decls, body) = let
                       ListType t2' -> if t1 = t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
+                    | EmptyListType -> (ListType t1, SConsExpr((t1, s1), (t2, s2)))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
+      | CarExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t', SCarExpr((t, s)))
+                |   PairType (t1, t2) -> (t1, SCarExpr((t, s))))
+      | CdrExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t, SCdrExpr((t, s)))
+                |   PairType (t1, t2) -> (t2, SCdrExpr((t, s))))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
       | Name s      -> let 
             ty = lookup_type s gamma
@@ -153,6 +159,34 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
+      (*| Group (t, e1, e2, e3, e4) ->
+            let bin_check ftype = (match ftype with
+                FunType(PairType(t1, t2), t3)
+                    -> t1 = t && t2 = t && t3 = t
+                | _ -> raise (Failure "Group binop with wrong type")) in
+            let neg_check ftype = (match ftype with
+                FunType(t1, t2)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Group unop wrong type")) in
+            let eq_check ftype = (match ftype with
+                FunType(PairType(t1, t2), BoolExpr)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Eq op wrong type")) in
+            (* zero, eq, plus, neg *)
+            let (t1, se1) = semant gamma epsilon e1 and
+                (t2, se2) = semant gamma epsilon e2 and
+                (t3, se3) = semant gamma epsilon e3 and
+                (t4, se4) = semant gamma epsilon e4 in
+            let sem_list = [(t1, se1); (t2, se2); (t3, se3); (t4, se4)]
+              and name_list = ["zero"; "eq"; "plus"; "neg"] in
+            let struct_wrap (accum, (t, se), name) = (name, se) :: accum in
+                    if eq_check t2 && bin_check t3 && neg_check t4
+                    && t1 = t then 
+                        (GroupType t, SStructInit(List.fold_left2 struct_wrap [] 
+                                                    sem_list, name_list))
+                    else raise (Failure "Identity elt wrong type")*)
+
+
 
       | _ -> raise (Failure "Not yet implemented")
 

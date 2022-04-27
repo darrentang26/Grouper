@@ -33,6 +33,8 @@ type expr =
   | StringLit of string
   | PairExpr of expr * expr
   | ConsExpr of expr * expr
+  | CarExpr of expr
+  | CdrExpr of expr
   | EmptyListExpr
   | Name of name
   | Binop of expr * op * expr
@@ -124,6 +126,8 @@ let rec string_of_expr = function
 | StringLit(str) -> "\"" ^ str ^ "\""
 | PairExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ "," ^ string_of_expr expr2 ^ ")"
 | ConsExpr(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " :: " ^ string_of_expr expr2 ^ ")"
+| CarExpr(expr) -> "car " ^ string_of_expr expr
+| CdrExpr(expr) -> "cdr " ^ string_of_expr expr
 | EmptyListExpr -> "[]"
 | Name(name) -> name
 | Binop(expr1,op,expr2) -> string_of_expr expr1 ^ " "  ^ string_of_op op ^ " " ^ string_of_expr expr2

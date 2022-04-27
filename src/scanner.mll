@@ -24,6 +24,8 @@ rule token = parse
 | '/'      { DIVIDE }
 | "mod"    { MOD }
 | "::"     { CONS }
+| "car"    { CAR }
+| "cdr"    { CDR }
 | '='      { ASSIGN }
 | '_'      { UNDERSCORE }
 | "->"     { ARROW }
@@ -36,7 +38,6 @@ rule token = parse
 | "&&"     { AND }
 | "||"     { OR }
 | "!"      { NOT }
-| "::"     { CONS }
 | "group"  { GROUP }
 | "ring"   { RING }
 | "field"  { FIELD }
