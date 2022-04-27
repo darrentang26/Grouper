@@ -112,11 +112,6 @@ let translate (typ_decls, fns, letb) =
                                              (struct_name ^ "." ^ typ) 
                                              builder in
             L.build_store (expr builder scope gamma value) field_ptr builder
-                      (*L.build_insertvalue init_struct 
-                                          (expr builder scope gamma value)
-                                          curr_idx
-                                          (struct_name ^ "." ^ typ)
-                                          builder*)
       | [] -> init_struct in
         let _ = add_elem 0 binds in L.build_load init_struct "" builder
   | SStructRef (var, field) -> let
