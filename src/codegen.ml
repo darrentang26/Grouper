@@ -90,11 +90,6 @@ let translate (typ_decls, fns, letb) =
   | SBoolLit b -> L.const_int i1_t (if b then 1 else 0)
   | SFliteral l -> L.const_float_of_string float_t l
   | SStringLit str -> L.build_global_stringptr str "" builder
-  (*| SStructInit binds -> L.const_struct context 
-                           (Array.of_list (List.map (fun (_, bound) ->
-                                                       match bound with
-                                                        (typ, SName name) -> StringMap.find name scope
-                                                       | _ -> expr builder scope gamma bound) binds))*)
   | SStructInit binds ->
       let struct_name = match t with 
         TypNameExpr(name) -> name
