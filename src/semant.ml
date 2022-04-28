@@ -32,7 +32,6 @@ let check (typ_decls, body) = let
     epsilon = StringMap.empty
 
     (* check adt types for uniqueness *)
-
     in let rho = List.fold_left 
         (fun env (name, texpr) -> match texpr with
           AdtTypeExpr (binds) -> List.fold_left
@@ -184,9 +183,41 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
+      | Match (names, evals) ->
+            let binds = List.map (fun (name) -> (name, lookup_type name gamma)) names
+            in let sevals: (Sast.spattern * Sast.sexpr) list = List.fold_left
+                (fun evals (pattern, expr)->
+                    let sexpr = semant gamma epsilon expr
+                        in match pattern with Pattern targets ->
+                            let stargets: Sast.starget list = 
+                            (* (try  *)
+                            (List.fold_left2
+                                (fun stargets target (name, tl) ->
+                                    let (starget, tr): Sast.starget * Ast.type_expr = semant_target gamma epsilon target
+                                        in let equal = match (tl, tr) with
+                                            (TypNameExpr nl, TypNameExpr nr) -> nl = nr
+                                          | _ -> tl = tr
+                                            in if equal
+                                                then starget :: stargets
+                                                else raise (Failure ("cannot match a variable of type " ^ string_of_type_expr tl ^ " on a pattern of type " ^ string_of_type_expr tr)))
+                                []
+                                targets
+                                binds)
+                                in ((SPattern stargets), sexpr) :: evals)
+                []
+                evals
+            in let rt: Ast.type_expr = List.fold_left
+                (fun rt' (spattern, (rt, sx)) ->
+                    if rt != rt'
+                        then raise (Failure ("patterns of different types"))
+                        else rt')
+                (fst (snd (List.hd sevals)))
+                sevals
+                in (rt, SMatch (binds, sevals))
+            
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
 
-      | _ -> raise (Failure "Not yet implemented")
+      | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))
 
     and semant_call gamma epsilon call =
         let rec semant_call_inner = function
@@ -218,7 +249,23 @@ let check (typ_decls, body) = let
 
             in let ((ty, sx), valid, _, _) = semant_call_inner call in
                 if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
-                    
+    
+    
+    and semant_target gamma epsilon target = match target with
+        TargetWildName name -> let (type_name, arg_type) = lookup_adt name rho
+            in if arg_type = VoidExpr
+                then (STargetWildName name, TypNameExpr type_name)
+                else raise (Failure (name ^ " is a constructor on " ^ string_of_type_expr arg_type))
+      | TargetWildLiteral expr -> let (t, s) = semant gamma epsilon expr
+            in (STargetWildLiteral (t, s), t)
+      | TargetWildApp (name, target) ->
+            let (starget, ty) = semant_target gamma epsilon target
+            and (type_name, arg_type) = lookup_adt name rho
+            (* use type equal function *)
+                in if ty = arg_type || (ty != VoidExpr && target = CatchAll)
+                    then (STargetWildApp (name, starget), TypNameExpr type_name)
+                    else raise (Failure ("cannot construct " ^ name ^ " with an expression of type " ^ string_of_type_expr ty))
+      | CatchAll -> raise (Failure "cannot use _ as the top-level pattern")
     
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)

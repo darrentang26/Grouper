@@ -92,7 +92,7 @@ let rec string_of_type_expr = function
 | BoolExpr -> "Bool"
 | StringExpr -> "String"
 | VoidExpr -> "Void"
-| TypNameExpr(name) -> name
+| TypNameExpr(name) -> "User-Type: " ^ name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
 | ParamType(type_exprs) -> "[" ^ String.concat ", " (List.map string_of_type_expr type_exprs) ^ "]"
@@ -129,9 +129,12 @@ let rec string_of_expr = function
 | AdtExpr(target) -> string_of_target target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
-| Match(args, patexprlist) -> "match (" ^ String.concat " " args ^ ")" ^ " with\n  | "
+| Match(args, patexprlist) -> "match (" ^ String.concat ", " args ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
+(* | Match(args, patexprlist) -> "match (" ^ String.concat " " args ^ ")" ^ " with\n  | "
+                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
+                                ^ " -> " ^ string_of_expr expr) patexprlist) *)
 | Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
                          ^ " then " ^ string_of_expr expr2 

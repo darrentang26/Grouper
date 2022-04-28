@@ -240,8 +240,7 @@ let translate (typ_decls, fns, letb) =
         let value_location = L.build_struct_gep location 1 (name ^ "-value") builder in
         let value_location = L.build_pointercast value_location (L.pointer_type (ltype_of_typ ty)) "" builder in
         let store_value = L.build_store (expr builder scope gamma sexpr) value_location builder
-          in L.build_load location "" builder
-      )
+          in L.build_load location "" builder)
   | SCall (fun_sexpr, params) ->
     let fun_value = expr builder scope gamma fun_sexpr in
     let param_values = Array.of_list (List.map (expr builder scope gamma) params)

@@ -144,6 +144,7 @@ fn_def:
     formals expr END           { Function($1, $2)}
   // | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
   | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
+  // | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
 
 //---------- formals ----------//
 formals:

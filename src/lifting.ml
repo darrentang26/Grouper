@@ -81,6 +81,14 @@ let name_all (typ_decls, sexpr) =
       ([], prev_names1)
       sexprs
       in ((ty, SCall (fsexpr', List.rev sexprs')), prev_names2)
+  | SMatch (binds, body) ->
+    let (body', prev_names') = List.fold_left
+      (fun (body, prev_names) (name, sexpr) ->
+        let (sexpr', prev_names') = name_all' sexpr prev_names false ""
+          in ((name, sexpr') :: body, prev_names'))
+      ([], prev_names)
+      body
+      in ((ty, SMatch (binds, body')), prev_names')
   | SIf (cond, s1, s2) ->
     let (cond', prev_names') = name_all' cond prev_names false ""
     in let (s1', prev_names1) = name_all' s1 prev_names' false ""
@@ -158,6 +166,14 @@ let lift_lambdas (typ_decls, sexpr) =
           ([], fs1)
           sexprs
           in ((ty, SCall (fsexpr', List.rev sexprs')), fs2)
+    | SMatch (binds, body) ->
+        let (body', fs) = List.fold_left
+          (fun (body', fs) (spattern, sexpr) ->
+            let (sexpr', fs') = lift_lambdas' sexpr
+              in ((spattern, sexpr') :: body', fs' @ fs))
+          ([], [])
+          body
+          in ((ty, SMatch (binds, body')), fs)
     | SIf (cond, s1, s2) ->
         let (cond', fs') = lift_lambdas' cond
         and (s1', fs1) = lift_lambdas' s1
