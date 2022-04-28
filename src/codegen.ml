@@ -71,7 +71,7 @@ let translate (typ_decls, fns, letb) =
   let user_functions = List.fold_left create_function StringMap.empty fns in
 
   let create_fp user_fps (((name, ty), (t', body)) : bind * sexpr) =
-    let (_, fun_defn, _) = StringMap.find name user_functions in
+    let (_, fun_defn, _) = StringMap.find name user_functions in 
     let gloabl_fp = L.define_global name fun_defn grp_module
       in StringMap.add name gloabl_fp user_fps in
   let user_fps = List.fold_left create_fp StringMap.empty fns in
@@ -94,7 +94,7 @@ let translate (typ_decls, fns, letb) =
       let struct_name = match t with 
         TypNameExpr(name) -> name
       | _ -> raise (Failure "Initializing a non-struct(?)") in
-      let curr_struct_type =  ltype_of_typ (StringMap.find struct_name gamma) in
+      let curr_struct_type =  ltype_of_typ (StringMap.find struct_name gamma) in 
       let undef_struct = L.build_malloc curr_struct_type
                                     struct_name
                                     builder in
@@ -331,13 +331,14 @@ in let populate_function fun_type fun_defn fun_builder sexpr =
   let add_formal scope (name, ty) param =
     let local = L.build_alloca (ltype_of_typ ty) "" fun_builder in
     let _ = L.build_store param local fun_builder in
-      (StringMap.add name local scope)
-  
+      (StringMap.add name local scope) in 
+  let add_formal_typ gamma (name, ty) = (StringMap.add name ty gamma)
   in match sexpr with (_, SFunction (binds, body)) -> 
     let params = Array.to_list (L.params fun_defn)
 
     in let scope = List.fold_left2 add_formal StringMap.empty binds params
-    in let value = expr fun_builder scope gamma body
+    in let gamma' = List.fold_left add_formal_typ gamma binds
+    in let value = expr fun_builder scope gamma' body
       in L.build_ret value fun_builder
 
 in let _ = List.map
