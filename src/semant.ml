@@ -57,9 +57,10 @@ let check (typ_decls, body) = let
                     ListType t' -> (t, SCdrExpr((t, s)))
                 |   PairType (t1, t2) -> (t2, SCdrExpr((t, s))))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      | Name s      -> let 
-            ty = lookup_type s gamma
-                in (ty, SName s)
+      | Name s      -> let
+            ty = lookup_type s gamma in 
+            (ty, SName s)
+
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -87,25 +88,30 @@ let check (typ_decls, body) = let
                     | (Not, BoolExpr) -> (ty, SUnop (Not, (ty, sx)))
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
-      | Let (binds, body) -> let
-            gamma' = List.fold_left
+      | Let (binds, body) ->
+            let gamma_fun = StringMap.filter 
+                (fun name ty -> (match ty with
+                                        FunType _ -> true
+                                        |       _ -> false))
+                gamma in 
+            let gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
                     gamma' = (match tl with
-                              (FunType _) -> StringMap.add name tl gamma
+                              (FunType _) -> StringMap.add name tl gamma_fun
                             | _ -> gamma) in let
                     (tr, (* sexpr *) _) = semant gamma' epsilon expr
-                    (* Update epsilon *)
-                        in if tl = tr
+                    (* Update epsilon *) in
+                            if tl = tr
                             then (StringMap.add name tl gamma)
                             else if tr = EmptyListType then match tl with
-                                      ListType tl' -> (StringMap.add name tl gamma) 
+                                      ListType tl' -> (StringMap.add name tl gamma)
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
                                 else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> let
-                gamma = match tl with (FunType _) -> StringMap.add name tl gamma | _ -> gamma
-                    in ((name, tl), semant gamma epsilon expr)) binds
+                gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun | _ -> gamma
+                    in ((name, tl), semant gamma' epsilon expr)) binds
                 in let (t, sx) = semant gamma' epsilon body
                     in (t, SLet (sbinds, (t, sx)))
       | If (cond_expr, then_expr, else_expr) -> let
@@ -123,7 +129,7 @@ let check (typ_decls, body) = let
       | Function (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma (name, tl) -> StringMap.add name tl gamma)
-                StringMap.empty
+                gamma
                 binds in let
             param_types = List.map
                 (fun (name, tl) -> tl)
