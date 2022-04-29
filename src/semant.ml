@@ -187,23 +187,28 @@ let check (typ_decls, body) = let
             let binds = List.map (fun (name) -> (name, lookup_type name gamma)) names
             in let sevals: (Sast.spattern * Sast.sexpr) list = List.fold_left
                 (fun evals (pattern, expr)->
-                    let sexpr = semant gamma epsilon expr
-                        in match pattern with Pattern targets ->
-                            let stargets: Sast.starget list = 
-                            (* (try  *)
-                            (List.fold_left2
-                                (fun stargets target (name, tl) ->
-                                    let (starget, tr) = semant_target gamma epsilon target
-                                        in let equal = match (tl, tr) with
-                                            (TypNameExpr nl, TypNameExpr nr) -> nl = nr || nl = "_" || nr = "_"
-                                          | _ -> tl = tr
-                                            in if equal
-                                                then starget :: stargets
-                                                else raise (Failure ("cannot match a variable of type " ^ string_of_type_expr tl ^ " on a pattern of type " ^ string_of_type_expr tr)))
-                                []
-                                targets
-                                binds)
-                                in ((SPattern stargets), sexpr) :: evals)
+                    match pattern with Pattern targets ->
+                        let (stargets, bound_vars) = (List.fold_left2
+                            (fun (stargets, bound_vars) target (name, tl) ->
+                                let ((starget, tr), bound_vars') = semant_target gamma epsilon target
+                                    in let equal = match (tl, tr) with
+                                        (TypNameExpr nl, TypNameExpr nr) -> nl = nr || nl = "_" || nr = "_"
+                                      | _ -> tl = tr
+                                        in if equal
+                                            then (starget :: stargets, bound_vars' @ bound_vars)
+                                            else raise (Failure ("cannot match a variable of type " ^ string_of_type_expr tl ^ " on a pattern of type " ^ string_of_type_expr tr)))
+                            ([], [])
+                            targets
+                            binds)
+                        (* in let _ = raise (Failure (String.concat ", " (List.map string_of_bind bound_vars))) *)
+                        in let sexpr = semant
+                            (List.fold_left
+                                (fun gamma (name, tl) -> StringMap.add name tl gamma)
+                                gamma
+                                bound_vars)
+                            epsilon
+                            expr
+                            in ((SPattern stargets), sexpr) :: evals)
                 []
                 evals
             in let rt: Ast.type_expr = List.fold_left
@@ -254,18 +259,24 @@ let check (typ_decls, body) = let
     and semant_target gamma epsilon target = match target with
         TargetWildName name -> let (type_name, arg_type) = lookup_adt name rho
             in if arg_type = VoidExpr
-                then (STargetWildName name, TypNameExpr type_name)
+                then ((STargetWildName name, TypNameExpr type_name), [])
                 else raise (Failure (name ^ " is a constructor on " ^ string_of_type_expr arg_type))
       | TargetWildLiteral expr -> let (t, s) = semant gamma epsilon expr
-            in (STargetWildLiteral (t, s), t)
+            in (match s with
+                SName n -> ((STargetWildLiteral (t, s), t), [(n, t)])
+              | _ -> ((STargetWildLiteral (t, s), t), []))
       | TargetWildApp (name, target) ->
-            let (starget, ty) = semant_target gamma epsilon target
-            and (type_name, arg_type) = lookup_adt name rho
+            let (type_name, arg_type) = lookup_adt name rho
+            in let ((starget, ty), bound_vars) = match target with
+                TargetWildLiteral (Name n) -> 
+                    let sname = (arg_type, SName n)
+                        in ((STargetWildLiteral (sname), arg_type), [(n, arg_type)])
+              | _ -> semant_target gamma epsilon target
             (* use type equal function *)
                 in if ty = arg_type || (ty != VoidExpr && target = CatchAll)
-                    then (STargetWildApp (name, starget), TypNameExpr type_name)
+                    then ((STargetWildApp (name, starget), TypNameExpr type_name), bound_vars)
                     else raise (Failure ("cannot construct " ^ name ^ " with an expression of type " ^ string_of_type_expr ty))
-      | CatchAll -> (SCatchAll, TypNameExpr "_")
+      | CatchAll -> ((SCatchAll, TypNameExpr "_"), [])
     
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)
