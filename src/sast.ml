@@ -101,9 +101,9 @@ and string_of_sfield(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) =
   string_of_sexpr expr7
 
 let string_of_sprogram (typ_decls, expr) = 
-  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
+  String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
 
 let string_of_sprogram_lifted (typ_decls, fs, expr) =
-  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ "\n\n" ^
+  String.concat "" (List.map string_of_typ_decl typ_decls) ^ "\n" ^
   String.concat "\n" (List.map (fun (bind, sexpr) -> string_of_bind bind ^ ": " ^ string_of_sexpr sexpr) fs) ^ "\n\n" ^
   string_of_sexpr expr ^ "\n"

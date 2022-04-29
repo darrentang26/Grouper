@@ -193,9 +193,9 @@ let check (typ_decls, body) = let
                             (* (try  *)
                             (List.fold_left2
                                 (fun stargets target (name, tl) ->
-                                    let (starget, tr): Sast.starget * Ast.type_expr = semant_target gamma epsilon target
+                                    let (starget, tr) = semant_target gamma epsilon target
                                         in let equal = match (tl, tr) with
-                                            (TypNameExpr nl, TypNameExpr nr) -> nl = nr
+                                            (TypNameExpr nl, TypNameExpr nr) -> nl = nr || nl = "_" || nr = "_"
                                           | _ -> tl = tr
                                             in if equal
                                                 then starget :: stargets
@@ -265,7 +265,7 @@ let check (typ_decls, body) = let
                 in if ty = arg_type || (ty != VoidExpr && target = CatchAll)
                     then (STargetWildApp (name, starget), TypNameExpr type_name)
                     else raise (Failure ("cannot construct " ^ name ^ " with an expression of type " ^ string_of_type_expr ty))
-      | CatchAll -> raise (Failure "cannot use _ as the top-level pattern")
+      | CatchAll -> (SCatchAll, TypNameExpr "_")
     
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)

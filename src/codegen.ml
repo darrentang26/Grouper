@@ -242,9 +242,16 @@ let translate (typ_decls, fns, letb) =
         let store_value = L.build_store (expr builder scope gamma sexpr) value_location builder
           in L.build_load location "" builder)
   | SCall (fun_sexpr, params) ->
-    let fun_value = expr builder scope gamma fun_sexpr in
-    let param_values = Array.of_list (List.map (expr builder scope gamma) params)
-      in L.build_call fun_value param_values "" builder
+      let fun_value = expr builder scope gamma fun_sexpr in
+      let param_values = Array.of_list (List.map (expr builder scope gamma) params)
+        in L.build_call fun_value param_values "" builder
+  (* | SMatch (binds, body) ->
+      let values = List.map
+        (fun (name, _) -> L.build_load (StringMap.find name scope) name builder)
+        binds in
+      let start_bb = L.insertion_block builder in
+      let the_function = L.block_parent start_bb in
+      let  *)
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
     let cond_value = expr builder scope gamma cond_sexpr
     in let start_bb = L.insertion_block builder
