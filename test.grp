@@ -1,12 +1,13 @@
 type Fruit = APPLE | BANANA of (Int)
 type Foo = Int
 
-let Fruit fruit = BANANA(1)
+let Fruit fruit = BANANA(3)
+(* let Fruit fruit = APPLE *)
 in let [Fruit] -> Int f =
-
   lambda (Fruit f) match (f) with
-  | (APPLE) -> 100
   | (_) -> -99
+  | (APPLE) -> -1
+  | (BANANA(3)) -> 100
   end
 
 in print f fruit
