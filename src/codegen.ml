@@ -263,28 +263,35 @@ let translate (typ_decls, fns, letb) =
                 in let enum_target_value = L.const_int i8_t enum_target
                 in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
                 in let enum_match_value = L.build_load enum_match_location "" builder 
-                in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value "" builder
+                in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
                   in (cond_value, scope)
+            | STargetWildApp (name, STargetWildLiteral sexpr) ->
+                let (enum_target, _) = StringMap.find name rho
+                in let value_location = L.build_alloca (L.type_of value) "" builder
+                in let _ = L.build_store value value_location builder
+                in let enum_target_value = L.const_int i8_t enum_target
+                in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
+                in let enum_match_value = L.build_load enum_match_location "" builder
+                in let enum_cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
+                in let (sexpr_cond_value, scope') = match sexpr with
+                    (_, SName name) -> raise (Failure "nested bindings not yet implemented")
+                  | (ty, sx) ->
+                      let sexpr_target_value = expr builder scope gamma (ty, sx)
+                      in let sexpr_match_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                      in let sexpr_match_location = L.build_pointercast sexpr_match_location (L.pointer_type (L.type_of sexpr_target_value)) (name ^ "-value-casted") builder
+                      in let sexpr_match_value = L.build_load sexpr_match_location "value" builder
+                      (* in let sexpr_match_value = L.build_bitcast sexpr_match_value (L.type_of sexpr_target_value) "" builder *)
+                      in let sexpr_cond_value = match ty with
+                          IntExpr | BoolExpr -> L.build_icmp L.Icmp.Eq sexpr_target_value sexpr_match_value "value-matches" builder
+                        | FloatExpr -> L.build_fcmp L.Fcmp.Ueq sexpr_target_value sexpr_match_value "value-matches" builder
+                        in (sexpr_cond_value, scope)
+                in let cond_value = L.build_and enum_cond_value sexpr_cond_value "enum-literal-matches" builder
+                  in (cond_value, scope')
             | SCatchAll -> (L.const_int i1_t 1, scope)
-          in let cond_value' = L.build_and cond_value target_cond "" builder
+          in let cond_value' = L.build_and cond_value target_cond "accumulated-match" builder
             in (cond_value', scope'))
           (L.const_int i1_t 1, scope)
           target_vals
-
-      (* in let (target_conds, bound_vals) = List.map2
-        (fun (target) (value) -> match target with
-            SCatchAll -> (L.const_int i1_t 1, []))
-        targets
-        match_vals
-      in let scope' = List.fold_left
-        (fun (scope) (name, alloca) -> StringMap.add name alloca scope)
-        scope
-        bound_vals
-      in let cond_value = List.fold_left
-        (fun (cond_value) (target_cond) ->
-          L.build_and cond_value target_cond "" builder)
-        L.const_int i1_t 1
-        target_conds *)
       
       in let start_bb = L.insertion_block builder
       in let the_function = L.block_parent start_bb
