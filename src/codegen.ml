@@ -245,6 +245,66 @@ let translate (typ_decls, fns, letb) =
       let fun_value = expr builder scope gamma fun_sexpr in
       let param_values = Array.of_list (List.map (expr builder scope gamma) params)
         in L.build_call fun_value param_values "" builder
+  | SMatch (binds, bodies) ->
+      let match_vals = List.map (fun (name, ty) -> expr builder scope gamma (ty, SName name)) binds
+      and (pattern, sexpr): (Sast.spattern * Sast.sexpr) = List.hd bodies
+      in let targets: Sast.starget list = match pattern with
+          SPattern (targets) -> targets
+        | _ -> raise (Failure "non-target pattern in match")
+      in let target_vals = List.combine targets match_vals
+
+      in let (cond_value, scope') = List.fold_left
+        (fun (cond_value, scope) (target, value) ->
+          let (target_cond, scope') = match target with
+            SCatchAll -> (L.const_int i1_t 1, scope)
+          in let cond_value' = L.build_and cond_value target_cond "" builder
+            in (cond_value', scope'))
+          (L.const_int i1_t 1, scope)
+          target_vals
+
+      (* in let (target_conds, bound_vals) = List.map2
+        (fun (target) (value) -> match target with
+            SCatchAll -> (L.const_int i1_t 1, []))
+        targets
+        match_vals
+      in let scope' = List.fold_left
+        (fun (scope) (name, alloca) -> StringMap.add name alloca scope)
+        scope
+        bound_vals
+      in let cond_value = List.fold_left
+        (fun (cond_value) (target_cond) ->
+          L.build_and cond_value target_cond "" builder)
+        L.const_int i1_t 1
+        target_conds *)
+      
+      in let start_bb = L.insertion_block builder
+      in let the_function = L.block_parent start_bb
+
+      in let then_bb = L.append_block context "then" the_function
+      in let _ = L.position_at_end then_bb builder
+      in let then_value = expr builder scope' gamma sexpr
+      in let then_bb = L.insertion_block builder
+
+      in let default_bb = L.append_block context "default" the_function
+      in let _ = L.position_at_end default_bb builder
+      in let default_value = (* call error function *) L.const_int i32_t 0
+      in let default_bb = L.insertion_block builder
+
+      in let merge_bb = L.append_block context "switchcase" the_function
+      in let _ = L.position_at_end merge_bb builder
+      in let incoming = [(then_value, then_bb); (default_value, default_bb)]
+      in let phi = L.build_phi incoming "iftmp" builder
+
+      in let _ = L.position_at_end start_bb builder
+      in let _ = L.build_cond_br cond_value then_bb default_bb builder
+
+      in let _ = L.position_at_end then_bb builder
+      in let _ = L.build_br merge_bb builder
+
+      in let _ = L.position_at_end default_bb builder
+      in let _ = L.build_br merge_bb builder
+
+      in let _ = L.position_at_end merge_bb builder in phi
   (* | SMatch (binds, body) ->
       let values = List.map
         (fun (name, _) -> L.build_load (StringMap.find name scope) name builder)
