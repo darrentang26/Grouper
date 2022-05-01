@@ -1,0 +1,10 @@
+type Point = {x : Int, y : Int}
+type Rectangle = {width : Float, height : Float}
+let [Int, Int] -> Int expon = lambda (Int pwr Int base)  if pwr == 1 
+                                                         then base  
+                                                         else base * (expon (pwr - 1) base) end end
+let Float w = 4.5
+let Float h = 12.45
+let Rectangle someRect = {width = w, height = h}
+let [Rectangle] -> Float area = lambda (Rectangle rect) rect.width * rect.height end
+in print (area someRect)
