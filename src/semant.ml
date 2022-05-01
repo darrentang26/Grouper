@@ -15,6 +15,10 @@ let lookup_type name gamma =
     try StringMap.find name gamma
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
 
+let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
+let binop_type ty = FunType (ParamType [ty; ty], ty)
+let unop_type ty = FunType (ParamType [ty], ty)
+
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let eq_type ty1 ty2 = (match ty1, ty2 with
   FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
@@ -168,59 +172,37 @@ let check (typ_decls, body) = let
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
-             |  GroupType ty -> (match sexp with
-                  SStructInit xs -> 
-                    let (n, (t, s)) = try List.find (fun (name, (ty, sexp)) -> name == field) xs
-                                            with Not_Found -> raise (Failure (field ^ " is not a valid group field"))
+                |  _ -> raise (Failure (var ^ " is not a struct")))
+            |  GroupType ty -> 
+                let group_fields tau = [("zero", tau); ("equals", compare_type tau); 
+                       ("plus", binop_type tau); ("neg", unop_type tau);
+                       ("minus", binop_type tau)] in
+                let (n, t) = try List.find (fun (name, tau) -> name = field) (group_fields ty)
+                                            with Not_found -> raise (Failure (field ^ " is not a valid group field"))
 
                     in (t, SStructRef(var, field))
-                | _              -> raise (Failure ("Group is not a struct - this is impossible???"))
-
-             |  _ -> raise (Failure (var ^ " is not a struct")))
-        |  _ -> raise (Failure "What was accessed was not a name"))
-      (*| Group (t, e1, e2, e3, e4) ->
-            let bin_check ftype = (match ftype with
-                FunType(PairType(t1, t2), t3)
-                    -> t1 = t && t2 = t && t3 = t
-                | _ -> raise (Failure "Group binop with wrong type")) in
-            let neg_check ftype = (match ftype with
-                FunType(t1, t2)
-                    -> t1 = t && t2 = t
-                | _ -> raise (Failure "Group unop wrong type")) in
-            let eq_check ftype = (match ftype with
-                FunType(PairType(t1, t2), BoolExpr)
-                    -> t1 = t && t2 = t
-                | _ -> raise (Failure "Eq op wrong type")) in
-            (* zero, eq, plus, neg *)
-            let (t1, se1) = semant gamma epsilon e1 and
-                (t2, se2) = semant gamma epsilon e2 and
-                (t3, se3) = semant gamma epsilon e3 and
-                (t4, se4) = semant gamma epsilon e4 in
-            let sem_list = [(t1, se1); (t2, se2); (t3, se3); (t4, se4)]
-              and name_list = ["zero"; "eq"; "plus"; "neg"] in
-            let struct_wrap (accum, (t, se), name) = (name, se) :: accum in
-                    if eq_check t2 && bin_check t3 && neg_check t4
-                    && t1 = t then 
-                        (GroupType t, SStructInit(List.fold_left2 struct_wrap [] 
-                                                    sem_list, name_list))
-                    else raise (Failure "Identity elt wrong type")*)
-
+            |  _ -> raise (Failure "What was accessed was not a name"))
 
 
       | Group (texp, zero, eq, plus, neg) -> 
-        let build_group zero eq plus neg =
-            SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg)]
+        let build_minus plus neg ty =
+            Function([("x", ty); ("y", ty)], Call( Call(plus, Name "x"), Call(neg, Name "y"))) in
+
+
+        let build_group zero eq plus neg min =
+            SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min)]
 
         and (t0, s0) = semant gamma epsilon zero
         and (teq, seq) = semant gamma epsilon eq
         and (tpl, spl) = semant gamma epsilon plus
         and (tneg, sneg) = semant gamma epsilon neg
+        and (tmin, smin) = semant gamma epsilon (build_minus plus neg texp)
         in (match (t0, teq, tpl, tneg) with
             (t1, FunType (ParamType [t2; t3], BoolExpr), 
                  FunType (ParamType [t4; t5], t6),
                  FunType (ParamType [t7], t8)) -> 
                         if eq_types [texp; t1; t2; t3; t4; t5; t6; t7; t8]
-                        then (GroupType(texp), build_group (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg))
+                        then (GroupType(texp), build_group (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg) (tmin, smin))
                         else raise (Failure "Group parameter has inconsistent type")
         |   _ -> raise (Failure "Equals, plus or negate function had wrong number of arguments"))
 

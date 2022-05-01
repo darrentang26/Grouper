@@ -10,7 +10,12 @@ let group_idx_lookup field =
                       if acc > 0 then acc + 1 
                                  else if name == field then 1
                                                        else 0)
-                  ["zero"; "equals"; "plus"; "neg"] 0
+                  ["zero"; "equals"; "plus"; "neg"; "minus"] 0
+
+
+let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
+let binop_type ty = FunType (ParamType [ty; ty], ty)
+let unop_type ty = FunType (ParamType [ty], ty)
 
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
@@ -34,9 +39,10 @@ let translate (typ_decls, fns, letb) =
 
   let group_to_struct ty =
     StructTypeExpr [("zero", ty); 
-                    ("equals", FunType (ParamType [ty; ty], BoolExpr));
-                    ("plus", FunType (ParamType [ty; ty], ty));
-                    ("neg", FunType (ParamType [ty], ty))] in
+                    ("equals", compare_type ty);
+                    ("plus", binop_type ty);
+                    ("neg", unop_type ty);
+                    ("minus", binop_type ty)] in
 
   let rec ltype_of_typ = function
       IntExpr -> i32_t
@@ -44,7 +50,7 @@ let translate (typ_decls, fns, letb) =
     | FloatExpr -> float_t
     | VoidExpr -> void_t
     | StringExpr -> string_t
-    | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | TypNameExpr name -> ltype_of_typ (try StringMap.find name gamma with Not_found -> raise (Failure name))
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> 
                                                         ltype_of_typ typ) fields))
     | ListType tau -> list_node_p
@@ -85,7 +91,8 @@ let translate (typ_decls, fns, letb) =
   let user_functions = List.fold_left create_function StringMap.empty fns in
 
   let create_fp user_fps (((name, ty), (t', body)) : bind * sexpr) =
-    let (_, fun_defn, _) = StringMap.find name user_functions in
+    let (_, fun_defn, _) = (try StringMap.find name user_functions 
+                            with Not_found -> raise (Failure name)) in
     let gloabl_fp = L.define_global name fun_defn grp_module
       in StringMap.add name gloabl_fp user_fps in
   let user_fps = List.fold_left create_fp StringMap.empty fns in
@@ -110,10 +117,15 @@ let translate (typ_decls, fns, letb) =
                                                         (typ, SName name) -> StringMap.find name scope
                                                        | _ -> expr builder scope gamma bound) binds))*)
   | SStructInit binds ->
-      let struct_name = match t with 
-        TypNameExpr(name) -> name
-      | _ -> raise (Failure "Initializing a non-struct(?)") in
-      let curr_struct_type =  ltype_of_typ (StringMap.find struct_name gamma) in
+      let struct_name = (match t with 
+        TypNameExpr name -> name
+      | GroupType ty -> "group"
+      | _ -> raise (Failure "Initializing a non-struct(?)")) in
+      let struct_type = (match t with 
+        TypNameExpr name -> StringMap.find name gamma
+      | GroupType ty -> group_to_struct ty
+      | _ -> raise (Failure "Initializing a non-struct(?)")) in
+      let curr_struct_type =  ltype_of_typ struct_type in
       let undef_struct = L.build_malloc curr_struct_type
                                     struct_name
                                     builder in
@@ -134,13 +146,14 @@ let translate (typ_decls, fns, letb) =
       | [] -> init_struct in
         let _ = add_elem 0 binds in L.build_load init_struct "" builder
   | SStructRef (var, field) -> let
-      struct_name = match (StringMap.find var gamma ) with 
-                       TypNameExpr(typ_name) -> typ_name 
-                    |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in let
-      struct_def = StringMap.find struct_name gamma in let rec
-      idx_finder curr_idx = function
-        (curr_field, _)::binds -> if field = curr_field then curr_idx else 
-                                   idx_finder (curr_idx + 1) binds
+      struct_def = match (StringMap.find var gamma ) with 
+                      TypNameExpr(typ_name) -> StringMap.find typ_name gamma
+                    | GroupType ty -> group_to_struct ty
+                    |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in 
+      let rec idx_finder curr_idx = function
+            (curr_field, _)::binds -> if field = curr_field 
+                                      then curr_idx 
+                                      else idx_finder (curr_idx + 1) binds
       | [] -> raise (Failure "Should not happen, invalid field lookup should be caught in semant") in let
       field_idx = match struct_def with 
                     StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds

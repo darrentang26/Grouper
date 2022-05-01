@@ -141,7 +141,7 @@ let rec string_of_expr = function
 | Match(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
-| Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
+| Call(expr1, expr2) -> "( Call " ^ string_of_expr expr1 ^ " on " ^ string_of_expr expr2 ^ ")"
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
                          ^ " then " ^ string_of_expr expr2 
                          ^ " else " ^ string_of_expr expr3

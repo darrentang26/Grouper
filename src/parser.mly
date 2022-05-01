@@ -33,9 +33,9 @@ open Ast
 %left LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
-%right NOT
 %nonassoc COMMA
 %nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
+%right NOT
 
 %%
 
@@ -123,7 +123,7 @@ expr:
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
-  | expr expr   %prec NOT { Call($1, $2) }
+  | expr expr %prec NOT { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
   | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
