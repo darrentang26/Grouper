@@ -256,7 +256,14 @@ let translate (typ_decls, fns, letb) =
       in let (cond_value, scope') = List.fold_left
         (fun (cond_value, scope) (target, value) ->
           let (target_cond, scope') = match target with
-            SCatchAll -> (L.const_int i1_t 1, scope)
+              STargetWildName name -> 
+                let (enum_target, _) = StringMap.find name rho
+                in let enum_target_value = L.const_int i8_t enum_target
+                in let enum_match_location = L.build_struct_gep value 0 (name ^ "-enum") builder
+                in let enum_match_value = L.build_load enum_match_location "" builder 
+                in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value "" builder
+                  in (cond_value, scope)
+            | SCatchAll -> (L.const_int i1_t 1, scope)
           in let cond_value' = L.build_and cond_value target_cond "" builder
             in (cond_value', scope'))
           (L.const_int i1_t 1, scope)
