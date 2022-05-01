@@ -258,8 +258,10 @@ let translate (typ_decls, fns, letb) =
           let (target_cond, scope') = match target with
               STargetWildName name -> 
                 let (enum_target, _) = StringMap.find name rho
+                in let value_location = L.build_alloca (L.type_of value) "" builder
+                in let _ = L.build_store value value_location builder
                 in let enum_target_value = L.const_int i8_t enum_target
-                in let enum_match_location = L.build_struct_gep value 0 (name ^ "-enum") builder
+                in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
                 in let enum_match_value = L.build_load enum_match_location "" builder 
                 in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value "" builder
                   in (cond_value, scope)
