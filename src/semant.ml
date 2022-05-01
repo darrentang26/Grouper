@@ -25,9 +25,12 @@ let check (typ_decls, body) = let
     (* rho = StringMap.empty and *)
     gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
         StringMap.empty 
-        typ_decls and
-    epsilon = StringMap.empty 
-
+        typ_decls and 
+    
+    epsilon = StringMap.empty and
+    user_typs = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+        StringMap.empty 
+        typ_decls
     in let rec semant gamma epsilon = function
         Literal  l  -> (IntExpr, SLiteral l)
       | Fliteral l  -> (FloatExpr, SFliteral l)
@@ -160,7 +163,7 @@ let check (typ_decls, body) = let
       | StructRef (var, field) -> let 
         (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
-             accessed_type = lookup_type typ gamma in (match accessed_type with
+             accessed_type = lookup_type typ user_typs in (match accessed_type with
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
