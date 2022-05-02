@@ -1,6 +1,7 @@
 (* Top for stdlib types*)
 type Point = {x : Int, y : Int}
 (* series of lets for stdlib functions *)
-let [Int, Int] -> Int expon = lambda (Int pwr Int base)  if pwr == 1 
+let [Int, Int] -> Int expon = lambda (Int base Int pwr)  if pwr == 1 
                                                          then base  
-                                                         else base * (expon (pwr - 1) base) end end
+                                                         else base * (expon base (pwr - 1)) end end
+                                                 
