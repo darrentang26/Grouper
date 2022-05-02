@@ -1,0 +1,7 @@
+type Rectangle = {width : Float, height : Float}
+
+let Float w = 4.5
+let Float h = 12.45
+let Rectangle someRect = {width = w, height = h}
+let [Rectangle] -> Float area = lambda (Rectangle rect) rect.width * rect.height end
+in print (area someRect)
