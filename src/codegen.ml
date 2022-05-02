@@ -266,7 +266,7 @@ let translate (typ_decls, fns, letb) =
                 in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
                   in (cond_value, scope)
             | STargetWildApp (name, STargetWildLiteral sexpr) ->
-                let (enum_target, _) = StringMap.find name rho
+                let (enum_target, target_type) = StringMap.find name rho
                 in let value_location = L.build_alloca (L.type_of value) "" builder
                 in let _ = L.build_store value value_location builder
                 in let enum_target_value = L.const_int i8_t enum_target
@@ -274,7 +274,11 @@ let translate (typ_decls, fns, letb) =
                 in let enum_match_value = L.build_load enum_match_location "" builder
                 in let enum_cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
                 in let (sexpr_cond_value, scope') = match sexpr with
-                    (_, SName name) -> raise (Failure "nested bindings not yet implemented")
+                    (ty, SName name_to_bind) ->
+                    let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                    in let target_location = L.build_pointercast target_location (L.pointer_type (ltype_of_typ ty)) (name ^ "-value-casted") builder
+                    in let scope' = StringMap.add name target_location scope 
+                      in (L.const_int i1_t 1, scope')
                   | (ty, sx) ->
                       let sexpr_target_value = expr builder scope gamma (ty, sx)
                       in let sexpr_match_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
