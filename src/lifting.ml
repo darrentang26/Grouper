@@ -128,7 +128,7 @@ let lift_lambdas (typ_decls, sexpr) =
               in match sx' with
                 SFunction _ ->
                   (bound_vars, ((name, ty), (ty', sx')) :: fs' @ fs)
-              | _ -> (((name, ty), (ty', sx')) :: bound_vars, fs))
+              | _ -> (((name, ty), (ty', sx')) :: bound_vars, fs' @ fs))
               (* in match ty with
                 FunType _ -> 
                   (bound_vars, ((name, ty), (ty', sx')) :: fs' @ fs)

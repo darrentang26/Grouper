@@ -18,6 +18,7 @@ let lookup_type name gamma =
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
 let unop_type ty = FunType (ParamType [ty], ty)
+let get_fun opp (op_name, sexp) = opp = op_name
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let eq_type ty1 ty2 = (match ty1, ty2 with
@@ -59,12 +60,14 @@ let check (typ_decls, body) = let
             (t, s) = semant gamma epsilon e in
                 (match t with
                     ListType t' -> (t', SCarExpr((t, s)))
-                |   PairType (t1, t2) -> (t1, SCarExpr((t, s))))
+                |   PairType (t1, t2) -> (t1, SCarExpr((t, s)))
+                |   _ -> raise (Failure (string_of_type_expr t)))
       | CdrExpr (e) -> let
             (t, s) = semant gamma epsilon e in
                 (match t with
                     ListType t' -> (t, SCdrExpr((t, s)))
-                |   PairType (t1, t2) -> (t2, SCdrExpr((t, s))))
+                |   PairType (t1, t2) -> (t2, SCdrExpr((t, s)))
+                |   _ -> raise (Failure (string_of_type_expr t)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
       | Name s      -> let
             ty = lookup_type s gamma in 
@@ -73,7 +76,7 @@ let check (typ_decls, body) = let
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
-                in if t1 != t2 then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
+                in if not (eq_type t1 t2) then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
                     (* Need to change this to work with algebra stuff!!!! *)
                     else (match op, t1 with
                       (Add, IntExpr) | (Add, FloatExpr) | (Add, StringExpr) -> (t1, SBinop ((t1, s1), Add, (t2, s2)))
@@ -89,12 +92,19 @@ let check (typ_decls, body) = let
                     | (And, BoolExpr) -> (t1, SBinop ((BoolExpr, s1), And, (t2, s2)))
                     | (Or, BoolExpr) -> (t1, SBinop ((t1, s1), Or, (t2, s2)))
                     | (Mod, IntExpr) -> (t1, SBinop ((t1, s1), Mod, (t2, s2)))
-                    | _ -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1)))
+                    | _ ->
+                        let (opp, sexp) = try List.find (get_fun (string_of_op op)) (StringMap.find (string_of_type_expr t1) epsilon)
+                        with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
+                    in  let ty = (match opp with "+" | "-" -> t1 | "=" -> BoolExpr)
+                        in (ty, SCall(sexp, [(t1, s1); (t2, s2)])))
       | Unop (uop, expr) -> let
             (ty, sx) = semant gamma epsilon expr
                 in (match uop, ty with
                       (Neg, IntExpr) | (Neg, FloatExpr) -> (ty, SUnop (Neg, (ty, sx)))
                     | (Not, BoolExpr) -> (ty, SUnop (Not, (ty, sx)))
+                    | (Neg, _) -> let (opp, sexp) = try List.find (get_fun "Neg") (StringMap.find (string_of_type_expr ty) epsilon)
+                                                        with Not_found -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty))
+                                    in (ty, SCall(sexp, [(ty, sx)]))
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
@@ -121,7 +131,17 @@ let check (typ_decls, body) = let
             sbinds = List.map (fun ((name, tl), expr) -> let
                 gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun | _ -> gamma
                     in ((name, tl), semant gamma' epsilon expr)) binds
-                in let (t, sx) = semant gamma' epsilon body
+            in let no_overload = [](*[IntExpr; BoolExpr; StringExpr; FloatExpr]*) in let
+                epsilon' = List.fold_left
+                (fun epsilon (nt, sexpr) -> (match sexpr with
+                        (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
+                                                    ("neg", sneg); ("minus", smin)])
+                            -> if List.mem ty no_overload then epsilon
+                            else StringMap.add (string_of_type_expr ty) 
+                                            [("=", seq); ("+", spl);
+                                             ("n", sneg); ("-", smin)] epsilon
+                        | _ -> epsilon)) epsilon sbinds
+                in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in

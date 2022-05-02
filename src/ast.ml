@@ -180,5 +180,6 @@ and string_of_field(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) =
   string_of_ring (name, expr1, expr2, expr3, expr4, expr5, expr6) ^ " " ^
   string_of_expr expr7
 
+
 let string_of_program (typ_decls, expr) = 
   String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_expr expr ^ "\n"

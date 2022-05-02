@@ -31,11 +31,12 @@ open Ast
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
-%left PLUS MINUS
-%left STAR DIVIDE MOD
+%left CAR CDR
 %nonassoc COMMA
 %nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
 %right NOT
+%left PLUS MINUS
+%left STAR DIVIDE MOD
 
 %%
 
