@@ -17,12 +17,12 @@ def main():
     for line in std_lines:
         if line[:3] == "typ":
             type_decls.append(line)
-        elif line[:2] != "(*":
+        else:
             prog.append(line) 
     for line in src_lines:
         if line[:3] == "typ":
             type_decls.append(line)
-        elif line[:2] != "(*":
+        else:
             prog.append(line) 
     tmp_file.writelines(type_decls)
     tmp_file.writelines(prog)
