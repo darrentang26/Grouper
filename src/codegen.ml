@@ -275,10 +275,11 @@ let translate (typ_decls, fns, letb) =
                 in let enum_cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
                 in let (sexpr_cond_value, scope') = match sexpr with
                     (ty, SName name_to_bind) ->
-                    let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
-                    in let target_location = L.build_pointercast target_location (L.pointer_type (ltype_of_typ ty)) (name ^ "-value-casted") builder
-                    in let scope' = StringMap.add name target_location scope 
-                      in (L.const_int i1_t 1, scope')
+                      let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                      in let target_location = L.build_pointercast target_location (L.pointer_type (ltype_of_typ ty)) (name ^ "-value-casted") builder
+                      in let scope' = StringMap.add name_to_bind target_location scope
+                      (* in let _ = raise (Failure ("added to scope: " ^ name_to_bind)) *)
+                        in (L.const_int i1_t 1, scope')
                   | (ty, sx) ->
                       let sexpr_target_value = expr builder scope gamma (ty, sx)
                       in let sexpr_match_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
@@ -292,6 +293,7 @@ let translate (typ_decls, fns, letb) =
                 in let cond_value = L.build_and enum_cond_value sexpr_cond_value "enum-literal-matches" builder
                   in (cond_value, scope')
             | SCatchAll -> (L.const_int i1_t 1, scope)
+
           in let cond_value' = L.build_and cond_value target_cond "accumulated-match" builder
             in (cond_value', scope'))
           (L.const_int i1_t 1, scope)
@@ -307,7 +309,7 @@ let translate (typ_decls, fns, letb) =
 
       in let default_bb = L.append_block context "default" the_function
       in let _ = L.position_at_end default_bb builder
-      in let default_value = (* call error function *) L.const_int i32_t 0
+      in let default_value = (* call error function *) L.const_int i32_t 9999
       in let default_bb = L.insertion_block builder
 
       in let merge_bb = L.append_block context "switchcase" the_function
