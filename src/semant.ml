@@ -159,7 +159,7 @@ let check (typ_decls, body) = let
              |  _::binds -> struct_type binds
              |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
                 in
-            (TypNameExpr(struct_type (StringMap.bindings usr_typs)), SStructInit(typed_binds))
+            (TypNameExpr(struct_type (StringMap.bindings user_typs)), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
         (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
