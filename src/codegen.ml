@@ -46,7 +46,7 @@ let translate (typ_decls, fns, letb) =
           in if cur > max_size then cur else max_size)
         0
         binds
-        in struct_t [| i8_t ; L.array_type i1_t max_size |]
+        in struct_t [| i8_t ; L.array_type i8_t (max_size / 8) |]
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
@@ -278,7 +278,7 @@ let translate (typ_decls, fns, letb) =
                       let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
                       in let target_location = L.build_pointercast target_location (L.pointer_type (ltype_of_typ ty)) (name ^ "-value-casted") builder
                       in let scope' = StringMap.add name_to_bind target_location scope
-                      (* in let _ = raise (Failure ("added to scope: " ^ name_to_bind)) *)
+                      (* in let scope' = StringMap.add name_to_bind target_value_location scope *)
                         in (L.const_int i1_t 1, scope')
                   | (ty, sx) ->
                       let sexpr_target_value = expr builder scope gamma (ty, sx)
@@ -309,7 +309,7 @@ let translate (typ_decls, fns, letb) =
 
       in let default_bb = L.append_block context "default" the_function
       in let _ = L.position_at_end default_bb builder
-      in let default_value = (* call error function *) L.const_int i32_t 9999
+      in let default_value = (* call error function *) L.const_int i32_t 800
       in let default_bb = L.insertion_block builder
 
       in let merge_bb = L.append_block context "switchcase" the_function
