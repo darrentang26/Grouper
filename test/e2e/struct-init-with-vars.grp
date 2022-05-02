@@ -1,0 +1,7 @@
+type Point = {x : Int, y : Int}
+
+let Int ecks = 5
+let Int why = 10
+let Int cuz = why
+let Point center = {x = ecks, y = why}
+in print center.y

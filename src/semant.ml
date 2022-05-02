@@ -25,9 +25,12 @@ let check (typ_decls, body) = let
     (* rho = StringMap.empty and *)
     gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
         StringMap.empty 
-        typ_decls and
-    epsilon = StringMap.empty 
-
+        typ_decls and 
+    
+    epsilon = StringMap.empty and
+    user_typs = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+        StringMap.empty 
+        typ_decls
     in let rec semant gamma epsilon = function
         Literal  l  -> (IntExpr, SLiteral l)
       | Fliteral l  -> (FloatExpr, SFliteral l)
@@ -137,14 +140,15 @@ let check (typ_decls, body) = let
             (rt, sbody) = semant gamma' epsilon body
                 in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
-      | StructInit bindsList -> (*let rec
-            check_consec_dupes = function
-                x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
-                           else x::(check_consec_dupes (y::rest))
-              | x::[] -> x::[] in let               
+      | StructInit bindsList -> let rec
+             check_consec_dupes = function
+             x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
+                          else x::(check_consec_dupes (y::rest))
+            | x::[] -> x::[] in let rec              
             get_names = function
-                
-            _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+              (name, typ)::binds -> name::(get_names binds)
+            | [] -> [] in let    
+            _ = check_consec_dupes (List.sort String.compare (get_names bindsList)) in
             let typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
                                    bindsList in let
@@ -155,11 +159,11 @@ let check (typ_decls, body) = let
              |  _::binds -> struct_type binds
              |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
                 in
-            (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
+            (TypNameExpr(struct_type (StringMap.bindings usr_typs)), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
         (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
-             accessed_type = lookup_type typ gamma in (match accessed_type with
+             accessed_type = lookup_type typ user_typs in (match accessed_type with
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
