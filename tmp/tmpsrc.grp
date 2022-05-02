@@ -1,6 +1,70 @@
-type Point = {x : Int, y : Int}
+type Fraction = {numer : Int, denom : Int}
+type Imaginary = Int
+type Complex = {real : Int, fake : Imaginary}
+(* Top for stdlib types*)
+
+(* series of lets for stdlib functions *)
+(* Standard Integer Operations*)
+(* expon: [Int, Int] -> Int 
+ * params: Int base, Int pwr
+ * returns: base multiplied by itself pwr number of times
+ *)
 let [Int, Int] -> Int expon = lambda (Int base Int pwr)  if pwr == 1 
                                                          then base  
                                                          else base * (expon base (pwr - 1)) end end
-                                                 let Int twoCubed = expon 2 3
-in print twoCubed
+(* int_gcd: [Int, Int] -> Int
+ * params: Int x, Int y
+ * returns: The greatest common divisor between the bigger number x and the smaller number y
+ *)
+let [Int, Int] -> Int int_gcd = lambda (Int x Int y)
+                                 let Int next_rem = y mod x in  
+                                 if next_rem == 0 then y else int_gcd y next_rem end end
+
+(* Fraction functions *)
+
+(* simplify: [Fraction] -> Fraction
+ * param: Fraction n
+ * returns: n's simplest form, where the gcd of the numerator and denominator is 1
+ *)
+let [Fraction] -> Fraction simplify = lambda (Fraction n) if (n.numer == n.denom) then {numer = 1, denom = 1} else
+                                        let Int bigger = if (n.numer > n.denom) then n.numer else n.denom end
+                                        and Int smaller = if (n.numer > n.denom) then n.denom else n.numer end in        
+                                        let Int gcd_top_bot = int_gcd bigger smaller in
+                                        {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)} end end
+
+(* frac_equal: [Fraction, Fraction] -> Bool   
+ * params: Fraction m, Fraction n
+ * returns: Bool of if the two fractions are equal
+ *)
+(*let [Fraction, Fraction] -> Bool frac_equal = lambda (Fraction m, Fraction n) (m.numer * n.denom) = (n.numer * m.denom) end*)
+
+(* frac_add: [Fraction, Fraction] -> Fraction   
+ * params: Fraction m, Fraction n
+ * returns: returns the simplest form of the sum of the provided fractions
+ *)
+(*let [Fraction, Fraction] -> Fraction frac_add = lambda (Fraction m, Fraction n) let
+                                                  Fraction simple_m = simplify m let
+                                                  Fraction simple_n = simplify n in
+                                                  {numer = (simple_n.numer * simple_m.denom + simple_m.numer + simple_n.denom),
+                                                   denom = (simple_m.denom * simple_n.denom)}*)
+
+(* frac_neg: [Fraction] -> Fraction   
+ * params: Fraction n
+ * returns: The negation in simplest form
+ *)
+ (*let [Fraction] -> Fraction frac_neg = lambda (Fraction n) let 
+ Fraction simple_n = simplify n in
+ {numer = -(simplify_n.numer), denom = simplify_n.denom}*)
+
+
+(* frac_inv: [Fraction] -> Fraction   
+ * params: Fraction n
+ * returns: The reciprocal in simplest form
+ *)
+(* let [Fraction] -> Fraction frac_inv = lambda (Fraction n) let 
+                                        Fraction simple_n = simplify n in
+                                        {numer = simplify_n.denom, denom = simplify_n.numer} *)
+
+(* The rationals group *)
+(* let Fraction group rationals = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} *) 
+                                                 in print "the standard library compiled!"
