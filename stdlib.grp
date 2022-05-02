@@ -26,11 +26,14 @@ let [Int, Int] -> Int int_gcd = lambda (Int x Int y)
  * param: Fraction n
  * returns: n's simplest form, where the gcd of the numerator and denominator is 1
  *)
-let [Fraction] -> Fraction simplify = lambda (Fraction n) if (n.numer == n.denom) then {numer = 1, denom = 1} else
+let [Fraction] -> Fraction simplify = lambda (Fraction n) 
+                                        let Fraction one = {numer = 1, denom = 1} in
+                                        if (n.numer == n.denom) then one else
                                         let Int bigger = if (n.numer > n.denom) then n.numer else n.denom end
                                         and Int smaller = if (n.numer > n.denom) then n.denom else n.numer end in        
                                         let Int gcd_top_bot = int_gcd bigger smaller in
-                                        {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)} end end
+                                        let Fraction notone = {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)}
+                                        in notone end end
 
 (* frac_equal: [Fraction, Fraction] -> Bool   
  * params: Fraction m, Fraction n
