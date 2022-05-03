@@ -234,22 +234,16 @@ let translate (typ_decls, fns, letb) =
         let _ = L.build_store (L.const_int i8_t enum) enum_location builder in
         let value_location = L.build_struct_gep location 1 (name ^ "-value") builder in
         let value_location = L.build_pointercast value_location (L.pointer_type (L.pointer_type (ltype_of_typ ty))) "" builder 
-      (* in
-        let value_location = L.build_load value_location "" builder  *)
-      in
-        let value_location_alloca = L.build_alloca (ltype_of_typ ty) "" builder
-      in
-        let _ = L.build_store (expr builder scope gamma sexpr) value_location_alloca builder
-      in
-        let _ = L.build_store value_location_alloca value_location builder
-        (* let value_location_alloca = L.build_store (expr builder scope gamma sexpr) value_location_alloca builder *)
+        in let value_location_alloca = L.build_alloca (ltype_of_typ ty) "" builder
+        in let _ = L.build_store (expr builder scope gamma sexpr) value_location_alloca builder
+        in let _ = L.build_store value_location_alloca value_location builder
           in L.build_load location "" builder)
   | SCall (fun_sexpr, params) ->
       let fun_value = expr builder scope gamma fun_sexpr in
       let param_values = Array.of_list (List.map (expr builder scope gamma) params)
         in L.build_call fun_value param_values "" builder
   | SMatch (binds, bodies) ->
-      let match_vals = List.map (fun (name, ty) -> expr builder scope gamma (ty, SName name)) binds
+      let match_vals = List.rev_map (fun (name, ty) -> expr builder scope gamma (ty, SName name)) binds
       
       in let start_bb = L.insertion_block builder
       in let the_function = L.block_parent start_bb
@@ -341,6 +335,7 @@ let translate (typ_decls, fns, letb) =
 
           in let then_value = expr builder scope' gamma sexpr
           in let then_bb = L.insertion_block builder
+          (* in let _ = L.move_block_after then_bb next_bb *)
 
           in let _ = L.position_at_end then_bb builder
           in let _ = L.build_cond_br cond_value merge_bb next_bb builder
@@ -357,6 +352,7 @@ let translate (typ_decls, fns, letb) =
       in let phi = L.build_phi incoming "switchtmp" builder
 
       in let _ = L.move_block_after first_bb merge_bb
+      in let _ = L.move_block_after first_bb default_bb
       in let _ = L.position_at_end merge_bb builder
         in phi
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
