@@ -1,0 +1,9 @@
+type UserType = AT | BT of (Int)
+
+let UserType x = BT (1600000)
+let [UserType] -> Int f = lambda (UserType x) match (x) with
+| (AT) -> 2
+| (BT (_)) -> 1
+end
+
+in print f x
