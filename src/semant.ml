@@ -35,7 +35,10 @@ let check (typ_decls, body) = let
     in let rho = List.fold_left 
         (fun env (name, texpr) -> match texpr with
           AdtTypeExpr (binds) -> List.fold_left
-            (fun env (adtname, ty) -> StringMap.add adtname (name, ty) env)
+            (fun env (adtname, ty) -> 
+                if StringMap.mem adtname env
+                    then raise (Failure ("adt " ^ adtname ^ " already defined"))
+                    else StringMap.add adtname (name, ty) env)
             env
             binds
         | _ -> env)
