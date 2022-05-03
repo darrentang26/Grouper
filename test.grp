@@ -1,0 +1,10 @@
+type Fruit = AF | BF of (Int)
+
+let Fruit fruit = BF (1)
+let [Fruit] -> String f = lambda (Fruit fruit) match (fruit) with
+| (AF) -> "Apple"
+| (BF(2)) -> "Banana"
+(* | (_) -> "Pear" *)
+end
+
+in print f fruit
