@@ -1,0 +1,3 @@
+let Int x = 5 in
+let Int a = if x < 5 then 3 else if x == 5 then 10 else 1 end end in
+print a
