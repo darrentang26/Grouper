@@ -184,7 +184,7 @@ let check (typ_decls, body) = let
              |  _ -> raise (Failure (var ^ "is not a struct")))
         |  _ -> raise (Failure "What was accessed was not a name"))
       | Match (names, evals) ->
-            let binds = List.map (fun (name) -> (name, lookup_type name gamma)) names
+            let binds = List.rev_map (fun (name) -> (name, lookup_type name gamma)) names
             in let sevals: (Sast.spattern * Sast.sexpr) list = List.fold_left
                 (fun evals (pattern, expr)->
                     match pattern with Pattern targets ->
