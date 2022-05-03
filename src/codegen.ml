@@ -453,25 +453,25 @@ let translate (typ_decls, fns, letb) =
     in let then_bb = L.append_block context "then" the_function
     in let _ = L.position_at_end then_bb builder
     in let then_value = expr builder scope gamma then_sexpr
-    in let then_bb = L.insertion_block builder
+    in let then_bb_end = L.insertion_block builder
 
     in let else_bb = L.append_block context "else" the_function
     in let _ = L.position_at_end else_bb builder
     in let else_value = expr builder scope gamma else_sexpr
-    in let else_bb = L.insertion_block builder
+    in let else_bb_end = L.insertion_block builder
 
     in let merge_bb = L.append_block context "ifcont" the_function
     in let _ = L.position_at_end merge_bb builder
-    in let incoming = [(then_value, then_bb); (else_value, else_bb)]
+    in let incoming = [(then_value, then_bb_end); (else_value, else_bb_end)]
     in let phi = L.build_phi incoming "iftmp" builder
 
     in let _ = L.position_at_end start_bb builder
     in let _ = L.build_cond_br cond_value then_bb else_bb builder
 
-    in let _ = L.position_at_end then_bb builder
+    in let _ = L.position_at_end then_bb_end builder
     in let _ = L.build_br merge_bb builder
 
-    in let _ = L.position_at_end else_bb builder
+    in let _ = L.position_at_end else_bb_end builder
     in let _ = L.build_br merge_bb builder
 
     in let _ = L.position_at_end merge_bb builder in phi
