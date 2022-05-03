@@ -253,7 +253,7 @@ let translate (typ_decls, fns, letb) =
 
       in let default_bb = L.append_block context "default" the_function
       in let _ = L.position_at_end default_bb builder
-      in let default_value = (* call error function *) L.const_int i32_t 800
+      in let default_value = (* call error function *) L.const_null (ltype_of_typ t)
       in let default_bb = L.insertion_block builder
 
       in let _ = L.position_at_end default_bb builder
