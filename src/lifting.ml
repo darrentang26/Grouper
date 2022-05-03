@@ -28,6 +28,12 @@ let name_all (typ_decls, sexpr) =
       let (s1', prev_names1) = name_all' s1 prev_names false ""
       in let (s2', prev_names2) = name_all' s2 prev_names1 false ""
         in ((ty, SConsExpr (s1', s2')), prev_names2)
+  | SCarExpr sexpr ->
+      let (sexpr', prev_names1) = name_all' sexpr prev_names false ""
+      in ((ty, SCarExpr sexpr'), prev_names1)
+  | SCdrExpr sexpr ->
+      let (sexpr', prev_names1) = name_all' sexpr prev_names false ""
+      in ((ty, SCdrExpr sexpr'), prev_names1)
   | SEmptyListExpr -> ((ty, SEmptyListExpr), prev_names)
   | SName n -> ((ty, SName n), prev_names)
   | SBinop (s1, op, s2) ->
@@ -113,6 +119,12 @@ let lift_lambdas (typ_decls, sexpr) =
         let (s1', fs1) = lift_lambdas' s1
         and (s2', fs2) = lift_lambdas' s2
           in ((ty, SConsExpr (s1', s2')), fs1 @ fs2)
+    | SCarExpr sexpr ->
+        let (sexpr', fs') = lift_lambdas' sexpr
+          in ((ty, SCarExpr(sexpr')), fs')
+    | SCdrExpr sexpr ->
+        let (sexpr', fs') = lift_lambdas' sexpr
+          in ((ty, SCdrExpr(sexpr')), fs')
     | SEmptyListExpr -> ((ty, SEmptyListExpr), [])
     | SName n -> ((ty, SName n), [])
     | SBinop (s1, op, s2) ->

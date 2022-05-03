@@ -28,8 +28,12 @@ let fun_type_eq ty1 ty2 = match ty1, ty2 with
 let check (typ_decls, body) = let
     gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
         StringMap.empty 
-        typ_decls and
-    epsilon = StringMap.empty
+        typ_decls and 
+    
+    epsilon = StringMap.empty and
+    user_typs = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+        StringMap.empty 
+        typ_decls
 
     (* check adt types for uniqueness *)
     in let rho = List.fold_left 
@@ -54,11 +58,6 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (PairType (t1, t2), SPairExpr ((t1, s1), (t2, s2)))
-      | ConsExpr (expr, EmptyListExpr) -> let
-            (t, sx) = semant gamma epsilon expr
-                in (match t with
-                      ListType EmptyListType -> raise (Failure "cannot hae a list of empty lists")
-                    | _ -> (ListType t, SConsExpr ((t, sx), (EmptyListType, SEmptyListExpr))))
       | ConsExpr (e1, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -66,11 +65,23 @@ let check (typ_decls, body) = let
                       ListType t2' -> if t1 = t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
+                    | EmptyListType -> (ListType t1, SConsExpr((t1, s1), (t2, s2)))
                     | _ -> raise (Failure ("must cons onto a list type, not " ^ string_of_type_expr t2)))
+      | CarExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t', SCarExpr((t, s)))
+                |   PairType (t1, t2) -> (t1, SCarExpr((t, s))))
+      | CdrExpr (e) -> let
+            (t, s) = semant gamma epsilon e in
+                (match t with
+                    ListType t' -> (t, SCdrExpr((t, s)))
+                |   PairType (t1, t2) -> (t2, SCdrExpr((t, s))))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
-      | Name s      -> let 
-            ty = lookup_type s gamma
-                in (ty, SName s)
+      | Name s      -> let
+            ty = lookup_type s gamma in 
+            (ty, SName s)
+
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
@@ -98,25 +109,30 @@ let check (typ_decls, body) = let
                     | (Not, BoolExpr) -> (ty, SUnop (Not, (ty, sx)))
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
-      | Let (binds, body) -> let
-            gamma' = List.fold_left
+      | Let (binds, body) ->
+            let gamma_fun = StringMap.filter 
+                (fun name ty -> (match ty with
+                                        FunType _ -> true
+                                        |       _ -> false))
+                gamma in 
+            let gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
                     gamma' = (match tl with
-                              (FunType _) -> StringMap.add name tl gamma
+                              (FunType _) -> StringMap.add name tl gamma_fun
                             | _ -> gamma) in let
                     (tr, (* sexpr *) _) = semant gamma' epsilon expr
-                    (* Update epsilon *)
-                        in if tl = tr
+                    (* Update epsilon *) in
+                            if tl = tr
                             then (StringMap.add name tl gamma)
                             else if tr = EmptyListType then match tl with
-                                      ListType tl' -> (StringMap.add name tl gamma) 
+                                      ListType tl' -> (StringMap.add name tl gamma)
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
                                 else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> let
-                gamma = match tl with (FunType _) -> StringMap.add name tl gamma | _ -> gamma
-                    in ((name, tl), semant gamma epsilon expr)) binds
+                gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun | _ -> gamma
+                    in ((name, tl), semant gamma' epsilon expr)) binds
                 in let (t, sx) = semant gamma' epsilon body
                     in (t, SLet (sbinds, (t, sx)))
       | If (cond_expr, then_expr, else_expr) -> let
@@ -134,7 +150,7 @@ let check (typ_decls, body) = let
       | Function (binds, body) -> let
             gamma' = List.fold_left
                 (fun gamma (name, tl) -> StringMap.add name tl gamma)
-                StringMap.empty
+                gamma
                 binds in let
             param_types = List.map
                 (fun (name, tl) -> tl)
@@ -158,14 +174,15 @@ let check (typ_decls, body) = let
                                         then (TypNameExpr type_name, SAdtExpr (STargetWildApp (target_name, STargetWildLiteral (ty, sx))))
                                         else raise (Failure ("cannot apply " ^ string_of_type_expr ty ^ " to " ^ string_of_type_expr arg_type)))
           | _ -> raise (Failure ("cannot use " ^ string_of_target target ^ " as a top-level target")))
-      | StructInit bindsList -> (*let rec
+      | StructInit bindsList -> let rec
             check_consec_dupes = function
                 x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
                            else x::(check_consec_dupes (y::rest))
-              | x::[] -> x::[] in let               
+              | x::[] -> x::[] in let rec
             get_names = function
-                
-            _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+              (name, typ)::binds -> name::(get_names binds)
+            | [] -> [] in let    
+            _ = check_consec_dupes (List.sort String.compare (get_names bindsList)) in
             let typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
                                    bindsList in let
@@ -176,11 +193,11 @@ let check (typ_decls, body) = let
              |  _::binds -> struct_type binds
              |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
                 in
-            (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
+            (TypNameExpr(struct_type (StringMap.bindings user_typs)), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
         (typ_name, _) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
-             accessed_type = lookup_type typ gamma in (match accessed_type with
+             accessed_type = lookup_type typ user_typs in (match accessed_type with
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
@@ -224,6 +241,34 @@ let check (typ_decls, body) = let
                 in (rt, SMatch (binds, sevals))
             
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
+      (*| Group (t, e1, e2, e3, e4) ->
+            let bin_check ftype = (match ftype with
+                FunType(PairType(t1, t2), t3)
+                    -> t1 = t && t2 = t && t3 = t
+                | _ -> raise (Failure "Group binop with wrong type")) in
+            let neg_check ftype = (match ftype with
+                FunType(t1, t2)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Group unop wrong type")) in
+            let eq_check ftype = (match ftype with
+                FunType(PairType(t1, t2), BoolExpr)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Eq op wrong type")) in
+            (* zero, eq, plus, neg *)
+            let (t1, se1) = semant gamma epsilon e1 and
+                (t2, se2) = semant gamma epsilon e2 and
+                (t3, se3) = semant gamma epsilon e3 and
+                (t4, se4) = semant gamma epsilon e4 in
+            let sem_list = [(t1, se1); (t2, se2); (t3, se3); (t4, se4)]
+              and name_list = ["zero"; "eq"; "plus"; "neg"] in
+            let struct_wrap (accum, (t, se), name) = (name, se) :: accum in
+                    if eq_check t2 && bin_check t3 && neg_check t4
+                    && t1 = t then 
+                        (GroupType t, SStructInit(List.fold_left2 struct_wrap [] 
+                                                    sem_list, name_list))
+                    else raise (Failure "Identity elt wrong type")*)
+
+
 
       | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))
 

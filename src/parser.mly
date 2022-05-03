@@ -6,7 +6,7 @@ open Ast
 
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE MOD ASSIGN UNDERSCORE ARROW
-%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS
+%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS CAR CDR
 %token GROUP RING FIELD POLY LET IN LAND IF THEN ELSE
 %token TYPE OF BAR LIST INT BOOL FLOAT STRING VOID PRINT
 %token FUNCTION MATCH WITH END
@@ -116,6 +116,8 @@ expr:
                           { PairExpr($2, $4) }
   | LBRACKET inside_list RBRACKET  { $2 }
   | expr CONS expr        { ConsExpr ($1, $3)}
+  | CAR expr              { CarExpr ($2)}
+  | CDR expr              { CdrExpr ($2)}
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
