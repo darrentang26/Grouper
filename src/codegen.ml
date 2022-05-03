@@ -5,17 +5,32 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-let group_idx_lookup field =
+let idx_lookup field fs =
   List.fold_right (fun name acc ->
                       if acc > 0 then acc + 1 
                                  else if name == field then 1
                                                        else 0)
-                  ["zero"; "equals"; "plus"; "neg"; "minus"] 0
+                  fs 0
+(* FIELDMOD *)
+let group_names = ["zero"; "equals"; "plus"; "neg"; "minus"]
+let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "deg"; "poly_neg"]
 
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
 let unop_type ty = FunType (ParamType [ty], ty)
+let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
+let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
+
+let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_type ty);
+                    ("neg", unop_type ty); ("minus", binop_type ty)]
+let group_to_struct ty = StructTypeExpr (group_list ty)
+
+let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
+                       ("inv", unop_type ty); ("div", binop_type ty); 
+                       ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
+                       ("poly_neg", unop_type (PolyType ty))]
+let field_to_struct ty = StructTypeExpr (field_list ty)
 
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
@@ -37,13 +52,6 @@ let translate (typ_decls, fns, letb) =
   (*let _ = L.struct_set_body list_node [| L.pointer_type i8_t; L.pointer_type i8_t |] in
   and string_t  = L.pointer_type (L.i8_type context)  *)
 
-  let group_to_struct ty =
-    StructTypeExpr [("zero", ty); 
-                    ("equals", compare_type ty);
-                    ("plus", binop_type ty);
-                    ("neg", unop_type ty);
-                    ("minus", binop_type ty)] in
-
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
@@ -52,24 +60,15 @@ let translate (typ_decls, fns, letb) =
     | StringExpr -> string_t
     | TypNameExpr name -> ltype_of_typ (try StringMap.find name gamma with Not_found -> raise (Failure name))
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> 
-                                                        ltype_of_typ typ) fields))
+                                                     ltype_of_typ typ) fields))
     | ListType tau -> list_node_p
     | EmptyListType -> list_node_p
+    | PolyType tau -> ltype_of_typ (ListType tau)
     | PairType (tau1, tau2) -> struct_t [| (ltype_of_typ tau1); (ltype_of_typ tau2) |]
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | GroupType ty -> ltype_of_typ (group_to_struct ty)
+    | FieldType ty -> ltype_of_typ (field_to_struct ty)
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
-
- 
-  (*let rec ltype_of_list = function
-      (_, SConsExpr((t1, e1), (t2, e2))) -> 
-        let tau1 = match t1 with 
-          ListType _ -> ltype_of_list (t1, e1)
-          | _        -> ltype_of_typ t1
-        in struct_t [| tau1; L.pointer_type (ltype_of_list (t2, e2)) |]
-    | (_, SEmptyListExpr) -> L.pointer_type i8_t*)
-
-
 
   and ltype_of_functionty ty = (match ty with
       FunType (ParamType pts, rt) -> L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts))
@@ -120,10 +119,12 @@ let translate (typ_decls, fns, letb) =
       let struct_name = (match t with 
         TypNameExpr name -> name
       | GroupType ty -> "group"
+      | FieldType ty -> "field"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
         TypNameExpr name -> StringMap.find name gamma
       | GroupType ty -> group_to_struct ty
+      | FieldType ty -> field_to_struct ty
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let curr_struct_type =  ltype_of_typ struct_type in
       let undef_struct = L.build_malloc curr_struct_type
@@ -149,6 +150,7 @@ let translate (typ_decls, fns, letb) =
       struct_def = match (StringMap.find var gamma ) with 
                       TypNameExpr(typ_name) -> StringMap.find typ_name gamma
                     | GroupType ty -> group_to_struct ty
+                    | FieldType ty -> field_to_struct ty
                     |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in 
       let rec idx_finder curr_idx = function
             (curr_field, _)::binds -> if field = curr_field 
@@ -157,7 +159,8 @@ let translate (typ_decls, fns, letb) =
       | [] -> raise (Failure "Should not happen, invalid field lookup should be caught in semant") in let
       field_idx = match struct_def with 
                     StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds
-                  | GroupType ty -> group_idx_lookup field
+                  | GroupType ty -> idx_lookup field group_names
+                  | FieldType ty -> idx_lookup field field_names
                   | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
         let lstruct = (StringMap.find var scope) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
@@ -182,7 +185,7 @@ let translate (typ_decls, fns, letb) =
       ptr_cast
       (*L.const_struct context [| v1; ptr|]*)
   | SEmptyListExpr ->
-      L.const_pointer_null list_node_p 
+      L.const_pointer_null list_node_p
   | SPairExpr (sexp1, sexp2) -> L.const_struct context
                                   (Array.of_list 
                                     (List.map 
@@ -195,11 +198,11 @@ let translate (typ_decls, fns, letb) =
                     | _ -> expr builder scope gamma (t, e)) in
           let pr = L.build_struct_gep v 0 "pair.fst" builder in
           L.build_load pr "pair.fst" builder
-    | ListType tau ->
+    | ListType ty | PolyType ty ->
           let node = expr builder scope gamma (t, e) in
           let pr = L.build_struct_gep node 0 "List.car" builder in
           let data = L.build_load pr "Data" builder in
-          let data_c = L.build_pointercast data (L.pointer_type (ltype_of_typ tau)) "Data_c" builder in
+          let data_c = L.build_pointercast data (L.pointer_type (ltype_of_typ ty)) "Data_c" builder in
           L.build_load data_c "Data" builder)
   | SCdrExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
@@ -208,7 +211,7 @@ let translate (typ_decls, fns, letb) =
                   | _ -> expr builder scope gamma (t, e)) in
         let pr = L.build_struct_gep v 1 "pair.snd" builder in
         L.build_load pr "pair.fst" builder
-      | ListType _ ->
+      | ListType _ | PolyType _ ->
           let node = expr builder scope gamma (t, e) in
           let pr = L.build_struct_gep node 1 "List.cdr" builder in
           let next = L.build_load pr "Next" builder in
@@ -313,7 +316,9 @@ let translate (typ_decls, fns, letb) =
     in (match uop, ty with
       (Neg, IntExpr)  -> L.build_neg value "" builder
     | (Neg, FloatExpr)-> L.build_fneg value "" builder
-    | (Not, BoolExpr) -> L.build_not value "" builder)
+    | (Not, BoolExpr) -> L.build_not value "" builder
+    | (Null, EmptyListType) -> L.const_int i1_t 1
+    | (Null, ListType tau) -> L.build_is_null value "" builder)
   | SLet (binds, body) -> let
     store_typ gamma ((name, ty), sexpr) = (StringMap.add name ty gamma) in let
     store_val scope ((name, ty), sexpr) = let

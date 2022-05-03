@@ -6,7 +6,7 @@ open Ast
 
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE MOD ASSIGN UNDERSCORE ARROW
-%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS CAR CDR
+%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS CAR CDR NULL
 %token GROUP RING FIELD POLY LET IN LAND IF THEN ELSE
 %token TYPE OF BAR LIST INT BOOL FLOAT STRING VOID PRINT
 %token FUNCTION MATCH WITH END
@@ -21,6 +21,7 @@ open Ast
 %nonassoc NOIN
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
+%nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
 %right ARROW
 %nonassoc LIST
 %nonassoc GROUP RING FIELD POLY
@@ -31,12 +32,11 @@ open Ast
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
-%left CAR CDR
+%left CAR CDR NULL
 %nonassoc COMMA
-%nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
-%right NOT
 %left PLUS MINUS
 %left STAR DIVIDE MOD
+%right NOT
 
 %%
 
@@ -119,6 +119,7 @@ expr:
   | expr CONS expr        { ConsExpr ($1, $3)}
   | CAR expr              { CarExpr ($2)}
   | CDR expr              { CdrExpr ($2)}
+  | NULL expr             { Unop(Null, $2) }
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }

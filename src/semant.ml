@@ -18,12 +18,55 @@ let lookup_type name gamma =
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
 let unop_type ty = FunType (ParamType [ty], ty)
+let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
+let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
 let get_fun opp (op_name, sexp) = opp = op_name
 
+(* FIELDMOD *)
+let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_type ty);
+                    ("neg", unop_type ty); ("minus", binop_type ty)]
+let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
+                       ("inv", unop_type ty); ("div", binop_type ty); 
+                       ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
+                       ("poly_neg", unop_type (PolyType ty))]
+
+let build_minus plus neg ty =
+    Function([("x", ty); ("y", ty)], Call(Call(plus, Name "x"), Call(neg, Name "y")))
+let build_div times inv ty =
+    Function([("x", ty); ("y", ty)], Call(Call(times, Name "x"), Call(inv, Name "y")))
+let build_mod times div minus ty =
+    Function([("x", ty); ("y", ty)], Call(Call(minus, Name "x"), Call(Call(times, Name "y"), (Call(Call(div, Name "x"), Name "y")))))
+let make_poly ty =
+    Function(["xs", ListType ty;], Name "xs")
+
+let poly_deg ty index =
+    let fun_name = "poly_deg." ^ string_of_int index in
+    Let([((fun_name, pdeg_type ty), 
+        Function([("xs", ListType ty)], 
+                    If (Unop(Null, Name "xs"), 
+                        Literal 0, 
+                        Binop(Literal 1, Add, 
+                              Call(Name fun_name, CdrExpr (Name "xs"))))))], 
+        Name fun_name)
+let poly_neg neg ty index =
+    let fun_name = "poly deg." ^ string_of_int index in
+    Let([((fun_name, unop_type (ListType ty)),
+        Function([("xs", ListType ty)],
+                   If (Unop(Null, Name "xs"),
+                       EmptyListExpr,
+                       ConsExpr(Call(neg, CarExpr (Name "xs")), 
+                                Call(Name fun_name, CdrExpr (Name "xs"))))))],
+        Name fun_name)
+(*let build_poly_plus plus texp inst_num =*)
+    
+
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
-let eq_type ty1 ty2 = (match ty1, ty2 with
+let rec eq_type ty1 ty2 = (match ty1, ty2 with
   FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
-    (ParamType ty1ps) = (ParamType ty2ps) && ty1rt = ty2rt
+    (eq_type (ParamType ty1ps) (ParamType ty2ps)) && (eq_type ty1rt ty2rt)
+| ListType ty, EmptyListType | EmptyListType, ListType ty -> true
+| PolyType t1, ListType t2 | ListType t1, PolyType t2 -> eq_type t1 t2
+| ParamType ty1ps, ParamType ty2ps -> List.for_all2 (fun e1 e2 -> eq_type e1 e2) ty1ps ty2ps
 | _ -> ty1 = ty2)
 
 let rec eq_types = function
@@ -48,10 +91,11 @@ let check (typ_decls, body) = let
             (t2, s2) = semant gamma epsilon e2
                 in (PairType (t1, t2), SPairExpr ((t1, s1), (t2, s2)))
       | ConsExpr (e1, e2) -> let
+           (* TODO: figure out poly type here *)
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (match t2 with
-                      ListType t2' -> if t1 = t2'
+                      ListType t2' -> if eq_type t1 t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | EmptyListType -> (ListType t1, SConsExpr((t1, s1), (t2, s2)))
@@ -59,13 +103,15 @@ let check (typ_decls, body) = let
       | CarExpr (e) -> let
             (t, s) = semant gamma epsilon e in
                 (match t with
-                    ListType t' -> (t', SCarExpr((t, s)))
+                    ListType t' | PolyType t' -> (t', SCarExpr((t, s)))
+                |   EmptyListType -> (raise (Failure "car of empty list"))
                 |   PairType (t1, t2) -> (t1, SCarExpr((t, s)))
                 |   _ -> raise (Failure (string_of_type_expr t)))
       | CdrExpr (e) -> let
             (t, s) = semant gamma epsilon e in
                 (match t with
-                    ListType t' -> (t, SCdrExpr((t, s)))
+                    ListType t' | PolyType t' -> (t, SCdrExpr((t, s)))
+                |   EmptyListType -> (raise (Failure "cdr of empty list"))
                 |   PairType (t1, t2) -> (t2, SCdrExpr((t, s)))
                 |   _ -> raise (Failure (string_of_type_expr t)))
       | EmptyListExpr -> (EmptyListType, SEmptyListExpr)
@@ -95,7 +141,7 @@ let check (typ_decls, body) = let
                     | _ ->
                         let (opp, sexp) = try List.find (get_fun (string_of_op op)) (StringMap.find (string_of_type_expr t1) epsilon)
                         with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
-                    in  let ty = (match opp with "+" | "-" -> t1 | "=" -> BoolExpr)
+                    in  let ty = (match opp with "=" -> BoolExpr | _ -> t1)
                         in (ty, SCall(sexp, [(t1, s1); (t2, s2)])))
       | Unop (uop, expr) -> let
             (ty, sx) = semant gamma epsilon expr
@@ -105,6 +151,8 @@ let check (typ_decls, body) = let
                     | (Neg, _) -> let (opp, sexp) = try List.find (get_fun "Neg") (StringMap.find (string_of_type_expr ty) epsilon)
                                                         with Not_found -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty))
                                     in (ty, SCall(sexp, [(ty, sx)]))
+                    | (Null, ListType tau) -> (BoolExpr, SUnop (Null, (ty, sx)))
+                    | (Null, EmptyListType) -> (BoolExpr, SBoolLit true)
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
@@ -120,26 +168,31 @@ let check (typ_decls, body) = let
                             | _ -> gamma) in let
                     (tr, (* sexpr *) _) = semant gamma' epsilon expr
                     (* Update epsilon *) in
-                            if tl = tr
+                            if eq_type tl tr
                             then (StringMap.add name tl gamma)
                             else if tr = EmptyListType then match tl with
                                       ListType tl' -> (StringMap.add name tl gamma)
                                     | _ -> raise (Failure "the left- and right-hand sides of a let binding must have the same type")
-                                else raise (Failure ("the left- and right-hand sides of bindings must mach: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
+                                else raise (Failure ("the left- and right-hand sides of bindings must match: " ^ (string_of_type_expr tl) ^ " =/= " ^ (string_of_type_expr tr))))
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> let
                 gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun | _ -> gamma
                     in ((name, tl), semant gamma' epsilon expr)) binds
-            in let no_overload = [](*[IntExpr; BoolExpr; StringExpr; FloatExpr]*) in let
+            in let
                 epsilon' = List.fold_left
                 (fun epsilon (nt, sexpr) -> (match sexpr with
                         (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin)])
-                            -> if List.mem ty no_overload then epsilon
-                            else StringMap.add (string_of_type_expr ty) 
+                            -> StringMap.add (string_of_type_expr ty) 
                                             [("=", seq); ("+", spl);
                                              ("n", sneg); ("-", smin)] epsilon
+                        | (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
+                                                    ("neg", sneg); ("minus", smin); one; 
+                                                    ("times", stim); inv; ("div", sdiv)])
+                            -> StringMap.add (string_of_type_expr ty)
+                                            [("=", seq); ("+", spl); ("n", sneg); ("-", smin);
+                                             ("*", stim); ("/", sdiv)] epsilon
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
@@ -194,21 +247,18 @@ let check (typ_decls, body) = let
                      (found_type, SStructRef(var,field))
                 |  _ -> raise (Failure (var ^ " is not a struct")))
             |  GroupType ty -> 
-                let group_fields tau = [("zero", tau); ("equals", compare_type tau); 
-                       ("plus", binop_type tau); ("neg", unop_type tau);
-                       ("minus", binop_type tau)] in
-                let (n, t) = try List.find (fun (name, tau) -> name = field) (group_fields ty)
-                                            with Not_found -> raise (Failure (field ^ " is not a valid group field"))
+                let (n, t) = try List.find (fun (name, tau) -> name = field) (group_list ty)
+                                            with Not_found -> raise (Failure (field ^ " is not a valid group element"))
 
+                    in (t, SStructRef(var, field))
+            |  FieldType ty ->
+                let (n, t) = try List.find (fun (name, tau) -> name = field) (field_list ty)
+                                            with Not_found -> raise (Failure (field ^ " is not a valid field element"))
                     in (t, SStructRef(var, field))
             |  _ -> raise (Failure "What was accessed was not a name"))
 
 
       | Group (texp, zero, eq, plus, neg) -> 
-        let build_minus plus neg ty =
-            Function([("x", ty); ("y", ty)], Call( Call(plus, Name "x"), Call(neg, Name "y"))) in
-
-
         let build_group zero eq plus neg min =
             SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min)]
 
@@ -225,7 +275,38 @@ let check (typ_decls, body) = let
                         then (GroupType(texp), build_group (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg) (tmin, smin))
                         else raise (Failure "Group parameter has inconsistent type")
         |   _ -> raise (Failure "Equals, plus or negate function had wrong number of arguments"))
-
+      | Field (texp, zero, eq, plus, neg, one, times, inv) ->
+        let field_count = StringMap.cardinal epsilon in
+        let build_field zero eq plus neg min one times inv div mpoly deg pneg=
+            SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min);
+                         ("one", one); ("times", times); ("inv", inv); ("div", div);
+                         ("make_poly", mpoly); ("deg", deg); ("poly_neg", pneg)] 
+        and (t0, s0) = semant gamma epsilon zero
+        and (teq, seq) = semant gamma epsilon eq
+        and (tpl, spl) = semant gamma epsilon plus
+        and (tneg, sneg) = semant gamma epsilon neg
+        and (tmin, smin) = semant gamma epsilon (build_minus plus neg texp)
+        and (t1, s1) = semant gamma epsilon one
+        and (ttim, stim) = semant gamma epsilon times
+        and (tinv, sinv) = semant gamma epsilon inv
+        and (tdiv, sdiv) = semant gamma epsilon (build_div times inv texp)
+        and (tmp, smp) = semant gamma epsilon (make_poly texp)
+        and (tdeg, sdeg) = semant gamma epsilon (poly_deg texp field_count)
+        and (tpneg, spneg) = semant gamma epsilon (poly_neg neg texp field_count)
+        (*and (tppl, sppl) = semant gamma epsilon (poly_plus texp plus field_count)*)
+        in (match (t0, teq, tpl, tneg, t1, ttim, tinv) with 
+            (t1, FunType (ParamType [t2; t3], BoolExpr), 
+                 FunType (ParamType [t4; t5], t6),
+                 FunType (ParamType [t7], t8),
+             t9, FunType (ParamType [t10; t11], t12),
+                 FunType (ParamType [t13], t14)) ->
+                if eq_types [texp; t1; t2; t3; t4; t5; t6; t7; t8; 
+                                   t9; t10; t11; t12; t13; t14]
+                then (FieldType texp, build_field (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg)
+                                            (tmin, smin) (t1, s1) (ttim, stim) (tinv, sinv)
+                                            (tdiv, sdiv) (tmp, smp) (tdeg, sdeg) (tpneg, spneg))
+                else raise (Failure "Field parameter has inconsistent type")
+            | _ -> raise (Failure "Equals, plus, negate, times or inverse function had wrong number of arguments"))
 
       | _ -> raise (Failure "Not yet implemented")
 
@@ -237,7 +318,7 @@ let check (typ_decls, body) = let
                 and (t2, s2) = semant gamma epsilon e2
                     in (match cft with
                         FunType (ParamType (pt :: pts), rt) ->
-                            if pt = t2
+                            if eq_type pt t2
                                 then if pts = []
                                     then ((rt, SCall ((oft, fs), sexpr_list @ [(t2, s2)])), true, [], rt)
                                     else ((oft, fs), false, sexpr_list @ [(t2, s2)], FunType (ParamType pts, rt))
@@ -249,7 +330,7 @@ let check (typ_decls, body) = let
                 and (t2, s2) = semant gamma epsilon e2
                     in (match t1 with
                         FunType (ParamType (pt :: pts), rt) ->
-                            if pt = t2
+                            if eq_type pt t2
                                 then if pts = []
                                     then ((rt, SCall ((t1, s1), [(t2, s2)])), true, [], rt)
                                     else ((t1, s1), false, [(t2, s2)], FunType (ParamType pts, rt))

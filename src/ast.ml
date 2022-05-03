@@ -3,7 +3,7 @@
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or | Mod
 
-type uop = Neg | Not
+type uop = Neg | Not | Null
 
 type name = string
 
@@ -92,6 +92,7 @@ let string_of_op = function
 let string_of_uop = function
   Neg -> "-"
 | Not -> "!"
+| Null -> "null?"
 
 let rec string_of_type_expr = function
   IntExpr -> "Int"
