@@ -6,7 +6,10 @@ import subprocess
 scriptpath = os.path.realpath(__file__)
 testpath = scriptpath[:scriptpath.rindex("/")] + "/test/e2e/"
 
-for file in os.listdir(testpath):
+files = os.listdir(testpath)
+files.sort()
+
+for file in files:
     if file.endswith(".fail.grp"):
         output_file = file[:file.rindex(".")] + ".out"
         compilation = subprocess.run(args="src/toplevel.native -l " + testpath + file + " 2> error.out", shell=True)
