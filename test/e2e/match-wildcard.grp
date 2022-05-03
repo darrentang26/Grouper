@@ -1,9 +1,0 @@
-type UserType = AT
-
-let UserType x = AT
-let [UserType] -> Int f = lambda (UserType x) match (x) with
-| (_) -> 1
-| (_) -> 2
-end
-
-in print f x

@@ -144,9 +144,7 @@ expr:
 
 fn_def:
     formals expr END           { Function($1, $2)}
-  // | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
-  | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
-  // | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
+  | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
 
 //---------- formals ----------//
 formals:
@@ -161,10 +159,6 @@ formal_list:
   | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
-var_list:
-    NAME                 { [$1] }
-  | var_list COMMA NAME  { $3 :: $1 }
-
 match_rule:
     match_line { [$1] }
   | match_line match_rule { $1 :: $2 }
@@ -192,8 +186,9 @@ literal:
                           { PairExpr($2, $4) }
 
 target_conc:
-      ADTNAME                           { TargetWildName($1) }
-    | ADTNAME LPAREN expr RPAREN        { TargetWildApp($1, TargetWildLiteral($3)) }
+      ADTNAME                           { TargetConcName($1) }
+    | ADTNAME LPAREN target_conc RPAREN { TargetConcApp($1, $3) }
+    | ADTNAME LPAREN expr RPAREN        { TargetConcApp($1, TargetConcExpr($3)) }
 
 
 //-------------------- MISC RULES --------------------//
