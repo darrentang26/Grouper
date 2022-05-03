@@ -41,10 +41,10 @@ type expr =
   | Unop of uop * expr
   | Let of (bind * expr) list * expr
   | Function of bind list * expr
-  | AdtExpr of target
+  | AdtExpr of target_concrete
   | StructInit of (name * expr) list
   | StructRef of name * name
-  | Match of name list * (pattern * expr) list
+  | Match of bind list * (pattern * expr) list
   | Call of expr * expr
   | If of expr * expr * expr
   | Group of group
@@ -53,13 +53,18 @@ type expr =
   | Print of expr
 
 and pattern =  
-    Pattern of target list
+    Pattern of target_wild list
 
-and target = 
+and target_wild = 
     TargetWildName of name
   | TargetWildLiteral of expr
-  | TargetWildApp of name * target
+  | TargetWildApp of name * target_wild
   | CatchAll
+
+and target_concrete = 
+    TargetConcName of name
+  | TargetConcExpr of expr
+  | TargetConcApp of name * target_concrete
   
 and group = type_expr * expr * expr * expr * expr
 and ring = type_expr * expr * expr * expr * expr * expr * expr
@@ -94,7 +99,7 @@ let rec string_of_type_expr = function
 | BoolExpr -> "Bool"
 | StringExpr -> "String"
 | VoidExpr -> "Void"
-| TypNameExpr(name) -> "User-Type: " ^ name
+| TypNameExpr(name) -> name
 | AdtTypeExpr(adts) -> String.concat " | " (List.map (fun (name, type_expr) -> match type_expr with VoidExpr -> name | _ -> name ^ " of " ^ string_of_type_expr type_expr) adts )
 | StructTypeExpr(structs) -> "{" ^ String.concat ", " (List.map (fun (name, type_expr) -> name ^ " : " ^ string_of_type_expr type_expr) structs ) ^ "}"
 | ParamType(type_exprs) -> "[" ^ String.concat ", " (List.map string_of_type_expr type_exprs) ^ "]"
@@ -130,15 +135,12 @@ let rec string_of_expr = function
 | Let([], body) -> "" ^ string_of_expr body
 | Let((bind,expr)::lets, body) -> "let " ^ string_of_bind bind ^ " = " ^ string_of_expr expr ^ " in\n" ^ string_of_expr (Let(lets, body))
 | Function(args,body) -> "(" ^ String.concat ", " (List.map string_of_bind args) ^ ") -> " ^ string_of_expr body 
-| AdtExpr(target) -> string_of_target target
+| AdtExpr(target) -> string_of_target_concrete target
 | StructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_expr expr) attribs ) ^ "}"
 | StructRef(name1, name2) -> name1 ^ "." ^ name2
-| Match(args, patexprlist) -> "match (" ^ String.concat ", " args ^ ")" ^ " with\n  | "
+| Match(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
-(* | Match(args, patexprlist) -> "match (" ^ String.concat " " args ^ ")" ^ " with\n  | "
-                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
-                                ^ " -> " ^ string_of_expr expr) patexprlist) *)
 | Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
                          ^ " then " ^ string_of_expr expr2 
@@ -149,13 +151,18 @@ let rec string_of_expr = function
 | Print(expr) -> "print: " ^ string_of_expr expr
 
 and string_of_pattern = function
-  Pattern(targets) -> "(" ^ String.concat ", " (List.map string_of_target targets) ^ ")"  
+  Pattern(targets) -> "(" ^ String.concat ", " (List.map string_of_target_wild targets) ^ ")"  
 
-and string_of_target = function
+and string_of_target_wild = function
   TargetWildName(name) -> name
 | TargetWildLiteral(expr) -> string_of_expr expr
-| TargetWildApp(name,target) -> name ^ "(" ^ string_of_target target ^ ")"
-| CatchAll -> "_" 
+| TargetWildApp(name,target) -> name ^ "(" ^ string_of_target_wild target ^ ")"
+| CatchAll -> "_"
+
+and string_of_target_concrete = function
+  TargetConcName(name) -> name
+| TargetConcExpr(expr) -> string_of_expr expr
+| TargetConcApp(name, target) -> name ^ string_of_target_concrete target  
 
 and string_of_group (name, expr1, expr2, expr3, expr4) = 
   string_of_type_expr name ^ " " ^
