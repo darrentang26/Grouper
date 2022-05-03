@@ -1,10 +1,10 @@
 type Language = C | JAVA | OCAML | RUST | OTHER of String
-let ([Language] -> String) hasObjects = (Language lang) -> match (Language lang) with
+let ([User-Type: Language] -> String) hasObjects = (User-Type: Language lang) -> match (lang) with
   | (C) -> "nah"
   | (JAVA) -> "heck yeah"
   | (OCAML) -> "apparently"
   | (RUST) -> "no idea"
   | (OTHER("Grouper")) -> "heck no"
   | (OTHER(s)) -> s + "++" in
-let Language js = OTHER"JavaScript" in
+let User-Type: Language js = OTHER("JavaScript") in
 print: (hasObjects js)

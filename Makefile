@@ -18,7 +18,7 @@ hw_test: toplevel
 e2e_test: toplevel
 	python3 e2e_validation.py
 
-tests: sp_test hw_test
+tests: sp_test hw_test e2e_test
 
 compile: toplevel
 	src/toplevel.native -a $(in) > ast.out
