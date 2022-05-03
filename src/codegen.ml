@@ -58,6 +58,9 @@ let translate (typ_decls, fns, letb) =
   let print_func : L.llvalue = 
     L.declare_function "printf" print_t grp_module in 
 
+  let exit_t = L.function_type void_t [| i32_t |] in
+  let exit_func = L.declare_function "exit" exit_t grp_module in
+
   (* create user function builders *)
   let create_function user_functions (((name, ty), (t', body)) : bind * sexpr) =
     let fun_type = ltype_of_functionty ty in
@@ -253,7 +256,8 @@ let translate (typ_decls, fns, letb) =
 
       in let default_bb = L.append_block context "default" the_function
       in let _ = L.position_at_end default_bb builder
-      in let default_value = (* call error function *) L.const_null (ltype_of_typ t)
+      in let _ = L.build_call exit_func [| (L.const_int i32_t 2) |] "" builder 
+      in let default_value = L.const_null (ltype_of_typ t)
       in let default_bb = L.insertion_block builder
 
       in let _ = L.position_at_end default_bb builder
