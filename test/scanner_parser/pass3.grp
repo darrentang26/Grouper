@@ -1,6 +1,6 @@
 type Language = C | JAVA | OCAML | RUST | OTHER of (String)
 
-let [Language] -> String hasObjects = lambda (Language lang) match (Language lang) with
+let [Language] -> String hasObjects = lambda (Language lang) match (lang) with
 |   (C)        -> "nah"
 |   (JAVA)     -> "heck yeah"
 |   (OCAML)    -> "apparently"
