@@ -18,10 +18,10 @@ and sx =
   | SUnop of uop * sexpr
   | SLet of (bind * sexpr) list * sexpr
   | SFunction of bind list * sexpr
-  | SAdtExpr of target_concrete
+  | SAdtExpr of starget
   | SStructInit of (name * sexpr) list
   | SStructRef of name * name
-  | SMatch of bind list * (pattern * sexpr) list
+  | SMatch of bind list * (spattern * sexpr) list
   | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
   | SGroup of sgroup
@@ -30,18 +30,13 @@ and sx =
   | SPrint of sexpr
 
 and spattern =  
-    SPattern of starget_wild list
+    SPattern of starget list
 
-and starget_wild = 
+and starget = 
     STargetWildName of name
   | STargetWildLiteral of sexpr
-  | STargetWildApp of name * starget_wild
+  | STargetWildApp of name * starget
   | SCatchAll
-
-and starget_concrete = 
-    STargetConcName of name
-  | STargetConcExpr of sexpr
-  | STargetConcApp of name * starget_concrete
   
 and sgroup = type_expr * sexpr * sexpr * sexpr * sexpr
 and sring = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
@@ -69,11 +64,11 @@ let rec string_of_sexpr (t, e) =
 | SUnop(op,expr) -> string_of_uop op ^ string_of_sexpr expr
 | SLet(binds, body) -> "let " ^ String.concat "\nand " (List.map (fun (bind, expr) -> string_of_bind bind ^ " =\n" ^ string_of_sexpr expr) binds) ^ "\nin " ^ (string_of_sexpr body)
 | SFunction(args,body) -> "(" ^ String.concat ", " (List.map string_of_bind args) ^ ") -> " ^ string_of_sexpr body 
-| SAdtExpr(target) -> string_of_target_concrete target
+| SAdtExpr(target) -> string_of_starget target
 | SStructInit(attribs) -> "{" ^ String.concat ", " (List.map (fun (name,expr) -> name ^ " = " ^ string_of_sexpr expr) attribs ) ^ "}"
 | SStructRef(name1, name2) -> name1 ^ "." ^ name2
-| SMatch(args, patexprlist) -> "match (" ^ String.concat " " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
-                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
+| SMatch(args, patexprlist) -> "match (" ^ String.concat ", " (List.map string_of_bind args) ^ ")" ^ " with\n  | "
+                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_spattern pattern 
                                 ^ " -> " ^ string_of_sexpr expr) patexprlist)
 | SCall(expr1, expr2s) -> string_of_sexpr expr1 ^ ": {" ^ String.concat ", " (List.map string_of_sexpr expr2s) ^ "}"
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
@@ -85,18 +80,13 @@ let rec string_of_sexpr (t, e) =
 | SPrint(expr) -> "print: " ^ string_of_sexpr expr
   ) ^ ")"
 and string_of_spattern = function
-  SPattern(targets) -> "(" ^ String.concat ", " (List.map string_of_starget_wild targets) ^ ")"  
+  SPattern(targets) -> "(" ^ String.concat ", " (List.map string_of_starget targets) ^ ")"  
 
-and string_of_starget_wild = function
+and string_of_starget = function
   STargetWildName(name) -> name
 | STargetWildLiteral(expr) -> string_of_sexpr expr
-| STargetWildApp(name,target) -> name ^ "(" ^ string_of_starget_wild target ^ ")"
-| SCatchAll -> "_"
-
-and string_of_starget_concrete = function
-  STargetConcName(name) -> name
-| STargetConcExpr(expr) -> string_of_sexpr expr
-| STargetConcApp(name, target) -> name ^ string_of_starget_concrete target  
+| STargetWildApp(name,target) -> name ^ "(" ^ string_of_starget target ^ ")"
+| SCatchAll -> "_" 
 
 and string_of_sgroup (name, expr1, expr2, expr3, expr4) = 
   string_of_type_expr name ^ " " ^
@@ -115,9 +105,9 @@ and string_of_sfield(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) =
   string_of_sexpr expr7
 
 let string_of_sprogram (typ_decls, expr) = 
-  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
+  String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
 
 let string_of_sprogram_lifted (typ_decls, fs, expr) =
-  String.concat "\n" (List.map string_of_typ_decl typ_decls) ^ "\n\n" ^
+  String.concat "" (List.map string_of_typ_decl typ_decls) ^ "\n" ^
   String.concat "\n" (List.map (fun (bind, sexpr) -> string_of_bind bind ^ ": " ^ string_of_sexpr sexpr) fs) ^ "\n\n" ^
   string_of_sexpr expr ^ "\n"

@@ -1,17 +1,17 @@
 type Z2 = ZERO | ONE
-let ([(Z2 * Z2)] -> Z2) add = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let ([(User-Type: Z2 * User-Type: Z2)] -> User-Type: Z2) add = (User-Type: Z2 a, User-Type: Z2 b) -> match (b, a) with
   | (ZERO, ONE) -> ONE
   | (ONE, ZERO) -> ONE
   | (_) -> ZERO in
-let [(Z2 -> Z2)] inverse = (Z2 a) -> match (Z2 a) with
+let [(User-Type: Z2 -> User-Type: Z2)] inverse = (User-Type: Z2 a) -> match (a) with
   | (ZERO) -> ONE
   | (ONE) -> ZERO in
-let Z2 identity = ZERO in
-let ([(Z2 * Z2)] -> Bool) equals = (Z2 n, Z2 m) -> n == m in
-let Z2 group mod_2_group = Z2 add identity inverse equals in
-let Z2 mult_id = ONE in
-let ([(Z2 * Z2)] -> Z2) mult = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let User-Type: Z2 identity = ZERO in
+let ([(User-Type: Z2 * User-Type: Z2)] -> Bool) equals = (User-Type: Z2 n, User-Type: Z2 m) -> n == m in
+let User-Type: Z2 group mod_2_group = User-Type: Z2 add identity inverse equals in
+let User-Type: Z2 mult_id = ONE in
+let ([(User-Type: Z2 * User-Type: Z2)] -> User-Type: Z2) mult = (User-Type: Z2 a, User-Type: Z2 b) -> match (b, a) with
   | (ONE, ONE) -> ONE
   | (_) -> ZERO in
-let Z2 ring mod_2_ring = Z2 add identity inverse equals mult mult_id in
+let User-Type: Z2 ring mod_2_ring = User-Type: Z2 add identity inverse equals mult mult_id in
 ZERO + ONE == ZERO
