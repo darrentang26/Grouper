@@ -13,7 +13,8 @@ let idx_lookup field fs =
                   fs 0
 (* FIELDMOD *)
 let group_names = ["zero"; "equals"; "plus"; "neg"; "minus"]
-let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "deg"; "poly_neg"]
+let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "deg"; 
+                                 "poly_plus"; "poly_minus"; "poly_neg"; "poly_times"]
 
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
@@ -29,7 +30,10 @@ let group_to_struct ty = StructTypeExpr (group_list ty)
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("inv", unop_type ty); ("div", binop_type ty); 
                        ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
-                       ("poly_neg", unop_type (PolyType ty))]
+                       ("poly_plus", binop_type (PolyType ty));
+                       ("poly_minus", binop_type (PolyType ty));
+                       ("poly_neg", unop_type (PolyType ty));
+                       ("poly_times", binop_type (PolyType ty))]
 let field_to_struct ty = StructTypeExpr (field_list ty)
 
 let translate (typ_decls, fns, letb) =
@@ -345,25 +349,25 @@ let translate (typ_decls, fns, letb) =
     in let then_bb = L.append_block context "then" the_function
     in let _ = L.position_at_end then_bb builder
     in let then_value = expr builder scope gamma then_sexpr
-    in let then_bb = L.insertion_block builder
+    in let then_bb_end = L.insertion_block builder
 
     in let else_bb = L.append_block context "else" the_function
     in let _ = L.position_at_end else_bb builder
     in let else_value = expr builder scope gamma else_sexpr
-    in let else_bb = L.insertion_block builder
+    in let else_bb_end = L.insertion_block builder
 
     in let merge_bb = L.append_block context "ifcont" the_function
     in let _ = L.position_at_end merge_bb builder
-    in let incoming = [(then_value, then_bb); (else_value, else_bb)]
+    in let incoming = [(then_value, then_bb_end); (else_value, else_bb_end)]
     in let phi = L.build_phi incoming "iftmp" builder
 
     in let _ = L.position_at_end start_bb builder
     in let _ = L.build_cond_br cond_value then_bb else_bb builder
 
-    in let _ = L.position_at_end then_bb builder
+    in let _ = L.position_at_end then_bb_end builder
     in let _ = L.build_br merge_bb builder
 
-    in let _ = L.position_at_end else_bb builder
+    in let _ = L.position_at_end else_bb_end builder
     in let _ = L.build_br merge_bb builder
 
     in let _ = L.position_at_end merge_bb builder in phi

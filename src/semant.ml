@@ -17,9 +17,13 @@ let lookup_type name gamma =
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
+let poly_binop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
 let unop_type ty = FunType (ParamType [ty], ty)
-let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
+let poly_unop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
+let mpoly_type ty = FunType (ParamType [PolyType ty], PolyType ty)
 let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
+let comul_type ty = FunType (ParamType [ty; IntExpr; PolyType ty], PolyType ty)
+
 let get_fun opp (op_name, sexp) = opp = op_name
 
 (* FIELDMOD *)
@@ -28,7 +32,10 @@ let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_t
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("inv", unop_type ty); ("div", binop_type ty); 
                        ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
-                       ("poly_neg", unop_type (PolyType ty))]
+                       ("poly_plus", binop_type (PolyType ty));
+                       ("poly_minus", binop_type (PolyType ty));
+                       ("poly_neg", unop_type (PolyType ty));
+                       ("poly_times", binop_type (PolyType ty))]
 
 let build_minus plus neg ty =
     Function([("x", ty); ("y", ty)], Call(Call(plus, Name "x"), Call(neg, Name "y")))
@@ -39,32 +46,109 @@ let build_mod times div minus ty =
 let make_poly ty =
     Function(["xs", ListType ty;], Name "xs")
 
-let poly_deg ty index =
+let poly_deg_bind ty index body =
     let fun_name = "poly_deg." ^ string_of_int index in
     Let([((fun_name, pdeg_type ty), 
         Function([("xs", ListType ty)], 
                     If (Unop(Null, Name "xs"), 
-                        Literal 0, 
+                        Literal (-1), 
                         Binop(Literal 1, Add, 
                               Call(Name fun_name, CdrExpr (Name "xs"))))))], 
-        Name fun_name)
-let poly_neg neg ty index =
-    let fun_name = "poly deg." ^ string_of_int index in
+        body)
+let poly_deg ty index =
+    let fun_name = "poly_deg." ^ string_of_int index
+    in poly_deg_bind ty index (Name fun_name)
+
+let poly_neg_bind neg ty index body =
+    let fun_name = "poly_neg." ^ string_of_int index in
     Let([((fun_name, unop_type (ListType ty)),
         Function([("xs", ListType ty)],
                    If (Unop(Null, Name "xs"),
                        EmptyListExpr,
                        ConsExpr(Call(neg, CarExpr (Name "xs")), 
                                 Call(Name fun_name, CdrExpr (Name "xs"))))))],
-        Name fun_name)
-(*let build_poly_plus plus texp inst_num =*)
+        body)
+let poly_neg neg ty index =
+    let fun_name = "poly_neg." ^ string_of_int index 
+    in poly_neg_bind neg ty index (Name fun_name)
+
+(*let poly_reduce_bind equal zero ty index body =
+    let fun_name = "poly_reduce." ^ string_of_int index in
+    Let([((fun_name, unop_type (ListType ty)),
+        Function([("xs", ListType ty); ("zero", ty)],
+            If(Unop(Null, Name "xs"),
+               EmptyListExpr,
+               If(Call(equal, ))))
+
+
+            )
+
+
+
+        )])*)
+
+let poly_plus_bind plus ty index body =
+    let fun_name = "poly_plus." ^ string_of_int index in
+    let deg_name = "poly_deg." ^ string_of_int (index + 1) in
+    let red_name = "poly_reduce." ^ string_of_int index in
+    let plus_body = Let([((fun_name, binop_type (ListType ty)),
+        Function([("xs", ListType ty); ("ys", ListType ty)],
+            If (Binop(Unop(Null, Name "xs"), And, Unop(Null, Name "ys")),
+                EmptyListExpr,
+                Let([(("x", ty), Call(Name deg_name, Name "xs")); (("y", ty), Call (Name deg_name, Name "ys"))],
+                    If (Binop(Name "x", Less, Name "y"), 
+                        ConsExpr(CarExpr(Name "ys"), Call(Call(Name fun_name, Name "xs"), CdrExpr(Name "ys"))),
+                        If (Binop(Name "x", Greater, Name "y"),
+                            ConsExpr(CarExpr(Name "xs"), Call(Call(Name fun_name, Name "ys"), CdrExpr(Name "xs"))),
+                            ConsExpr(Call(Call(plus, CarExpr(Name "xs")), CarExpr(Name "ys")),
+                                     Call(Call(Name fun_name, CdrExpr(Name "xs")), CdrExpr(Name "ys")))))))))],
+            body)
+        in poly_deg_bind ty (index + 1) plus_body
+let poly_plus plus ty index =
+    let fun_name = "poly_plus." ^ string_of_int index
+     in poly_plus_bind plus ty index (Name fun_name)
+
+let build_poly_minus plus neg ty field_count =
+    build_minus (poly_plus plus ty (field_count + 1)) (poly_neg neg ty (field_count + 3)) (PolyType ty)
+
+let co_mul_bind times ty index body =
+    let fun_name = "co_mul." ^ (string_of_int index) in
+    Let([((fun_name, comul_type ty), 
+        Function([("coeff", ty); ("degree", IntExpr); ("xs", ListType ty)],
+        If(Binop(Unop(Null, Name "xs"), And, Binop(Name "degree", Equal, Literal 0)),
+           EmptyListExpr,
+           If(Unop(Null, Name "xs"),
+              ConsExpr(Literal 0, Call(Call(Call(Name fun_name, Name "coeff"), Binop(Name "degree", Sub, Literal 1)), Name "xs")),
+              ConsExpr(Call(Call(times, Name "coeff"), CarExpr(Name "xs")),
+                       Call(Call(Call(Name fun_name, Name "coeff"), Name "degree"), CdrExpr(Name "xs")))))))],
+    body)
+let poly_times_bind  times plus ty index body =
+    let fun_name = "poly_times." ^ string_of_int index in
+    let plus_name = "poly_plus." ^ string_of_int (index + 3) in
+    let deg_name = "poly_deg." ^ string_of_int (index + 4) in
+    let comul_name = "co_mul." ^ string_of_int index in
+    let times_body = Let([((fun_name, binop_type (ListType ty)),
+        Function([("xs", ListType ty); ("ys", ListType ty)],
+            If(Unop(Null, Name "xs"),
+               EmptyListExpr,
+               Let([(("x", ty), Call(Name deg_name, Name "xs"))],
+                    Call(Call(Name plus_name, Call(Call(Call(Name comul_name, CarExpr(Name "xs")), Call(Name deg_name, Name "xs")), Name "ys")), 
+                         Call(Call(Name fun_name, CdrExpr(Name "xs")), Name "ys"))))))],
+        body) in
+    let comul_body = co_mul_bind times ty index times_body 
+    in poly_plus_bind plus ty (index + 3) comul_body
+let build_poly_times times plus ty index =
+    let fun_name = "poly_times." ^ string_of_int index in
+        poly_times_bind times plus ty index (Name fun_name)
+
     
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let rec eq_type ty1 ty2 = (match ty1, ty2 with
   FunType (ParamType ty1ps, ty1rt), FunType (ParamType ty2ps, ty2rt) ->
     (eq_type (ParamType ty1ps) (ParamType ty2ps)) && (eq_type ty1rt ty2rt)
-| ListType ty, EmptyListType | EmptyListType, ListType ty -> true
+| ListType ty, EmptyListType | EmptyListType, ListType ty
+| PolyType ty, EmptyListType | EmptyListType, PolyType ty -> true
 | PolyType t1, ListType t2 | ListType t1, PolyType t2 -> eq_type t1 t2
 | ParamType ty1ps, ParamType ty2ps -> List.for_all2 (fun e1 e2 -> eq_type e1 e2) ty1ps ty2ps
 | _ -> ty1 = ty2)
@@ -95,7 +179,7 @@ let check (typ_decls, body) = let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
                 in (match t2 with
-                      ListType t2' -> if eq_type t1 t2'
+                      ListType t2' | PolyType t2' -> if eq_type t1 t2'
                             then (t2, SConsExpr ((t1, s1), (t2, s2)))
                             else raise (Failure ("must cons " ^ string_of_type_expr t1 ^ " onto a list of the same type, not " ^ string_of_type_expr t2))
                     | EmptyListType -> (ListType t1, SConsExpr((t1, s1), (t2, s2)))
@@ -276,11 +360,12 @@ let check (typ_decls, body) = let
                         else raise (Failure "Group parameter has inconsistent type")
         |   _ -> raise (Failure "Equals, plus or negate function had wrong number of arguments"))
       | Field (texp, zero, eq, plus, neg, one, times, inv) ->
-        let field_count = StringMap.cardinal epsilon in
-        let build_field zero eq plus neg min one times inv div mpoly deg pneg=
+        let field_count = 10 * (StringMap.cardinal epsilon) in
+        let build_field zero eq plus neg min one times inv div mpoly deg pplus pmin pneg ptimes =
             SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min);
                          ("one", one); ("times", times); ("inv", inv); ("div", div);
-                         ("make_poly", mpoly); ("deg", deg); ("poly_neg", pneg)] 
+                         ("make_poly", mpoly); ("deg", deg); ("poly_plus", pplus);
+                         ("poly_minus", pmin); ("poly_neg", pneg); ("poly_times", ptimes)] 
         and (t0, s0) = semant gamma epsilon zero
         and (teq, seq) = semant gamma epsilon eq
         and (tpl, spl) = semant gamma epsilon plus
@@ -293,7 +378,9 @@ let check (typ_decls, body) = let
         and (tmp, smp) = semant gamma epsilon (make_poly texp)
         and (tdeg, sdeg) = semant gamma epsilon (poly_deg texp field_count)
         and (tpneg, spneg) = semant gamma epsilon (poly_neg neg texp field_count)
-        (*and (tppl, sppl) = semant gamma epsilon (poly_plus texp plus field_count)*)
+        and (tppl, sppl) = semant gamma epsilon (poly_plus plus texp field_count)
+        and (tpmin, spmin) = semant gamma epsilon (build_poly_minus plus neg texp field_count)
+        and (tptim, sptim) = semant gamma epsilon (build_poly_times times plus texp field_count)
         in (match (t0, teq, tpl, tneg, t1, ttim, tinv) with 
             (t1, FunType (ParamType [t2; t3], BoolExpr), 
                  FunType (ParamType [t4; t5], t6),
@@ -304,7 +391,8 @@ let check (typ_decls, body) = let
                                    t9; t10; t11; t12; t13; t14]
                 then (FieldType texp, build_field (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg)
                                             (tmin, smin) (t1, s1) (ttim, stim) (tinv, sinv)
-                                            (tdiv, sdiv) (tmp, smp) (tdeg, sdeg) (tpneg, spneg))
+                                            (tdiv, sdiv) (tmp, smp) (tdeg, sdeg) (tppl, sppl) 
+                                            (tpmin, spmin) (tpneg, spneg) (tptim, sptim))
                 else raise (Failure "Field parameter has inconsistent type")
             | _ -> raise (Failure "Equals, plus, negate, times or inverse function had wrong number of arguments"))
 
