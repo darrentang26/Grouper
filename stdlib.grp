@@ -32,14 +32,13 @@ let [Fraction] -> Fraction simplify = lambda (Fraction n)
                                         let Int bigger = if (n.numer > n.denom) then n.numer else n.denom end
                                         and Int smaller = if (n.numer > n.denom) then n.denom else n.numer end in        
                                         let Int gcd_top_bot = int_gcd bigger smaller in
-                                        let Fraction notone = {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)}
-                                        in notone end end
+                                          {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)} end end
 
 (* frac_equal: [Fraction, Fraction] -> Bool   
  * params: Fraction m, Fraction n
  * returns: Bool of if the two fractions are equal
  *)
-(*let [Fraction, Fraction] -> Bool frac_equal = lambda (Fraction m, Fraction n) (m.numer * n.denom) = (n.numer * m.denom) end*)
+let [Fraction, Fraction] -> Bool frac_equal = lambda (Fraction m Fraction n) (m.numer * n.denom) == (n.numer * m.denom) end
 
 (* frac_add: [Fraction, Fraction] -> Fraction   
  * params: Fraction m, Fraction n
