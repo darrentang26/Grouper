@@ -27,8 +27,7 @@ let [Int, Int] -> Int int_gcd = lambda (Int x Int y)
  * returns: n's simplest form, where the gcd of the numerator and denominator is 1
  *)
 let [Fraction] -> Fraction simplify = lambda (Fraction n) 
-                                        let Fraction one = {numer = 1, denom = 1} in
-                                        if (n.numer == n.denom) then one else
+                                        if (n.numer == n.denom) then {numer = 1, denom = 1} else
                                         let Int bigger = if (n.numer > n.denom) then n.numer else n.denom end
                                         and Int smaller = if (n.numer > n.denom) then n.denom else n.numer end in        
                                         let Int gcd_top_bot = int_gcd bigger smaller in
@@ -44,28 +43,28 @@ let [Fraction, Fraction] -> Bool frac_equal = lambda (Fraction m Fraction n) (m.
  * params: Fraction m, Fraction n
  * returns: returns the simplest form of the sum of the provided fractions
  *)
-(*let [Fraction, Fraction] -> Fraction frac_add = lambda (Fraction m, Fraction n) let
-                                                  Fraction simple_m = simplify m let
-                                                  Fraction simple_n = simplify n in
-                                                  {numer = (simple_n.numer * simple_m.denom + simple_m.numer + simple_n.denom),
-                                                   denom = (simple_m.denom * simple_n.denom)}*)
+let [Fraction, Fraction] -> Fraction frac_add = lambda (Fraction m Fraction n) 
+                                                  let Fraction simple_m = simplify m in
+                                                  let Fraction simple_n = simplify n in
+                                                    simplify {numer = (simple_n.numer * simple_m.denom + simple_m.numer * simple_n.denom), 
+                                                              denom = (simple_m.denom * simple_n.denom)} end
 
 (* frac_neg: [Fraction] -> Fraction   
  * params: Fraction n
  * returns: The negation in simplest form
  *)
- (*let [Fraction] -> Fraction frac_neg = lambda (Fraction n) let 
- Fraction simple_n = simplify n in
- {numer = -(simplify_n.numer), denom = simplify_n.denom}*)
+let [Fraction] -> Fraction frac_neg = lambda (Fraction n) 
+                                        let Fraction simple_n = simplify n in
+                                        {numer = -(simple_n.numer), denom = simple_n.denom} end
 
 
 (* frac_inv: [Fraction] -> Fraction   
  * params: Fraction n
  * returns: The reciprocal in simplest form
  *)
-(* let [Fraction] -> Fraction frac_inv = lambda (Fraction n) let 
-                                        Fraction simple_n = simplify n in
-                                        {numer = simplify_n.denom, denom = simplify_n.numer} *)
+let [Fraction] -> Fraction frac_inv = lambda (Fraction n) 
+                                        let Fraction simple_n = simplify n in
+                                        {numer = simple_n.denom, denom = simple_n.numer} end
 
 (* The rationals group *)
 (* let Fraction group rationals = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} *) 
