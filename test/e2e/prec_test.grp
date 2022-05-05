@@ -1,0 +1,2 @@
+let Bool x = 5 * 6 - 3 + 4 > 30 - 5 && 5 == 4 in
+if x then print "true" else print "false" end

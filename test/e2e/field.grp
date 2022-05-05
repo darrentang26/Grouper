@@ -1,6 +1,6 @@
 let [Int, Int] -> Bool eq = lambda (Int x Int y) (x mod 3) == (y mod 3) end in 
 let [Int, Int] -> Int pl = lambda (Int x Int y) (x + y) mod 3 end in
-let [Int] -> Int neg = lambda (Int x) -x + 3 end in
+let [Int] -> Int neg = lambda (Int x) ~x + 3 end in
 let [Int, Int] -> Int times = lambda (Int x Int y) (x * y) mod 3 end in
 let [Int] -> Int inv = lambda (Int x) x end in
 let Int field fd = field {Int, 0, eq, pl, neg, 1, times, inv} in
