@@ -1,0 +1,8 @@
+type Point = {x : Float, y : Float}
+type Line = {slope : Float, inter : Float} 
+
+let Point some_pt = {x = 12.8, y = 2.6}
+let Line cool_line = {slope = 4.5, inter = 1.8}
+in if some_pt == {x = 12.8, y = 4342.6} then print "oh no" else
+   if cool_line == {slope = 4.5, inter = 1.8} then print "yay"
+   else print "oh heck nah" end end
