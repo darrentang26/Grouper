@@ -1,6 +1,5 @@
 type Fraction = {numer : Int, denom : Int}
-type Imaginary = Int
-type Complex = {real : Int, fake : Imaginary}
+type Complex = {real : Float, fake : Float}
 (* Top for stdlib types*)
 
 (* series of lets for stdlib functions *)
@@ -66,6 +65,21 @@ let [Fraction] -> Fraction frac_inv = lambda (Fraction n)
                                         let Fraction simple_n = simplify n in
                                         {numer = simple_n.denom, denom = simple_n.numer} end
 
-(* The rationals group *)
-(* let Fraction group rationals = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} *) 
-                                                 in print "the standard library compiled!"
+(* frac_mult: [Fraction, Fraction] -> Fraction
+ * params: Fraction m, Fraction n
+ * returns: the product of m and n in simplest form
+ *)
+let [Fraction, Fraction] -> Fraction frac_mult = lambda (Fraction m Fraction n)
+                                                 simplify {numer = (m.numer * n.numer), denom = (m.denom * n.denom)} end
+
+(* The rationals group and field *)
+let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg}
+let Fraction field rat_field = field {Fraction, {numer = 0, denom = 1}, 
+                                     frac_equal, frac_add, 
+                                     frac_neg, {numer = 1, denom = 1},
+                                     frac_mult, frac_inv}
+
+                                                 let Fraction frac1 = {numer = 3, denom = 5}
+let Fraction frac2 = simplify {numer = 2, denom = 6}
+let Fraction fracsum = rat_group.plus frac1 frac2
+in print fracsum.denom
