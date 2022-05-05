@@ -19,10 +19,11 @@ let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
 let poly_binop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
 let unop_type ty = FunType (ParamType [ty], ty)
-let poly_unop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
-let mpoly_type ty = FunType (ParamType [PolyType ty], PolyType ty)
+let poly_unop_type ty = FunType (ParamType [PolyType ty; ty], PolyType ty)
+let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
 let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
-let comul_type ty = FunType (ParamType [ty; IntExpr; PolyType ty], PolyType ty)
+let comul_type ty = FunType (ParamType [ty; IntExpr; PolyType ty; ty], PolyType ty)
+let bterm_type ty = FunType (ParamType [IntExpr; ty], PolyType ty)
 
 let get_fun opp (op_name, sexp) = opp = op_name
 
@@ -31,11 +32,16 @@ let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_t
                     ("neg", unop_type ty); ("minus", binop_type ty)]
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("inv", unop_type ty); ("div", binop_type ty); 
-                       ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
-                       ("poly_plus", binop_type (PolyType ty));
-                       ("poly_minus", binop_type (PolyType ty));
+                       ("make_poly", mpoly_type ty); ("poly_deg", pdeg_type ty);
+                       ("poly_equals", compare_type (PolyType ty));
+                       ("poly_plus", poly_binop_type ty);
+                       ("poly_minus", poly_binop_type ty);
                        ("poly_neg", unop_type (PolyType ty));
-                       ("poly_times", binop_type (PolyType ty))]
+                       ("poly_times", poly_binop_type ty);
+                       ("poly_div", poly_binop_type ty);
+                       ("poly_mod", poly_binop_type ty);
+                       ("poly_gcd", poly_binop_type ty)]
+let field_to_struct ty = StructTypeExpr (field_list ty)
 
 let build_minus plus neg ty =
     Function([("x", ty); ("y", ty)], Call(Call(plus, Name "x"), Call(neg, Name "y")))
@@ -43,7 +49,7 @@ let build_div times inv ty =
     Function([("x", ty); ("y", ty)], Call(Call(times, Name "x"), Call(inv, Name "y")))
 let build_mod times div minus ty =
     Function([("x", ty); ("y", ty)], Call(Call(minus, Name "x"), Call(Call(times, Name "y"), (Call(Call(div, Name "x"), Name "y")))))
-let make_poly ty =
+let build_make_poly ty =
     Function(["xs", ListType ty;], Name "xs")
 
 let poly_deg_bind ty index body =
@@ -72,30 +78,39 @@ let poly_neg neg ty index =
     let fun_name = "poly_neg." ^ string_of_int index 
     in poly_neg_bind neg ty index (Name fun_name)
 
-(*let poly_reduce_bind equal zero ty index body =
+let poly_equals_bind equals ty index body =
+    let fun_name = "poly_equals." ^ string_of_int index in
+    Let([((fun_name, compare_type(ListType ty)),
+        Function([("xs", ListType ty); ("ys", ListType ty)],
+            If(Binop(Unop(Null, Name "xs"), And, Unop(Null, Name "ys")),
+                BoolLit true,
+                If(Binop(Unop(Null, Name "xs"), Or, Unop(Null, Name "ys")),
+                   BoolLit false,
+                   Binop(Call(Call(equals, CarExpr(Name "xs")), CarExpr (Name "ys")),
+                         And,
+                         Call(Call(Name fun_name, CdrExpr(Name "xs")), CdrExpr(Name "ys")))))))],
+        body)
+
+let poly_reduce_bind equals ty index body =
     let fun_name = "poly_reduce." ^ string_of_int index in
-    Let([((fun_name, unop_type (ListType ty)),
+    Let([((fun_name, poly_unop_type ty),
         Function([("xs", ListType ty); ("zero", ty)],
             If(Unop(Null, Name "xs"),
-               EmptyListExpr,
-               If(Call(equal, ))))
+               ConsExpr(Name "zero", EmptyListExpr),
+               If(Call(Call(equals, CarExpr(Name "xs")), Name "zero"),
+                  Call(Call(Name fun_name, CdrExpr(Name "xs")), Name "zero"),
+                  Name "xs"))))],
+    body)
 
-
-            )
-
-
-
-        )])*)
-
-let poly_plus_bind plus ty index body =
-    let fun_name = "poly_plus." ^ string_of_int index in
-    let deg_name = "poly_deg." ^ string_of_int (index + 1) in
-    let red_name = "poly_reduce." ^ string_of_int index in
-    let plus_body = Let([((fun_name, binop_type (ListType ty)),
+let poly_plus_inner_bind plus ty index body =
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_plus_inner"
+    and deg_name = build_name "poly_deg" in
+    Let([((fun_name, binop_type (ListType ty)),
         Function([("xs", ListType ty); ("ys", ListType ty)],
             If (Binop(Unop(Null, Name "xs"), And, Unop(Null, Name "ys")),
                 EmptyListExpr,
-                Let([(("x", ty), Call(Name deg_name, Name "xs")); (("y", ty), Call (Name deg_name, Name "ys"))],
+                Let([(("x", IntExpr), Call(Name deg_name, Name "xs")); (("y", IntExpr), Call (Name deg_name, Name "ys"))],
                     If (Binop(Name "x", Less, Name "y"), 
                         ConsExpr(CarExpr(Name "ys"), Call(Call(Name fun_name, Name "xs"), CdrExpr(Name "ys"))),
                         If (Binop(Name "x", Greater, Name "y"),
@@ -103,45 +118,142 @@ let poly_plus_bind plus ty index body =
                             ConsExpr(Call(Call(plus, CarExpr(Name "xs")), CarExpr(Name "ys")),
                                      Call(Call(Name fun_name, CdrExpr(Name "xs")), CdrExpr(Name "ys")))))))))],
             body)
-        in poly_deg_bind ty (index + 1) plus_body
+
+
+let poly_plus_bind plus ty index body =
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_plus"
+    and red_name = build_name "poly_reduce"
+    and in_name = build_name "poly_plus_inner" in
+    let plus_body = Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+        Call(Call(Name red_name, Call(Call(Name in_name, Name "xs"), Name "ys")), Name "zero")))],
+    body)
+    in poly_plus_inner_bind plus ty index plus_body
+
 let poly_plus plus ty index =
     let fun_name = "poly_plus." ^ string_of_int index
      in poly_plus_bind plus ty index (Name fun_name)
 
-let build_poly_minus plus neg ty field_count =
-    build_minus (poly_plus plus ty (field_count + 1)) (poly_neg neg ty (field_count + 3)) (PolyType ty)
+let build_poly_minus ty index =
+    let plus_name = "poly_plus." ^ string_of_int index
+    and neg_name = "poly_neg." ^ string_of_int index in
+    Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+        Call(Call(Call(Name plus_name, Name "xs"), Call(Name neg_name, Name "ys")), Name "zero"))
 
 let co_mul_bind times ty index body =
     let fun_name = "co_mul." ^ (string_of_int index) in
     Let([((fun_name, comul_type ty), 
-        Function([("coeff", ty); ("degree", IntExpr); ("xs", ListType ty)],
+        Function([("coeff", ty); ("degree", IntExpr); ("xs", ListType ty); ("zero", ty)],
         If(Binop(Unop(Null, Name "xs"), And, Binop(Name "degree", Equal, Literal 0)),
            EmptyListExpr,
            If(Unop(Null, Name "xs"),
-              ConsExpr(Literal 0, Call(Call(Call(Name fun_name, Name "coeff"), Binop(Name "degree", Sub, Literal 1)), Name "xs")),
+              ConsExpr(Name "zero", Call(Call(Call(Call(Name fun_name, Name "coeff"), Binop(Name "degree", Sub, Literal 1)), Name "xs"), Name "zero")),
               ConsExpr(Call(Call(times, Name "coeff"), CarExpr(Name "xs")),
-                       Call(Call(Call(Name fun_name, Name "coeff"), Name "degree"), CdrExpr(Name "xs")))))))],
+                       Call(Call(Call(Call(Name fun_name, Name "coeff"), Name "degree"), CdrExpr(Name "xs")), Name "zero"))))))],
     body)
+
 let poly_times_bind  times plus ty index body =
-    let fun_name = "poly_times." ^ string_of_int index in
-    let plus_name = "poly_plus." ^ string_of_int (index + 3) in
-    let deg_name = "poly_deg." ^ string_of_int (index + 4) in
-    let comul_name = "co_mul." ^ string_of_int index in
-    let times_body = Let([((fun_name, binop_type (ListType ty)),
-        Function([("xs", ListType ty); ("ys", ListType ty)],
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_times"
+    and plus_name = build_name "poly_plus"
+    and deg_name = build_name "poly_deg"
+    and comul_name = build_name "co_mul" in
+    let times_body = Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
             If(Unop(Null, Name "xs"),
                EmptyListExpr,
-               Let([(("x", ty), Call(Name deg_name, Name "xs"))],
-                    Call(Call(Name plus_name, Call(Call(Call(Name comul_name, CarExpr(Name "xs")), Call(Name deg_name, Name "xs")), Name "ys")), 
-                         Call(Call(Name fun_name, CdrExpr(Name "xs")), Name "ys"))))))],
+               Let([(("x", IntExpr), Call(Name deg_name, Name "xs"))],
+                    Call(Call(Call(Name plus_name, Call(Call(Call(Call(Name comul_name, CarExpr(Name "xs")), Call(Name deg_name, Name "xs")), Name "ys"), Name "zero")), 
+                         Call(Call(Call(Name fun_name, CdrExpr(Name "xs")), Name "ys"), Name "zero")), Name "zero")))))],
         body) in
-    let comul_body = co_mul_bind times ty index times_body 
-    in poly_plus_bind plus ty (index + 3) comul_body
+     co_mul_bind times ty index times_body 
+
 let build_poly_times times plus ty index =
     let fun_name = "poly_times." ^ string_of_int index in
         poly_times_bind times plus ty index (Name fun_name)
 
-    
+let build_term_bind ty index body =
+    let fun_name = "build_term." ^ string_of_int index in
+    Let([((fun_name, bterm_type ty),
+        Function([("x", IntExpr); ("zero", ty)],
+            If(Binop(Name "x", Equal, Literal 0),
+               EmptyListExpr,
+               ConsExpr(Name "zero", Call(Call(Name fun_name, Binop(Name "x", Sub, Literal 1)), Name "zero")))))],
+    body)
+
+let poly_div_bind div ty index body =
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_div_inner"
+    and term_name = build_name "build_term"
+    and times_name = build_name "poly_times"
+    and deg_name = build_name "poly_deg"
+    and eq_name = build_name "poly_equals"
+    and poly_min = build_poly_minus ty index in
+    let div_body = Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+            If(Unop(Null, Name "ys"),
+               EmptyListExpr,
+               Let([(("x", IntExpr), Call(Name deg_name, Name "xs")); (("y", IntExpr), Call(Name deg_name, Name "ys"))],
+                    If(Binop(Binop(Name "x", Less, Name "y"), Or, Call(Call(Name eq_name, Name "xs"), ConsExpr(Name "zero", EmptyListExpr))),
+                       EmptyListExpr,
+                       Let([(("lead_coeff", ty), Call(Call(div, CarExpr(Name "xs")), CarExpr(Name "ys")))],
+                       Let([(("lead_term", ListType ty), ConsExpr(Name "lead_coeff", Call(Call(Name term_name, Binop(Name "x", Sub, Name "y")), Name "zero")))],
+                       Let([(("diff", ListType ty), Call(Call(Call(poly_min, Name "xs"), Call(Call(Call(Name times_name, Name "lead_term"), Name "ys"), Name "zero")), Name "zero"))],
+                            ConsExpr(Name "lead_coeff", Call(Call(Call(Name fun_name, Name "diff"), Name "ys"), Name "zero"))))))))))],
+        body) in
+        build_term_bind ty index div_body
+let poly_div_bind div ty index body =
+    let fun_name = "poly_div." ^ string_of_int index
+    and inner_name = "poly_div_inner." ^ string_of_int index in
+    let div_body = Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+            Let([(("q", ListType ty), Call(Call(Call(Name inner_name, Name "xs"), Name "ys"), Name "zero"))],
+                If(Unop(Null, Name "q"),
+                   ConsExpr(Name "zero", Name "q"),
+                   Name "q"))))], body)
+in poly_div_bind div ty index div_body
+
+let poly_mod_bind div ty index body =
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_mod"
+    and term_name = build_name "build_term"
+    and times_name = build_name "poly_times"
+    and deg_name = build_name "poly_deg"
+    and eq_name = build_name "poly_equals"
+    and poly_min = build_poly_minus ty index in
+    Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+            If(Unop(Null, Name "ys"),
+               Name "xs",
+               Let([(("x", IntExpr), Call(Name deg_name, Name "xs")); (("y", IntExpr), Call(Name deg_name, Name "ys"))],
+                    If(Binop(Binop(Name "x", Less, Name "y"), Or, Call(Call(Name eq_name, Name "xs"), ConsExpr(Name "zero", EmptyListExpr))),
+                       Name "xs",
+                       Let([(("lead_coeff", ty), Call(Call(div, CarExpr(Name "xs")), CarExpr(Name "ys")))],
+                       Let([(("lead_term", ListType ty), ConsExpr(Name "lead_coeff", Call(Call(Name term_name, Binop(Name "x", Sub, Name "y")), Name "zero")))],
+                       Let([(("diff", ListType ty), Call(Call(Call(poly_min, Name "xs"), Call(Call(Call(Name times_name, Name "lead_term"), Name "ys"), Name "zero")), Name "zero"))],
+                            Call(Call(Call(Name fun_name, Name "diff"), Name "ys"), Name "zero")))))))))],
+        body)
+let poly_gcd_bind ty index body =
+    let build_name field = field ^ "." ^ string_of_int index in
+    let fun_name = build_name "poly_gcd"
+    and eq_name = build_name "poly_equals"
+    and mod_name = build_name "poly_mod" in
+    Let([((fun_name, poly_binop_type ty),
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+            If(Call(Call(Name eq_name, Name "ys"), ConsExpr(Name "zero", EmptyListExpr)),
+               Name "xs",
+               Let([(("rem", ListType ty), Call(Call(Call(Name mod_name, Name "xs"), Name "ys"), Name "zero"))],
+                 Call(Call(Call(Name fun_name, Name "ys"), Name "rem"), Name "zero")))))],
+    body)
+
+(*let build_poly_mod ty index =
+    let poly_minus = build_poly_minus ty index
+    and times_name = "poly_times." ^ string_of_int index
+    and div_name = "poly_div." ^ string_of_int index in
+        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
+            Call(Call(Call(poly_minus, Name "xs"), Call(Call(Call(Name times_name, Name "ys"), Call(Call(Call(Name div_name, Name "xs"), Name "ys"), Name "zero")), Name "zero")), Name "zero"))
+   *) 
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let rec eq_type ty1 ty2 = (match ty1, ty2 with
@@ -206,7 +318,7 @@ let check (typ_decls, body) = let
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
             (t2, s2) = semant gamma epsilon e2
-                in if not (eq_type t1 t2) then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
+                in if not (eq_type t1 t2) then raise (Failure ("cannot apply binary operator " ^ string_of_op op ^ " to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
                     (* Need to change this to work with algebra stuff!!!! *)
                     else (match op, t1 with
                       (Add, IntExpr) | (Add, FloatExpr) | (Add, StringExpr) -> (t1, SBinop ((t1, s1), Add, (t2, s2)))
@@ -223,16 +335,25 @@ let check (typ_decls, body) = let
                     | (Or, BoolExpr) -> (t1, SBinop ((t1, s1), Or, (t2, s2)))
                     | (Mod, IntExpr) -> (t1, SBinop ((t1, s1), Mod, (t2, s2)))
                     | _ ->
-                        let (opp, sexp) = try List.find (get_fun (string_of_op op)) (StringMap.find (string_of_type_expr t1) epsilon)
-                        with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
-                    in  let ty = (match opp with "=" -> BoolExpr | _ -> t1)
-                        in (ty, SCall(sexp, [(t1, s1); (t2, s2)])))
+                        (match t1 with
+                        PolyType tau -> let (opp, sexp) = try List.find (get_fun ("p" ^ string_of_op op)) (StringMap.find (string_of_type_expr tau) epsilon)
+                            with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
+                            in let (_, (_, szero)) = try List.find (get_fun ("zero")) (StringMap.find (string_of_type_expr tau) epsilon)
+                                with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
+                            in let ty = (match opp with "p==" -> BoolExpr | _ -> t1)
+                            in (ty, SCall(sexp, [(t1, s1); (t2, s2); (tau, szero)]))
+
+                        | _ -> let (opp, sexp) = try List.find (get_fun (string_of_op op)) (StringMap.find (string_of_type_expr t1) epsilon)
+                            with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
+                            in let ty = (match opp with "==" -> BoolExpr | _ -> t1)
+                            in (ty, SCall(sexp, [(t1, s1); (t2, s2)]))))
+
       | Unop (uop, expr) -> let
             (ty, sx) = semant gamma epsilon expr
                 in (match uop, ty with
                       (Neg, IntExpr) | (Neg, FloatExpr) -> (ty, SUnop (Neg, (ty, sx)))
                     | (Not, BoolExpr) -> (ty, SUnop (Not, (ty, sx)))
-                    | (Neg, _) -> let (opp, sexp) = try List.find (get_fun "Neg") (StringMap.find (string_of_type_expr ty) epsilon)
+                    | (Neg, _) -> let (opp, sexp) = try List.find (get_fun "n") (StringMap.find (string_of_type_expr ty) epsilon)
                                                         with Not_found -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty))
                                     in (ty, SCall(sexp, [(ty, sx)]))
                     | (Null, ListType tau) -> (BoolExpr, SUnop (Null, (ty, sx)))
@@ -240,6 +361,10 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
+            let ((fname, _), _)::_ = binds in
+            (try 
+            let field_count = StringMap.cardinal epsilon in
+            let field_name = "field." ^ string_of_int field_count in
             let gamma_fun = StringMap.filter 
                 (fun name ty -> (match ty with
                                         FunType _ -> true
@@ -249,6 +374,7 @@ let check (typ_decls, body) = let
                 (fun gamma ((name, tl), expr) -> let
                     gamma' = (match tl with
                               (FunType _) -> StringMap.add name tl gamma_fun
+                            | FieldType ty -> StringMap.add field_name (field_to_struct ty) gamma
                             | _ -> gamma) in let
                     (tr, (* sexpr *) _) = semant gamma' epsilon expr
                     (* Update epsilon *) in
@@ -261,25 +387,54 @@ let check (typ_decls, body) = let
                 gamma
                 binds and
             sbinds = List.map (fun ((name, tl), expr) -> let
-                gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun | _ -> gamma
+                gamma' = match tl with (FunType _) -> StringMap.add name tl gamma_fun 
+                        | FieldType ty -> StringMap.add field_name (field_to_struct ty) gamma
+                        | _ -> gamma
                     in ((name, tl), semant gamma' epsilon expr)) binds
             in let
                 epsilon' = List.fold_left
-                (fun epsilon (nt, sexpr) -> (match sexpr with
+                (fun epsilon ((name, ty), sexpr) -> (match sexpr with
                         (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin)])
                             -> StringMap.add (string_of_type_expr ty) 
-                                            [("=", seq); ("+", spl);
+                                            [("==", seq); ("+", spl);
                                              ("n", sneg); ("-", smin)] epsilon
-                        | (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
+                        (*| (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin); one; 
                                                     ("times", stim); inv; ("div", sdiv)])
                             -> StringMap.add (string_of_type_expr ty)
-                                            [("=", seq); ("+", spl); ("n", sneg); ("-", smin);
-                                             ("*", stim); ("/", sdiv)] epsilon
+                                            [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
+                                             ("*", stim); ("/", sdiv)] epsilon*)
+                        | (FieldType ty, sx) ->
+                            let rec struct_sx sexp = (match sexp with
+                                SLet (binds, (ty, sx)) -> struct_sx sx
+                            |   SStructInit sexprs -> sexprs
+                            | _ -> [])
+                        in let build_ref ty field = (ty, SName (name ^ "." ^ field))
+                        in (match struct_sx sx with
+                            [("zero", szero); ("equals", seq); ("plus", spl);
+                                   ("neg", sneg); ("minus", smin); one;
+                                   ("times", stim); inv; ("div", sdiv);
+                                   make_poly; poly_deg; ("poly_equals", speq);
+                                   ("poly_plus", sppl); ("poly_minus", spmin);
+                                   ("poly_neg", spneg); ("poly_times", sptim);
+                                   ("poly_div", spdiv); ("poly_mod", spmod);
+                                   poly_gcd]
+                                -> StringMap.add (string_of_type_expr ty)
+                                    [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
+                                             ("*", stim); ("/", sdiv); 
+                                             ("p==", speq); ("p+", sppl);
+                                             ("p-", spmin); ("pn", spneg); ("p*", sptim);
+                                             ("p/", spdiv); ("pmod", spmod);
+                                             ("zero", szero)] epsilon
+                            | _ -> epsilon)
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
+                with Failure "the left- and right-hand sides of bindings must match: Int list =/= Int" -> 
+                    (match binds with
+                        ((_, FunType _), _)::_ -> raise (Failure fname)
+                        | _ -> raise (Failure "the left- and right-hand sides of bindings must match: Int list =/= Int")))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in
             if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
@@ -311,17 +466,24 @@ let check (typ_decls, body) = let
             get_names = function
                 
             _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+            let eq_binds b1s b2s = (match (b1s, b2s) with
+                ([], []) -> true
+            |   ((n1, t1) :: _, (n2, t2) :: _) -> n1 = n2 && eq_type t1 t2
+            |   _ -> false) in
             let typed_binds = List.map (fun (name, expr) -> 
                                      (name, semant gamma epsilon expr)) 
                                    bindsList in let
             comparable = List.map (fun (name,(typ, expr)) -> (name, typ)) typed_binds in let rec
             struct_type = function
-                (name, StructTypeExpr(fields))::binds -> if fields = comparable then
-                                                                  name else struct_type binds
+                (name, StructTypeExpr(fields))::binds -> if eq_binds fields comparable 
+                                                                then if String.starts_with "field." name
+                                                                     then let ((_, ty) :: _) = fields in
+                                                                        FieldType ty
+                                                                     else TypNameExpr name
+                                                                else struct_type binds
              |  _::binds -> struct_type binds
-             |  [] -> raise (Failure "initialized a struct that matches no declared struct type") 
-                in
-            (TypNameExpr(struct_type (StringMap.bindings gamma)), SStructInit(typed_binds))
+             |  [] -> raise (Failure "initialized a struct that matches no declared struct type") in
+            (struct_type (StringMap.bindings gamma), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
         (typ_name, sexp) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
@@ -360,27 +522,38 @@ let check (typ_decls, body) = let
                         else raise (Failure "Group parameter has inconsistent type")
         |   _ -> raise (Failure "Equals, plus or negate function had wrong number of arguments"))
       | Field (texp, zero, eq, plus, neg, one, times, inv) ->
-        let field_count = 10 * (StringMap.cardinal epsilon) in
-        let build_field zero eq plus neg min one times inv div mpoly deg pplus pmin pneg ptimes =
-            SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min);
+        let field_count = StringMap.cardinal epsilon in
+        let build_field zero eq plus neg min one times inv div mpoly pmin index =
+            let str_index = string_of_int index in
+            let gen_bind field = (field, Name (field ^ "." ^ str_index)) in
+            let struct_body = StructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min);
                          ("one", one); ("times", times); ("inv", inv); ("div", div);
-                         ("make_poly", mpoly); ("deg", deg); ("poly_plus", pplus);
-                         ("poly_minus", pmin); ("poly_neg", pneg); ("poly_times", ptimes)] 
+                         ("make_poly", mpoly); gen_bind "poly_deg"; gen_bind "poly_equals";
+                         gen_bind "poly_plus"; ("poly_minus", pmin); 
+                         gen_bind "poly_neg"; gen_bind "poly_times";
+                         gen_bind "poly_div"; gen_bind "poly_mod";
+                         gen_bind "poly_gcd"] in
+            let gcd_body = poly_gcd_bind texp index struct_body in
+            let mod_body = poly_mod_bind div texp index gcd_body in
+            let div_body = poly_div_bind div texp index mod_body in
+            let times_body = poly_times_bind times plus texp index div_body in
+            let plus_body = poly_plus_bind plus texp index times_body in
+            let neg_body = poly_neg_bind neg texp index plus_body in
+            let eq_body = poly_equals_bind eq texp index neg_body in
+            let deg_body = poly_deg_bind texp index eq_body in
+            poly_reduce_bind eq texp index deg_body
+
         and (t0, s0) = semant gamma epsilon zero
         and (teq, seq) = semant gamma epsilon eq
         and (tpl, spl) = semant gamma epsilon plus
         and (tneg, sneg) = semant gamma epsilon neg
-        and (tmin, smin) = semant gamma epsilon (build_minus plus neg texp)
+        and min = build_minus plus neg texp
         and (t1, s1) = semant gamma epsilon one
         and (ttim, stim) = semant gamma epsilon times
         and (tinv, sinv) = semant gamma epsilon inv
-        and (tdiv, sdiv) = semant gamma epsilon (build_div times inv texp)
-        and (tmp, smp) = semant gamma epsilon (make_poly texp)
-        and (tdeg, sdeg) = semant gamma epsilon (poly_deg texp field_count)
-        and (tpneg, spneg) = semant gamma epsilon (poly_neg neg texp field_count)
-        and (tppl, sppl) = semant gamma epsilon (poly_plus plus texp field_count)
-        and (tpmin, spmin) = semant gamma epsilon (build_poly_minus plus neg texp field_count)
-        and (tptim, sptim) = semant gamma epsilon (build_poly_times times plus texp field_count)
+        and div = build_div times inv texp
+        and mpoly = build_make_poly texp
+        and pmin = build_poly_minus texp field_count
         in (match (t0, teq, tpl, tneg, t1, ttim, tinv) with 
             (t1, FunType (ParamType [t2; t3], BoolExpr), 
                  FunType (ParamType [t4; t5], t6),
@@ -389,10 +562,9 @@ let check (typ_decls, body) = let
                  FunType (ParamType [t13], t14)) ->
                 if eq_types [texp; t1; t2; t3; t4; t5; t6; t7; t8; 
                                    t9; t10; t11; t12; t13; t14]
-                then (FieldType texp, build_field (t0, s0) (teq, seq) (tpl, spl) (tneg, sneg)
-                                            (tmin, smin) (t1, s1) (ttim, stim) (tinv, sinv)
-                                            (tdiv, sdiv) (tmp, smp) (tdeg, sdeg) (tppl, sppl) 
-                                            (tpmin, spmin) (tpneg, spneg) (tptim, sptim))
+                then let field_struct = build_field zero eq plus neg min one times inv div mpoly pmin field_count
+                    in let (t, s) = semant gamma epsilon field_struct
+                    in (FieldType texp, s)
                 else raise (Failure "Field parameter has inconsistent type")
             | _ -> raise (Failure "Equals, plus, negate, times or inverse function had wrong number of arguments"))
 

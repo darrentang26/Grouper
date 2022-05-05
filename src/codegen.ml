@@ -13,13 +13,16 @@ let idx_lookup field fs =
                   fs 0
 (* FIELDMOD *)
 let group_names = ["zero"; "equals"; "plus"; "neg"; "minus"]
-let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "deg"; 
-                                 "poly_plus"; "poly_minus"; "poly_neg"; "poly_times"]
+let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "poly_deg"; "poly_equals"; 
+                                 "poly_plus"; "poly_minus"; "poly_neg"; "poly_times"; 
+                                 "poly_div"; "poly_mod"; "poly_gcd"]
 
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
 let binop_type ty = FunType (ParamType [ty; ty], ty)
+let poly_binop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
 let unop_type ty = FunType (ParamType [ty], ty)
+let poly_unop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
 let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
 let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
 
@@ -29,11 +32,15 @@ let group_to_struct ty = StructTypeExpr (group_list ty)
 
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("inv", unop_type ty); ("div", binop_type ty); 
-                       ("make_poly", mpoly_type ty); ("deg", pdeg_type ty);
-                       ("poly_plus", binop_type (PolyType ty));
-                       ("poly_minus", binop_type (PolyType ty));
+                       ("make_poly", mpoly_type ty); ("poly_deg", pdeg_type ty);
+                       ("poly_equals", compare_type (PolyType ty));
+                       ("poly_plus", poly_binop_type ty);
+                       ("poly_minus", poly_binop_type ty);
                        ("poly_neg", unop_type (PolyType ty));
-                       ("poly_times", binop_type (PolyType ty))]
+                       ("poly_times", poly_binop_type ty);
+                       ("poly_div", poly_binop_type ty);
+                       ("poly_mod", poly_binop_type ty);
+                       ("poly_gcd", poly_binop_type ty)]
 let field_to_struct ty = StructTypeExpr (field_list ty)
 
 let translate (typ_decls, fns, letb) =
@@ -126,7 +133,7 @@ let translate (typ_decls, fns, letb) =
       | FieldType ty -> "field"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
-        TypNameExpr name -> StringMap.find name gamma
+        TypNameExpr name -> (try StringMap.find name gamma with Not_found -> raise (Failure name))
       | GroupType ty -> group_to_struct ty
       | FieldType ty -> field_to_struct ty
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
@@ -151,8 +158,8 @@ let translate (typ_decls, fns, letb) =
       | [] -> init_struct in
         let _ = add_elem 0 binds in L.build_load init_struct "" builder
   | SStructRef (var, field) -> let
-      struct_def = match (StringMap.find var gamma ) with 
-                      TypNameExpr(typ_name) -> StringMap.find typ_name gamma
+      struct_def = match (try (StringMap.find var gamma) with Not_found -> raise (Failure var)) with 
+                      TypNameExpr(typ_name) -> (try StringMap.find typ_name gamma with Not_found -> raise (Failure typ_name))
                     | GroupType ty -> group_to_struct ty
                     | FieldType ty -> field_to_struct ty
                     |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in 
@@ -166,7 +173,7 @@ let translate (typ_decls, fns, letb) =
                   | GroupType ty -> idx_lookup field group_names
                   | FieldType ty -> idx_lookup field field_names
                   | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
-        let lstruct = (StringMap.find var scope) in
+        let lstruct = (try (StringMap.find var scope) with Not_found -> raise (Failure var)) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder
         
   | SConsExpr ((t1, e1), (t2, e2)) ->
@@ -198,7 +205,7 @@ let translate (typ_decls, fns, letb) =
   | SCarExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
           let v = (match e with 
-                      SName name -> StringMap.find name scope
+                      SName name -> (try StringMap.find name scope with Not_found -> raise (Failure name))
                     | _ -> expr builder scope gamma (t, e)) in
           let pr = L.build_struct_gep v 0 "pair.fst" builder in
           L.build_load pr "pair.fst" builder
@@ -211,7 +218,7 @@ let translate (typ_decls, fns, letb) =
   | SCdrExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
         let v = (match e with
-                    SName name -> StringMap.find name scope
+                    SName name -> (try StringMap.find name scope with Not_found -> raise (Failure name))
                   | _ -> expr builder scope gamma (t, e)) in
         let pr = L.build_struct_gep v 1 "pair.snd" builder in
         L.build_load pr "pair.fst" builder
@@ -256,8 +263,8 @@ let translate (typ_decls, fns, letb) =
             Some global ->
               (* global *)
               L.build_load global name builder
-          | None -> L.build_load (StringMap.find name scope) name builder)
-    | _ -> L.build_load (StringMap.find name scope) name builder)
+          | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
+    | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
     right = expr builder scope gamma (tr, sr)
@@ -389,7 +396,7 @@ in let populate_function fun_type fun_defn fun_builder sexpr =
 
 in let _ = List.map
   (fun (((name, _), sexpr) : bind * sexpr) ->
-    let (fun_type, fun_defn, fun_builder) = StringMap.find name user_functions
+    let (fun_type, fun_defn, fun_builder) = (try StringMap.find name user_functions with Not_found -> raise (Failure name))
       in populate_function fun_type fun_defn fun_builder sexpr)
   fns
 
