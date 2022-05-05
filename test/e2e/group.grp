@@ -1,0 +1,5 @@
+let [Int, Int] -> Bool eq = lambda (Int x Int y) x == y end in
+let [Int, Int] -> Int pl = lambda (Int x Int y) x + y end in
+let [Int] -> Int neg = lambda (Int x) -x end in
+let Int group gp = group {Int, 0, eq, pl, neg} in
+print gp.minus 5 3

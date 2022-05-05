@@ -3,7 +3,7 @@
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or | Mod
 
-type uop = Neg | Not
+type uop = Neg | Not | Null
 
 type name = string
 
@@ -62,7 +62,7 @@ and target =
   | CatchAll
   
 and group = type_expr * expr * expr * expr * expr
-and ring = type_expr * expr * expr * expr * expr * expr * expr
+and ring = type_expr * expr * expr * expr * expr * expr * expr * expr
 and field = type_expr * expr * expr * expr * expr * expr * expr * expr
 
 type program = typ_decl list * expr
@@ -87,6 +87,7 @@ let string_of_op = function
 let string_of_uop = function
   Neg -> "-"
 | Not -> "!"
+| Null -> "null?"
 
 let rec string_of_type_expr = function
   IntExpr -> "Int"
@@ -136,10 +137,7 @@ let rec string_of_expr = function
 | Match(args, patexprlist) -> "match (" ^ String.concat ", " args ^ ")" ^ " with\n  | "
                                 ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
                                 ^ " -> " ^ string_of_expr expr) patexprlist)
-(* | Match(args, patexprlist) -> "match (" ^ String.concat " " args ^ ")" ^ " with\n  | "
-                                ^ String.concat "\n  | " (List.map (fun (pattern, expr) -> string_of_pattern pattern 
-                                ^ " -> " ^ string_of_expr expr) patexprlist) *)
-| Call(expr1, expr2) -> "(" ^ string_of_expr expr1 ^ " " ^ string_of_expr expr2 ^ ")"
+| Call(expr1, expr2) -> "( Call " ^ string_of_expr expr1 ^ " on " ^ string_of_expr expr2 ^ ")"
 | If(expr1,expr2,expr3) -> "if " ^ string_of_expr expr1 
                          ^ " then " ^ string_of_expr expr2 
                          ^ " else " ^ string_of_expr expr3
@@ -164,14 +162,14 @@ and string_of_group (name, expr1, expr2, expr3, expr4) =
   string_of_expr expr3 ^ " " ^
   string_of_expr expr4
 
-and string_of_ring(name, expr1, expr2, expr3, expr4, expr5, expr6) = 
+and string_of_ring(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) = 
   string_of_group (name, expr1, expr2, expr3, expr4) ^ " " ^
   string_of_expr expr5 ^ " " ^
-  string_of_expr expr6
+  string_of_expr expr6 ^ " " ^ string_of_expr expr7
 
 and string_of_field(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) = 
-  string_of_ring (name, expr1, expr2, expr3, expr4, expr5, expr6) ^ " " ^
-  string_of_expr expr7
+  string_of_ring (name, expr1, expr2, expr3, expr4, expr5, expr6, expr7)
+
 
 let string_of_program (typ_decls, expr) = 
   String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_expr expr ^ "\n"
