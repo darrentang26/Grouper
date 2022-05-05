@@ -11,6 +11,15 @@ module StringMap = Map.Make(String)
 
 exception Failure of string
 
+let starts_with ~prefix s =
+    let len_s = String.length s
+    and len_pre = String.length prefix in
+    let rec aux i =
+      if i = len_pre then true
+      else if String.unsafe_get s i <> String.unsafe_get prefix i then false
+      else aux (i + 1)
+    in len_s >= len_pre && aux 0
+
 let lookup_type name gamma = 
     try StringMap.find name gamma
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
@@ -542,10 +551,10 @@ let check (typ_decls, body) = let
             comparable = List.map (fun (name,(typ, expr)) -> (name, typ)) typed_binds in let rec
             struct_type = function
                 (name, StructTypeExpr(fields))::binds -> if eq_binds fields comparable 
-                                                                then if String.starts_with "field." name
+                                                                then if starts_with "field." name
                                                                      then let ((_, ty) :: _) = fields in
                                                                         FieldType ty
-                                                                     else if String.starts_with "ring." name
+                                                                     else if starts_with "ring." name
                                                                      then let ((_, ty) :: _) = fields in
                                                                         RingType ty
                                                                      else TypNameExpr name
