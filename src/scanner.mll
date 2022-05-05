@@ -26,6 +26,7 @@ rule token = parse
 | "::"     { CONS }
 | "car"    { CAR }
 | "cdr"    { CDR }
+| "null?"  { NULL }
 | '='      { ASSIGN }
 | '_'      { UNDERSCORE }
 | "->"     { ARROW }
