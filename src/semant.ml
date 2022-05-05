@@ -76,9 +76,6 @@ let poly_deg_bind ty index body =
                         Binop(Literal 1, Add, 
                               Call(Name fun_name, CdrExpr (Name "xs"))))))], 
         body)
-(*let poly_deg ty index =
-    let fun_name = "poly_deg." ^ string_of_int index
-    in poly_deg_bind ty index (Name fun_name)*)
 
 let poly_neg_bind neg ty index body =
     let fun_name = "poly_neg." ^ string_of_int index in
@@ -89,9 +86,6 @@ let poly_neg_bind neg ty index body =
                        ConsExpr(Call(neg, CarExpr (Name "xs")), 
                                 Call(Name fun_name, CdrExpr (Name "xs"))))))],
         body)
-(*let poly_neg neg ty index =
-    let fun_name = "poly_neg." ^ string_of_int index 
-    in poly_neg_bind neg ty index (Name fun_name)*)
 
 let poly_equals_bind equals ty index body =
     let fun_name = "poly_equals." ^ string_of_int index in
@@ -146,10 +140,6 @@ let poly_plus_bind plus ty index body =
     body)
     in poly_plus_inner_bind plus ty index plus_body
 
-(*let poly_plus plus ty index =
-    let fun_name = "poly_plus." ^ string_of_int index
-     in poly_plus_bind plus ty index (Name fun_name)*)
-
 let build_poly_minus ty index =
     let plus_name = "poly_plus." ^ string_of_int index
     and neg_name = "poly_neg." ^ string_of_int index in
@@ -183,10 +173,6 @@ let poly_times_bind  times plus ty index body =
                          Call(Call(Call(Name fun_name, CdrExpr(Name "xs")), Name "ys"), Name "zero")), Name "zero")))))],
         body) in
      co_mul_bind times ty index times_body 
-
-(*let build_poly_times times plus ty index =
-    let fun_name = "poly_times." ^ string_of_int index in
-        poly_times_bind times plus ty index (Name fun_name)*)
 
 let build_term_bind ty index body =
     let fun_name = "build_term." ^ string_of_int index in
@@ -261,14 +247,6 @@ let poly_gcd_bind ty index body =
                Let([(("rem", ListType ty), Call(Call(Call(Name mod_name, Name "xs"), Name "ys"), Name "zero"))],
                  Call(Call(Call(Name fun_name, Name "ys"), Name "rem"), Name "zero")))))],
     body)
-
-(*let build_poly_mod ty index =
-    let poly_minus = build_poly_minus ty index
-    and times_name = "poly_times." ^ string_of_int index
-    and div_name = "poly_div." ^ string_of_int index in
-        Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
-            Call(Call(Call(poly_minus, Name "xs"), Call(Call(Call(Name times_name, Name "ys"), Call(Call(Call(Name div_name, Name "xs"), Name "ys"), Name "zero")), Name "zero")), Name "zero"))
-   *) 
 let lookup_adt name rho = 
     try StringMap.find name rho
         with Not_found -> raise (Failure ("unbound identifier " ^ name))
@@ -710,35 +688,6 @@ let check (typ_decls, body) = let
                 in (rt, SMatch (binds, sevals))
             
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
-      (*| Group (t, e1, e2, e3, e4) ->
-            let bin_check ftype = (match ftype with
-                FunType(PairType(t1, t2), t3)
-                    -> t1 = t && t2 = t && t3 = t
-                | _ -> raise (Failure "Group binop with wrong type")) in
-            let neg_check ftype = (match ftype with
-                FunType(t1, t2)
-                    -> t1 = t && t2 = t
-                | _ -> raise (Failure "Group unop wrong type")) in
-            let eq_check ftype = (match ftype with
-                FunType(PairType(t1, t2), BoolExpr)
-                    -> t1 = t && t2 = t
-                | _ -> raise (Failure "Eq op wrong type")) in
-            (* zero, eq, plus, neg *)
-            let (t1, se1) = semant gamma epsilon e1 and
-                (t2, se2) = semant gamma epsilon e2 and
-                (t3, se3) = semant gamma epsilon e3 and
-                (t4, se4) = semant gamma epsilon e4 in
-            let sem_list = [(t1, se1); (t2, se2); (t3, se3); (t4, se4)]
-              and name_list = ["zero"; "eq"; "plus"; "neg"] in
-            let struct_wrap (accum, (t, se), name) = (name, se) :: accum in
-                    if eq_check t2 && bin_check t3 && neg_check t4
-                    && t1 = t then 
-                        (GroupType t, SStructInit(List.fold_left2 struct_wrap [] 
-                                                    sem_list, name_list))
-                    else raise (Failure "Identity elt wrong type")*)
-
-
-
       | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))
 
     and semant_call gamma epsilon call =
