@@ -287,7 +287,7 @@ let translate (typ_decls, fns, letb) =
       let right_store = L.build_store right right_ptr builder in 
       let type_order = List.map (fun (name, typ) -> typ) fields in
       let rec load_fields lstruct idx = function
-        IntExpr::rest | FloatExpr::rest -> (L.build_load (L.build_struct_gep lstruct idx "" builder) "" builder)::(load_fields lstruct (idx + 1) rest)
+        IntExpr::rest | FloatExpr::rest | BoolExpr::rest -> (L.build_load (L.build_struct_gep lstruct idx "" builder) "" builder)::(load_fields lstruct (idx + 1) rest)
       | typ::rest -> raise (Failure ("(struct equality) cannot check equality of " ^ (string_of_type_expr typ)))
       | [] -> [] in
       let left_loads = load_fields left_ptr 0 type_order in
@@ -295,7 +295,7 @@ let translate (typ_decls, fns, letb) =
       let rec cmp_left_right (left_list, right_list, typs) = match (left_list, right_list, typs) with
         (left_val::lrest, right_val::rrest, typ::trest) -> 
           let cmp_fn = match typ with
-            IntExpr -> L.build_icmp L.Icmp.Eq
+            IntExpr | BoolExpr -> L.build_icmp L.Icmp.Eq
           | FloatExpr -> L.build_fcmp L.Fcmp.Ueq
           | _ -> raise (Failure "Other types should not be present") in
             (cmp_fn left_val right_val "" builder)::(cmp_left_right (lrest, rrest, trest))
@@ -307,7 +307,9 @@ let translate (typ_decls, fns, letb) =
       |  val1::[] -> val1
       |  val1::rest -> L.build_and val1 (build_ands rest) "" builder 
        in
-      build_ands cmpd_values  
+      build_ands cmpd_values
+    | (Equal, EmptyListType) -> L.build_load (L.const_int (ltype_of_typ BoolExpr) 1) "emptycmp" builder
+    (*| (Equal, ListType typ) -> match typ with *)
     | (Neq, IntExpr)        -> L.build_icmp L.Icmp.Ne left right "" builder
     | (Neq, FloatExpr)      -> L.build_fcmp L.Fcmp.Une left right "" builder (* not quite sure how this works... *)
     | (Less, IntExpr)       -> L.build_icmp L.Icmp.Slt left right "" builder
