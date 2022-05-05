@@ -97,6 +97,7 @@ let check (typ_decls, body) = let
                     | (Div, IntExpr) | (Div, FloatExpr) -> (t1, SBinop ((t1, s1), Div, (t2, s2)))
                     | (Equal, IntExpr) | (Equal, FloatExpr) | (Equal, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Equal, (t2, s2))) 
                     | (Equal, StructTypeExpr fields) -> (BoolExpr, SBinop ((StructTypeExpr fields, s1), Equal, (StructTypeExpr fields, s2)))
+                    | (Equal, ListType typ) -> (BoolExpr, SBinop((ListType typ, s1), op, (ListType typ, s2)))
                     | (Neq, IntExpr) | (Neq, FloatExpr) | (Neq, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Neq, (t2, s2)))
                     | (Less, IntExpr) | (Less, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Less, (t2, s2)))
                     | (Leq, IntExpr) | (Leq, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Leq, (t2, s2)))
