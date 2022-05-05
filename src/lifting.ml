@@ -138,8 +138,8 @@ let lift_lambdas (typ_decls, sexpr) =
         let (bound_vars, fs) = List.fold_left
           (fun (bound_vars, fs) ((name, ty), sexpr) ->
             let ((ty', sx'), fs') = lift_lambdas' sexpr
-              in match sx' with
-                SFunction _ ->
+              in match ty' with
+                FunType _ ->
                   (bound_vars, ((name, ty), (ty', sx')) :: fs' @ fs)
               | _ -> (((name, ty), (ty', sx')) :: bound_vars, fs' @ fs))
               (* in match ty with
