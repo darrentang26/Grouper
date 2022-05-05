@@ -1,7 +1,6 @@
 (* Top for stdlib types*)
 type Fraction = {numer : Int, denom : Int}
-type Imaginary = Int
-type Complex = {real : Int, fake : Imaginary}
+type Complex = {real : Float, fake : Float}
 
 (* series of lets for stdlib functions *)
 (* Standard Integer Operations*)
@@ -16,9 +15,20 @@ let [Int, Int] -> Int expon = lambda (Int base Int pwr)  if pwr == 1
  * params: Int x, Int y
  * returns: The greatest common divisor between the bigger number x and the smaller number y
  *)
-let [Int, Int] -> Int int_gcd = lambda (Int x Int y)
-                                 let Int next_rem = y mod x in  
-                                 if next_rem == 0 then y else int_gcd y next_rem end end
+
+(* int_eq*)
+let [Int, Int] -> Bool int_eq = lambda (Int a Int b) a == b end
+
+(* int_add *)
+let [Int, Int] -> Int int_add = lambda (Int a Int b) a + b end
+
+(* int_mult*)
+let [Int, Int] -> Int int_mult = lambda (Int a Int b) a * b end
+
+(* int_div *)
+let [Int, Int] -> Int int_div = lambda (Int a Int b) a / b end
+
+let Int ring int_ring = ring {Int, 0, int_eq, int_add, int_}
 
 (* Fraction functions *)
 
@@ -66,6 +76,18 @@ let [Fraction] -> Fraction frac_inv = lambda (Fraction n)
                                         let Fraction simple_n = simplify n in
                                         {numer = simple_n.denom, denom = simple_n.numer} end
 
-(* The rationals group *)
-(* let Fraction group rationals = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} *) 
+(* frac_mult: [Fraction, Fraction] -> Fraction
+ * params: Fraction m, Fraction n
+ * returns: the product of m and n in simplest form
+ *)
+let [Fraction, Fraction] -> Fraction frac_mult = lambda (Fraction m Fraction n)
+                                                 simplify {numer = (m.numer * n.numer), denom = (m.denom * n.denom)} end
+
+(* The rationals group and field *)
+let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg}
+let Fraction field rat_field = field {Fraction, {numer = 0, denom = 1}, 
+                                     frac_equal, frac_add, 
+                                     frac_neg, {numer = 1, denom = 1},
+                                     frac_mult, frac_inv}
+
                                                  
