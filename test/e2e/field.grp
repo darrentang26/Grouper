@@ -1,0 +1,12 @@
+let [Int, Int] -> Bool eq = lambda (Int x Int y) (x mod 3) == (y mod 3) end in 
+let [Int, Int] -> Int pl = lambda (Int x Int y) (x + y) mod 3 end in
+let [Int] -> Int neg = lambda (Int x) -x + 3 end in
+let [Int, Int] -> Int times = lambda (Int x Int y) (x * y) mod 3 end in
+let [Int] -> Int inv = lambda (Int x) x end in
+let Int field fd = field {Int, 0, eq, pl, neg, 1, times, inv} in
+let Int poly ys = fd.make_poly [1, 2, 0, 1] in
+let Int poly xs = fd.make_poly [1, 1] in
+let Int poly quotient = fd.poly_div xs ys fd.zero in
+let Int poly remainder = fd.poly_mod xs ys fd.zero in
+let Int poly gcd = fd.poly_gcd xs ys fd.zero in
+print car gcd

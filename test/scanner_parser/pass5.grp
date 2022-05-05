@@ -1,6 +1,6 @@
 type Z2 = ZERO | ONE
 
-let [Z2 * Z2] -> Z2 add = lambda (Z2 a Z2 b) match (Z2 a Z2 b) with 
+let [Z2, Z2] -> Z2 add = lambda (Z2 a Z2 b) match (Z2 a Z2 b) with 
 |   (ZERO, ONE) -> ONE
 |   (ONE, ZERO)   -> ONE
 |   (_) -> ZERO
@@ -10,12 +10,12 @@ let [Z2 -> Z2] inverse = lambda (Z2 a) match (Z2 a) with
 |   (ONE)  -> ZERO
 end
 let Z2 identity = ZERO
-and [Z2 * Z2] -> Bool equals = lambda (Z2 n  Z2 m) n == m  end
-and Z2 group mod_2_group = group {Z2, add, identity, inverse, equals}
+and [Z2, Z2] -> Bool equals = lambda (Z2 n  Z2 m) n == m  end
+and Z2 group mod_2_group = group {Z2, identity, equals, add, inverse}
 and Z2 mult_id = ONE
-and [Z2 * Z2] -> Z2 mult = lambda (Z2 a Z2 b) match (Z2 a Z2 b) with
+and [Z2, Z2] -> Z2 mult = lambda (Z2 a Z2 b) match (Z2 a Z2 b) with
 |   (ONE, ONE)   -> ONE
-|   (_)          -> ZERO 
-end
-let Z2 ring mod_2_ring = ring {Z2, add, identity, inverse, equals, mult, mult_id}
+|   (_)          -> ZERO end
+and [Z2] -> Z2 inv = lambda (Z2 a) a end
+let Z2 field mod_2_field = field {Z2, identity, equals, add, inverse, mult_id, mult, inv}
 in ZERO + ONE == ZERO

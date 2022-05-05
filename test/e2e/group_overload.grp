@@ -1,0 +1,8 @@
+let [Int list, Int list] -> Bool eq = lambda (Int list x Int list y) 
+    (car x) == (car y) end in
+let [Int list, Int list] -> Int list pl = lambda (Int list x Int list y) 
+    [(car x) + (car y)] end in
+let [Int list] -> Int list neg = lambda (Int list x) 
+    [- (car x)] end in
+let Int list group gp = group {Int list, [0], eq, pl, neg} in
+print car ([3] + [1])

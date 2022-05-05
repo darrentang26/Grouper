@@ -22,20 +22,19 @@ open Ast
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
 %nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
+%nonassoc COMMA
 %right ARROW
 %nonassoc LIST
-%nonassoc GROUP RING FIELD POLY
-%nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
+%nonassoc POLY
+%nonassoc GROUP RING FIELD
 %right ASSIGN
 %left CONS
-%left OR
-%left AND
-%left EQ NEQ
-%left LT GT LEQ GEQ
-%left CAR CDR NULL
-%nonassoc COMMA
+%nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
+%left OR AND
+%left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
+%left CAR CDR NULL
 %right NOT
 
 %%
@@ -122,7 +121,7 @@ expr:
   | NULL expr             { Unop(Null, $2) }
   | NAME                  { Name($1) }
   | expr binop expr %prec STAR { Binop($1, $2, $3) }
-  | MINUS expr %prec NOT  { Unop(Neg, $2) }
+  | MINUS expr %prec CAR  { Unop(Neg, $2) }
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
   | expr expr %prec NOT { Call($1, $2) }
@@ -130,8 +129,8 @@ expr:
                           { If($2, $4, $6) }
   | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
                       { Group ($3, $5, $7, $9, $11) }        
-  | RING LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
-                      { Ring  ($3, $5, $7, $9, $11, $13, $15) }
+  | RING LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
+                      { Ring  ($3, $5, $7, $9, $11, $13, $15, $17) }
   | FIELD LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
                       { Field ($3, $5, $7, $9, $11, $13, $15, $17) }
   | LBRACE struct_init_body RBRACE

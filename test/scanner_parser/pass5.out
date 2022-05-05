@@ -1,5 +1,5 @@
 type Z2 = ZERO | ONE
-let ([(Z2 * Z2)] -> Z2) add = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let ([Z2, Z2] -> Z2) add = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
   | (ZERO, ONE) -> ONE
   | (ONE, ZERO) -> ONE
   | (_) -> ZERO in
@@ -7,11 +7,12 @@ let [(Z2 -> Z2)] inverse = (Z2 a) -> match (Z2 a) with
   | (ZERO) -> ONE
   | (ONE) -> ZERO in
 let Z2 identity = ZERO in
-let ([(Z2 * Z2)] -> Bool) equals = (Z2 n, Z2 m) -> n == m in
-let Z2 group mod_2_group = Z2 add identity inverse equals in
+let ([Z2, Z2] -> Bool) equals = (Z2 n, Z2 m) -> n == m in
+let Z2 group mod_2_group = Z2 identity equals add inverse in
 let Z2 mult_id = ONE in
-let ([(Z2 * Z2)] -> Z2) mult = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let ([Z2, Z2] -> Z2) mult = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
   | (ONE, ONE) -> ONE
   | (_) -> ZERO in
-let Z2 ring mod_2_ring = Z2 add identity inverse equals mult mult_id in
+let ([Z2] -> Z2) inv = (Z2 a) -> a in
+let Z2 field mod_2_field = Z2 identity equals add inverse mult_id mult inv in
 ZERO + ONE == ZERO

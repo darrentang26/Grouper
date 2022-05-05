@@ -16,6 +16,7 @@ let group_names = ["zero"; "equals"; "plus"; "neg"; "minus"]
 let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "poly_deg"; "poly_equals"; 
                                  "poly_plus"; "poly_minus"; "poly_neg"; "poly_times"; 
                                  "poly_div"; "poly_mod"; "poly_gcd"]
+let ring_names = group_names @ ["one"; "times"; "div"; "mod"; "gcd"]
 
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
@@ -25,6 +26,7 @@ let unop_type ty = FunType (ParamType [ty], ty)
 let poly_unop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyType ty)
 let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
 let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
+let gcd_type ty = FunType (ParamType [ty; ty; ty], ty)
 
 let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_type ty);
                     ("neg", unop_type ty); ("minus", binop_type ty)]
@@ -42,6 +44,11 @@ let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty);
                        ("poly_mod", poly_binop_type ty);
                        ("poly_gcd", poly_binop_type ty)]
 let field_to_struct ty = StructTypeExpr (field_list ty)
+
+let ring_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
+                       ("div", binop_type ty); ("mod", binop_type ty);
+                       ("gcd", gcd_type ty)]
+let ring_to_struct ty = StructTypeExpr (ring_list ty)
 
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
@@ -79,6 +86,7 @@ let translate (typ_decls, fns, letb) =
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | GroupType ty -> ltype_of_typ (group_to_struct ty)
     | FieldType ty -> ltype_of_typ (field_to_struct ty)
+    | RingType ty -> ltype_of_typ (ring_to_struct ty)
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
 
   and ltype_of_functionty ty = (match ty with
@@ -131,11 +139,13 @@ let translate (typ_decls, fns, letb) =
         TypNameExpr name -> name
       | GroupType ty -> "group"
       | FieldType ty -> "field"
+      | RingType ty -> "ring"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
         TypNameExpr name -> (try StringMap.find name gamma with Not_found -> raise (Failure name))
       | GroupType ty -> group_to_struct ty
       | FieldType ty -> field_to_struct ty
+      | RingType ty -> ring_to_struct ty
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let curr_struct_type =  ltype_of_typ struct_type in
       let undef_struct = L.build_malloc curr_struct_type
@@ -162,6 +172,7 @@ let translate (typ_decls, fns, letb) =
                       TypNameExpr(typ_name) -> (try StringMap.find typ_name gamma with Not_found -> raise (Failure typ_name))
                     | GroupType ty -> group_to_struct ty
                     | FieldType ty -> field_to_struct ty
+                    | RingType ty -> ring_to_struct ty
                     |  _ -> raise (Failure "Should not happen, non-struct name accessed should be caught in semant") in 
       let rec idx_finder curr_idx = function
             (curr_field, _)::binds -> if field = curr_field 
@@ -172,6 +183,7 @@ let translate (typ_decls, fns, letb) =
                     StructTypeExpr(struct_binds) -> idx_finder 0 struct_binds
                   | GroupType ty -> idx_lookup field group_names
                   | FieldType ty -> idx_lookup field field_names
+                  | RingType ty -> idx_lookup field ring_names
                   | _ -> raise (Failure "Should not happen, non-struct type should be caught in semant") in 
         let lstruct = (try (StringMap.find var scope) with Not_found -> raise (Failure var)) in
         L.build_load (L.build_struct_gep lstruct field_idx (var ^ "." ^ field) builder) (var ^ "." ^ field) builder

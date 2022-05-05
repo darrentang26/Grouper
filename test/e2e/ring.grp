@@ -1,0 +1,14 @@
+let [Int list, Int list] -> Bool eq = lambda (Int list x Int list y) 
+    car x == car y end in
+let [Int list, Int list] -> Int list pl = lambda (Int list x Int list y) 
+    [car x + car y] end in
+let [Int list] -> Int list neg = lambda (Int list x) 
+    [-(car x)] end in
+let [Int list, Int list] -> Int list tim = lambda (Int list x Int list y)
+    [car x * car y] end in
+let [Int list, Int list] -> Int list divide = lambda (Int list x Int list y) 
+    [car x / car y] end in
+
+let Int list ring rg = ring {Int list, [0], eq, pl, neg, [1], tim, divide} in
+let Int list gcd =  rg.gcd [70] [30] rg.zero in
+print car gcd

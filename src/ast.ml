@@ -67,7 +67,7 @@ and target_concrete =
   | TargetConcApp of name * target_concrete
   
 and group = type_expr * expr * expr * expr * expr
-and ring = type_expr * expr * expr * expr * expr * expr * expr
+and ring = type_expr * expr * expr * expr * expr * expr * expr * expr
 and field = type_expr * expr * expr * expr * expr * expr * expr * expr
 
 type program = typ_decl list * expr
@@ -172,14 +172,13 @@ and string_of_group (name, expr1, expr2, expr3, expr4) =
   string_of_expr expr3 ^ " " ^
   string_of_expr expr4
 
-and string_of_ring(name, expr1, expr2, expr3, expr4, expr5, expr6) = 
+and string_of_ring(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) = 
   string_of_group (name, expr1, expr2, expr3, expr4) ^ " " ^
   string_of_expr expr5 ^ " " ^
-  string_of_expr expr6
+  string_of_expr expr6 ^ " " ^ string_of_expr expr7
 
 and string_of_field(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) = 
-  string_of_ring (name, expr1, expr2, expr3, expr4, expr5, expr6) ^ " " ^
-  string_of_expr expr7
+  string_of_ring (name, expr1, expr2, expr3, expr4, expr5, expr6, expr7)
 
 
 let string_of_program (typ_decls, expr) = 
