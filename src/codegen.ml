@@ -265,7 +265,8 @@ let translate (typ_decls, fns, letb) =
           L.build_pointercast next list_node_p "Next_c" builder)
   | SPrint (typ, sx) -> 
       let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in let 
+      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in
+      let bool_format_str = L.build_global_stringptr "b%d\n" "fmt" builder in let
       value = expr builder scope gamma (typ, sx) in                          
       (match typ with 
         StringExpr -> let
@@ -274,11 +275,7 @@ let translate (typ_decls, fns, letb) =
           in value
       | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
       | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
-      | BoolExpr -> let
-          lbool = L.string_of_llvalue value in
-          if lbool = "i1 true" then expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "true"))
-          else expr builder scope gamma (StringExpr, SPrint(StringExpr, SStringLit "false"))
-      (*| StructTypeExpr fields ->*)
+      | BoolExpr -> L.build_call print_func [|bool_format_str ; value|] "printf" builder
       | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
   
   (*| SPrint sexpr -> (match sexpr with 
