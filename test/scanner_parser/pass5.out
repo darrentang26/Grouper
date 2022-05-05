@@ -1,18 +1,18 @@
 type Z2 = ZERO | ONE
-let ([Z2, Z2] -> Z2) add = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let ([(User-Type: Z2 * User-Type: Z2)] -> User-Type: Z2) add = (User-Type: Z2 a, User-Type: Z2 b) -> match (b, a) with
   | (ZERO, ONE) -> ONE
   | (ONE, ZERO) -> ONE
   | (_) -> ZERO in
-let [(Z2 -> Z2)] inverse = (Z2 a) -> match (Z2 a) with
+let [(User-Type: Z2 -> User-Type: Z2)] inverse = (User-Type: Z2 a) -> match (a) with
   | (ZERO) -> ONE
   | (ONE) -> ZERO in
-let Z2 identity = ZERO in
-let ([Z2, Z2] -> Bool) equals = (Z2 n, Z2 m) -> n == m in
-let Z2 group mod_2_group = Z2 identity equals add inverse in
-let Z2 mult_id = ONE in
-let ([Z2, Z2] -> Z2) mult = (Z2 a, Z2 b) -> match (Z2 a Z2 b) with
+let User-Type: Z2 identity = ZERO in
+let ([User-Type: Z2, User-Type: Z2] -> Bool) equals = (User-Type: Z2 n, User-Type: Z2 m) -> n == m in
+let User-Type: Z2 group mod_2_group = User-Type: Z2 identity equals add inverse in
+let User-Type: Z2 mult_id = ONE in
+let ([(User-Type: Z2 * User-Type: Z2)] -> User-Type: Z2) mult = (User-Type: Z2 a, User-Type: Z2 b) -> match (b, a) with
   | (ONE, ONE) -> ONE
   | (_) -> ZERO in
-let ([Z2] -> Z2) inv = (Z2 a) -> a in
-let Z2 field mod_2_field = Z2 identity equals add inverse mult_id mult inv in
+let ([User-Type: Z2] -> User-Type: Z2) inv = (User-Type: Z2 a) -> a in
+let User-Type: Z2 field mod_2_field = User-Type: Z2 identity equals add inverse mult_id mult inv in
 ZERO + ONE == ZERO

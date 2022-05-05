@@ -1,0 +1,4 @@
+let Int list xs = [1, 2, 3, 4] in
+let Int list ys = cdr xs in
+let Int x = car ys in
+if x == 2 then print "yay" else print "boo" end

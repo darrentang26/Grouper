@@ -1,6 +1,6 @@
 (* Semantic Analysis *)
 
-(* rho = user-type environment *)
+(* rho = ADT environment *)
 (* gamma = name/type environment *)
 (* epsilon = name/value environment *)
 
@@ -269,6 +269,9 @@ let poly_gcd_bind ty index body =
         Function([("xs", ListType ty); ("ys", ListType ty); ("zero", ty)],
             Call(Call(Call(poly_minus, Name "xs"), Call(Call(Call(Name times_name, Name "ys"), Call(Call(Call(Name div_name, Name "xs"), Name "ys"), Name "zero")), Name "zero")), Name "zero"))
    *) 
+let lookup_adt name rho = 
+    try StringMap.find name rho
+        with Not_found -> raise (Failure ("unbound identifier " ^ name))
 
 (*let type_eq ty1 ty2 = raise (Failure "not implemented")*)
 let rec eq_type ty1 ty2 = (match ty1, ty2 with
@@ -286,11 +289,28 @@ let rec eq_types = function
 
 
 let check (typ_decls, body) = let
-    (* rho = StringMap.empty and *)
     gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
         StringMap.empty 
-        typ_decls and
-    epsilon = StringMap.empty 
+        typ_decls and 
+    
+    epsilon = StringMap.empty and
+    user_typs = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
+        StringMap.empty 
+        typ_decls
+
+    (* check adt types for uniqueness *)
+    in let rho = List.fold_left 
+        (fun env (name, texpr) -> match texpr with
+          AdtTypeExpr (binds) -> List.fold_left
+            (fun env (adtname, ty) -> 
+                if StringMap.mem adtname env
+                    then raise (Failure ("adt " ^ adtname ^ " already defined"))
+                    else StringMap.add adtname (name, ty) env)
+            env
+            binds
+        | _ -> env)
+        StringMap.empty
+        typ_decls
 
     in let rec semant gamma epsilon = function
         Literal  l  -> (IntExpr, SLiteral l)
@@ -378,8 +398,6 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
-            let ((fname,_),_)::_ = binds in
-            (try 
             let rec struct_sx sexp = (match sexp with
                                 SLet (binds, (ty, sx)) -> struct_sx sx
                             |   SStructInit sexprs -> sexprs
@@ -463,8 +481,6 @@ let check (typ_decls, body) = let
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
-        with Failure "the left- and right-hand sides of bindings must match: ([Int list, Int list] -> Int list) =/= ([Int list, Int list] -> Int)"
-         -> raise (Failure fname))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in
             if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
@@ -487,15 +503,31 @@ let check (typ_decls, body) = let
                 binds and
             (rt, sbody) = semant gamma' epsilon body
                 in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
-      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
+      | AdtExpr target -> (match target with
+            TargetWildName target_name -> let
+                (type_name, arg_type) = lookup_adt target_name rho in
+                    if arg_type = VoidExpr
+                        then (TypNameExpr type_name, SAdtExpr (STargetWildName target_name))
+                        else raise (Failure (target_name ^ " does not take any arguments"))
+          | TargetWildApp (target_name, inner_target) -> let
+                (type_name, arg_type) = lookup_adt target_name rho in
+                    if arg_type = VoidExpr
+                        then raise (Failure (target_name ^ " expects nothing as an argument"))
+                        else (match inner_target with
+                            TargetWildLiteral expr -> let
+                                (ty, sx) = semant gamma epsilon expr
+                                    in if arg_type = ty
+                                        then (TypNameExpr type_name, SAdtExpr (STargetWildApp (target_name, STargetWildLiteral (ty, sx))))
+                                        else raise (Failure ("cannot apply " ^ string_of_type_expr ty ^ " to " ^ string_of_type_expr arg_type)))
+          | _ -> raise (Failure ("cannot use " ^ string_of_target target ^ " as a top-level target")))
       | StructInit bindsList -> (*let rec
-            check_consec_dupes = function
+            (heck_consec_dupes = function
                 x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
                            else x::(check_consec_dupes (y::rest))
-              | x::[] -> x::[] in let               
+              | x::[] -> x::[] in let rec
             get_names = function
                 
-            _ = check_consec_dupes (List.sort String.compare bindsList) in*) 
+            _ -> check_consec_dupes (List.sort String.compare bindsList) in*) 
             let eq_binds b1s b2s = (match (b1s, b2s) with
                 ([], []) -> true
             |   ((n1, t1) :: _, (n2, t2) :: _) -> n1 = n2 && eq_type t1 t2
@@ -520,7 +552,7 @@ let check (typ_decls, body) = let
       | StructRef (var, field) -> let 
         (typ_name, sexp) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
-             accessed_type = lookup_type typ gamma in (match accessed_type with
+             accessed_type = lookup_type typ user_typs in (match accessed_type with
                 StructTypeExpr(binds) -> let 
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
@@ -636,8 +668,74 @@ let check (typ_decls, body) = let
                     in (FieldType texp, s)
                 else raise (Failure "Field parameter has inconsistent type")
             | _ -> raise (Failure "Equals, plus, negate, times or inverse function had wrong number of arguments"))
+      | Match (names, evals) ->
+            let binds = List.rev_map (fun (name) -> (name, lookup_type name gamma)) names
+            in let sevals: (Sast.spattern * Sast.sexpr) list = List.fold_left
+                (fun evals (pattern, expr)->
+                    match pattern with Pattern targets ->
+                        let (stargets, bound_vars) = (List.fold_left2
+                            (fun (stargets, bound_vars) target (name, tl) ->
+                                let ((starget, tr), bound_vars') = semant_target gamma epsilon target
+                                    in let equal = match (tl, tr) with
+                                        (TypNameExpr nl, TypNameExpr nr) -> nl = nr || nl = "_" || nr = "_"
+                                      | _ -> tl = tr
+                                        in if equal
+                                            then (starget :: stargets, bound_vars' @ bound_vars)
+                                            else raise (Failure ("cannot match a variable of type " ^ string_of_type_expr tl ^ " on a pattern of type " ^ string_of_type_expr tr)))
+                            ([], [])
+                            targets
+                            binds)
+                        (* in let _ = raise (Failure (String.concat ", " (List.map string_of_bind bound_vars))) *)
+                        in let sexpr = semant
+                            (List.fold_left
+                                (fun gamma (name, tl) -> StringMap.add name tl gamma)
+                                gamma
+                                bound_vars)
+                            epsilon
+                            expr
+                            in ((SPattern stargets), sexpr) :: evals)
+                []
+                evals
+            in let rt: Ast.type_expr = List.fold_left
+                (fun rt' (spattern, (rt, sx)) ->
+                    if rt != rt'
+                        then raise (Failure ("patterns of different types"))
+                        else rt')
+                (fst (snd (List.hd sevals)))
+                sevals
+                in (rt, SMatch (binds, sevals))
+            
+      | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
+      (*| Group (t, e1, e2, e3, e4) ->
+            let bin_check ftype = (match ftype with
+                FunType(PairType(t1, t2), t3)
+                    -> t1 = t && t2 = t && t3 = t
+                | _ -> raise (Failure "Group binop with wrong type")) in
+            let neg_check ftype = (match ftype with
+                FunType(t1, t2)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Group unop wrong type")) in
+            let eq_check ftype = (match ftype with
+                FunType(PairType(t1, t2), BoolExpr)
+                    -> t1 = t && t2 = t
+                | _ -> raise (Failure "Eq op wrong type")) in
+            (* zero, eq, plus, neg *)
+            let (t1, se1) = semant gamma epsilon e1 and
+                (t2, se2) = semant gamma epsilon e2 and
+                (t3, se3) = semant gamma epsilon e3 and
+                (t4, se4) = semant gamma epsilon e4 in
+            let sem_list = [(t1, se1); (t2, se2); (t3, se3); (t4, se4)]
+              and name_list = ["zero"; "eq"; "plus"; "neg"] in
+            let struct_wrap (accum, (t, se), name) = (name, se) :: accum in
+                    if eq_check t2 && bin_check t3 && neg_check t4
+                    && t1 = t then 
+                        (GroupType t, SStructInit(List.fold_left2 struct_wrap [] 
+                                                    sem_list, name_list))
+                    else raise (Failure "Identity elt wrong type")*)
 
-      | _ -> raise (Failure "Not yet implemented")
+
+
+      | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))
 
     and semant_call gamma epsilon call =
         let rec semant_call_inner = function
@@ -669,7 +767,29 @@ let check (typ_decls, body) = let
 
             in let ((ty, sx), valid, _, _) = semant_call_inner call in
                 if valid then (ty, sx) else raise (Failure ("functions must be completely applied"))
-                    
+    
+    
+    and semant_target gamma epsilon target = match target with
+        TargetWildName name -> let (type_name, arg_type) = lookup_adt name rho
+            in if arg_type = VoidExpr
+                then ((STargetWildName name, TypNameExpr type_name), [])
+                else raise (Failure (name ^ " is a constructor on " ^ string_of_type_expr arg_type))
+      | TargetWildLiteral expr -> let (t, s) = semant gamma epsilon expr
+            in (match s with
+                SName n -> ((STargetWildLiteral (t, s), t), [(n, t)])
+              | _ -> ((STargetWildLiteral (t, s), t), []))
+      | TargetWildApp (name, target) ->
+            let (type_name, arg_type) = lookup_adt name rho
+            in let ((starget, ty), bound_vars) = match target with
+                TargetWildLiteral (Name n) -> 
+                    let sname = (arg_type, SName n)
+                        in ((STargetWildLiteral (sname), arg_type), [(n, arg_type)])
+              | _ -> semant_target gamma epsilon target
+            (* use type equal function *)
+                in if ty = arg_type || (ty != VoidExpr && target = CatchAll)
+                    then ((STargetWildApp (name, starget), TypNameExpr type_name), bound_vars)
+                    else raise (Failure ("cannot construct " ^ name ^ " with an expression of type " ^ string_of_type_expr ty))
+      | CatchAll -> ((SCatchAll, TypNameExpr "_"), [])
     
         in match body with
         Let _ -> (typ_decls, semant gamma epsilon body)

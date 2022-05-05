@@ -53,10 +53,6 @@ let ring_to_struct ty = StructTypeExpr (ring_list ty)
 let translate (typ_decls, fns, letb) =
   let context = L.global_context () in 
 
-  let gamma = List.fold_left (fun env (name, texpr) -> StringMap.add name texpr env) 
-  StringMap.empty 
-  typ_decls in 
-
   let i32_t     = L.i32_type    context 
   and i8_t      = L.i8_type     context 
   and i1_t      = L.i1_type     context
@@ -70,15 +66,33 @@ let translate (typ_decls, fns, letb) =
   (*let _ = L.struct_set_body list_node [| L.pointer_type i8_t; L.pointer_type i8_t |] in
   and string_t  = L.pointer_type (L.i8_type context)  *)
 
+  let gamma = List.fold_left
+    (fun env (name, texpr) -> StringMap.add name texpr env) 
+    StringMap.empty 
+    typ_decls in
+
+  let rho = List.fold_left 
+    (fun env (name, texpr) -> match texpr with
+      AdtTypeExpr (binds) -> (match (List.fold_left
+        (fun (env, enum) (adtname, ty) ->
+          (StringMap.add adtname (enum, ty) env, enum + 1))
+        (env, 0)
+        binds) with (env, _) -> env)
+      | _ -> env)
+    StringMap.empty
+    typ_decls in
+
+  let max x1 x2 = if x1 > x2 then x1 else x2 in
+  
   let rec ltype_of_typ = function
       IntExpr -> i32_t
     | BoolExpr -> i1_t
     | FloatExpr -> float_t
     | VoidExpr -> void_t
     | StringExpr -> string_t
-    | TypNameExpr name -> ltype_of_typ (try StringMap.find name gamma with Not_found -> raise (Failure name))
-    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> 
-                                                     ltype_of_typ typ) fields))
+    | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | AdtTypeExpr binds -> struct_t [| i8_t ; L.pointer_type i8_t |]
+    | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | ListType tau -> list_node_p
     | EmptyListType -> list_node_p
     | PolyType tau -> ltype_of_typ (ListType tau)
@@ -88,6 +102,17 @@ let translate (typ_decls, fns, letb) =
     | FieldType ty -> ltype_of_typ (field_to_struct ty)
     | RingType ty -> ltype_of_typ (ring_to_struct ty)
     | ty -> raise (Failure ("type not implemented: " ^ string_of_type_expr ty))
+
+ 
+  (*let rec ltype_of_list = function
+      (_, SConsExpr((t1, e1), (t2, e2))) -> 
+        let tau1 = match t1 with 
+          ListType _ -> ltype_of_list (t1, e1)
+          | _        -> ltype_of_typ t1
+        in struct_t [| tau1; L.pointer_type (ltype_of_list (t2, e2)) |]
+    | (_, SEmptyListExpr) -> L.pointer_type i8_t*)
+
+
 
   and ltype_of_functionty ty = (match ty with
       FunType (ParamType pts, rt) -> L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts))
@@ -100,6 +125,9 @@ let translate (typ_decls, fns, letb) =
   let print_func : L.llvalue = 
     L.declare_function "printf" print_t grp_module in 
 
+  let exit_t = L.function_type void_t [| i32_t |] in
+  let exit_func = L.declare_function "exit" exit_t grp_module in
+
   (* create user function builders *)
   let create_function user_functions (((name, ty), (t', body)) : bind * sexpr) =
     let fun_type = ltype_of_functionty ty in
@@ -109,8 +137,7 @@ let translate (typ_decls, fns, letb) =
   let user_functions = List.fold_left create_function StringMap.empty fns in
 
   let create_fp user_fps (((name, ty), (t', body)) : bind * sexpr) =
-    let (_, fun_defn, _) = (try StringMap.find name user_functions 
-                            with Not_found -> raise (Failure name)) in
+    let (_, fun_defn, _) = StringMap.find name user_functions in 
     let gloabl_fp = L.define_global name fun_defn grp_module
       in StringMap.add name gloabl_fp user_fps in
   let user_fps = List.fold_left create_fp StringMap.empty fns in
@@ -142,7 +169,7 @@ let translate (typ_decls, fns, letb) =
       | RingType ty -> "ring"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
-        TypNameExpr name -> (try StringMap.find name gamma with Not_found -> raise (Failure name))
+        TypNameExpr name -> StringMap.find name gamma
       | GroupType ty -> group_to_struct ty
       | FieldType ty -> field_to_struct ty
       | RingType ty -> ring_to_struct ty
@@ -160,11 +187,6 @@ let translate (typ_decls, fns, letb) =
                                              (struct_name ^ "." ^ typ) 
                                              builder in
             L.build_store (expr builder scope gamma value) field_ptr builder
-                      (*L.build_insertvalue init_struct 
-                                          (expr builder scope gamma value)
-                                          curr_idx
-                                          (struct_name ^ "." ^ typ)
-                                          builder*)
       | [] -> init_struct in
         let _ = add_elem 0 binds in L.build_load init_struct "" builder
   | SStructRef (var, field) -> let
@@ -217,20 +239,20 @@ let translate (typ_decls, fns, letb) =
   | SCarExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
           let v = (match e with 
-                      SName name -> (try StringMap.find name scope with Not_found -> raise (Failure name))
+                      SName name -> StringMap.find name scope
                     | _ -> expr builder scope gamma (t, e)) in
           let pr = L.build_struct_gep v 0 "pair.fst" builder in
           L.build_load pr "pair.fst" builder
-    | ListType ty | PolyType ty ->
+    | ListType tau | PolyType tau ->
           let node = expr builder scope gamma (t, e) in
           let pr = L.build_struct_gep node 0 "List.car" builder in
           let data = L.build_load pr "Data" builder in
-          let data_c = L.build_pointercast data (L.pointer_type (ltype_of_typ ty)) "Data_c" builder in
+          let data_c = L.build_pointercast data (L.pointer_type (ltype_of_typ tau)) "Data_c" builder in
           L.build_load data_c "Data" builder)
   | SCdrExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
         let v = (match e with
-                    SName name -> (try StringMap.find name scope with Not_found -> raise (Failure name))
+                    SName name -> StringMap.find name scope
                   | _ -> expr builder scope gamma (t, e)) in
         let pr = L.build_struct_gep v 1 "pair.snd" builder in
         L.build_load pr "pair.fst" builder
@@ -356,10 +378,144 @@ let translate (typ_decls, fns, letb) =
     gamma' = List.fold_left store_typ gamma binds
       in   
       expr builder scope' gamma' body
+  | SAdtExpr target -> (match target with
+      STargetWildName name ->
+        let (enum, _) = StringMap.find name rho in
+        let target_type = ltype_of_typ t in
+        let location = L.build_alloca target_type name builder in
+        let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
+        let store = L.build_store (L.const_int i8_t enum) enum_location builder
+          in L.build_load location "" builder
+    | STargetWildApp (name, STargetWildLiteral sexpr) -> 
+        let (enum, ty) = StringMap.find name rho in
+        let target_type = ltype_of_typ t in
+        let location = L.build_alloca target_type name builder in
+        let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
+        let _ = L.build_store (L.const_int i8_t enum) enum_location builder in
+        let value_location = L.build_struct_gep location 1 (name ^ "-value") builder in
+        let value_location = L.build_pointercast value_location (L.pointer_type (L.pointer_type (ltype_of_typ ty))) "" builder 
+        in let value_location_alloca = L.build_alloca (ltype_of_typ ty) "" builder
+        in let _ = L.build_store (expr builder scope gamma sexpr) value_location_alloca builder
+        in let _ = L.build_store value_location_alloca value_location builder
+          in L.build_load location "" builder)
   | SCall (fun_sexpr, params) ->
-    let fun_value = expr builder scope gamma fun_sexpr in
-    let param_values = Array.of_list (List.map (expr builder scope gamma) params)
-      in L.build_call fun_value param_values "" builder
+      let fun_value = expr builder scope gamma fun_sexpr in
+      let param_values = Array.of_list (List.map (expr builder scope gamma) params)
+        in L.build_call fun_value param_values "" builder
+  | SMatch (binds, bodies) ->
+      let match_vals = List.rev_map (fun (name, ty) -> expr builder scope gamma (ty, SName name)) binds
+      
+      in let start_bb = L.insertion_block builder
+      in let the_function = L.block_parent start_bb
+
+      in let merge_bb = L.append_block context "switchcase" the_function
+      in let _ = L.position_at_end merge_bb builder
+
+      in let default_bb = L.append_block context "default" the_function
+      in let _ = L.position_at_end default_bb builder
+      in let _ = L.build_call exit_func [| (L.const_int i32_t 2) |] "" builder 
+      in let default_value = L.const_null (ltype_of_typ t)
+      in let default_bb = L.insertion_block builder
+
+      in let _ = L.position_at_end default_bb builder
+      in let _ = L.build_br merge_bb builder
+
+      in let (cases, first_bb) = List.fold_left
+        (fun (cases, next_bb) (pattern, sexpr) ->
+          let targets = match pattern with SPattern (targets) -> targets
+          in let target_vals = List.combine targets match_vals
+
+          in let then_bb = L.append_block context "then" the_function
+          in let _ = L.position_at_end then_bb builder
+          
+          in let (cond_value, scope') = List.fold_left
+            (fun (cond_value, scope) (target, value) ->
+              let (target_cond, scope') =
+                let rec codegen_target target value = match target with
+                    STargetWildName name -> 
+                      let (enum_target, _) = StringMap.find name rho
+                      in let value_location = L.build_alloca (L.type_of value) "" builder
+                      in let _ = L.build_store value value_location builder
+                      in let enum_target_value = L.const_int i8_t enum_target
+                      in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
+                      in let enum_match_value = L.build_load enum_match_location "" builder 
+                      in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
+                        in (cond_value, scope)
+                  | STargetWildApp (name, STargetWildLiteral sexpr) ->
+                      let (enum_target, target_type) = StringMap.find name rho
+                      in let value_location = L.build_alloca (L.type_of value) "" builder
+                      in let _ = L.build_store value value_location builder
+                      in let enum_target_value = L.const_int i8_t enum_target
+                      in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
+                      in let enum_match_value = L.build_load enum_match_location "" builder
+                      in let enum_cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
+                      in let (sexpr_cond_value, scope') = match sexpr with
+                          (ty, SName name_to_bind) ->
+                            let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                            in let target_location = L.build_pointercast target_location (L.pointer_type (L.pointer_type (ltype_of_typ ty))) (name ^ "-value-casted") builder
+                            in let target_location = L.build_load target_location "" builder
+                            in let scope' = StringMap.add name_to_bind target_location scope
+                              in (L.const_int i1_t 1, scope')
+                        | (ty, sx) ->
+                            let sexpr_target_value = expr builder scope gamma (ty, sx)
+                            in let sexpr_match_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                            in let sexpr_match_location = L.build_pointercast sexpr_match_location (L.pointer_type (L.pointer_type (L.type_of sexpr_target_value))) (name ^ "-value-casted") builder
+                            in let sexpr_match_value = L.build_load sexpr_match_location "value-pointer" builder
+                            in let sexpr_match_value = L.build_load sexpr_match_value "value" builder
+                            in let sexpr_cond_value = match ty with
+                                IntExpr | BoolExpr -> L.build_icmp L.Icmp.Eq sexpr_target_value sexpr_match_value "value-matches" builder
+                              | FloatExpr -> L.build_fcmp L.Fcmp.Ueq sexpr_target_value sexpr_match_value "value-matches" builder
+                              in (sexpr_cond_value, scope)
+                      in let cond_value = L.build_and enum_cond_value sexpr_cond_value "enum-literal-matches" builder
+                        in (cond_value, scope')
+                  | STargetWildApp (name, inner_target) ->
+                      let (enum_target, target_type) = StringMap.find name rho
+                      in let value_location = L.build_alloca (L.type_of value) "" builder
+                      in let _ = L.build_store value value_location builder
+
+                      in let enum_target_value = L.const_int i8_t enum_target
+                      in let enum_match_location = L.build_struct_gep value_location 0 (name ^ "-enum") builder
+                      in let enum_match_value = L.build_load enum_match_location "" builder
+                      in let enum_cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
+
+                      in let target_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
+                      in let target_location = L.build_pointercast target_location (L.pointer_type (L.pointer_type (ltype_of_typ target_type))) (name ^ "-value-casted") builder
+                      in let target_value = L.build_load target_location "" builder
+                      in let target_value = L.build_load target_value "" builder
+
+                      in let (inner_cond_value, scope') = codegen_target inner_target target_value
+                        in let cond_value = L.build_and enum_cond_value inner_cond_value "" builder
+                          in (cond_value, scope')
+                  | SCatchAll -> (L.const_int i1_t 1, scope)
+                  in codegen_target target value
+
+              in let cond_value' = L.build_and cond_value target_cond "accumulated-match" builder
+                in (cond_value', scope'))
+              (L.const_int i1_t 1, scope)
+              target_vals
+
+          in let then_value = expr builder scope' gamma sexpr
+          in let then_bb = L.insertion_block builder
+          (* in let _ = L.move_block_after then_bb next_bb *)
+
+          in let _ = L.position_at_end then_bb builder
+          in let _ = L.build_cond_br cond_value merge_bb next_bb builder
+            in ((then_value, then_bb) :: cases, then_bb))
+        ([(default_value, default_bb)], default_bb)
+        (* (List.rev bodies) *)
+        bodies
+      
+      in let _ = L.position_at_end start_bb builder
+      in let _ = L.build_br first_bb builder
+
+      in let _ = L.position_at_end merge_bb builder
+      in let incoming = cases
+      in let phi = L.build_phi incoming "switchtmp" builder
+
+      in let _ = L.move_block_after first_bb merge_bb
+      in let _ = L.move_block_after first_bb default_bb
+      in let _ = L.position_at_end merge_bb builder
+        in phi
   | SIf (cond_sexpr, then_sexpr, else_sexpr) ->
     let cond_value = expr builder scope gamma cond_sexpr
     in let start_bb = L.insertion_block builder
@@ -397,13 +553,14 @@ in let populate_function fun_type fun_defn fun_builder sexpr =
   let add_formal scope (name, ty) param =
     let local = L.build_alloca (ltype_of_typ ty) "" fun_builder in
     let _ = L.build_store param local fun_builder in
-      (StringMap.add name local scope)
-  
+      (StringMap.add name local scope) in 
+  let add_formal_typ gamma (name, ty) = (StringMap.add name ty gamma)
   in match sexpr with (_, SFunction (binds, body)) -> 
     let params = Array.to_list (L.params fun_defn)
 
     in let scope = List.fold_left2 add_formal StringMap.empty binds params
-    in let value = expr fun_builder scope gamma body
+    in let gamma' = List.fold_left add_formal_typ gamma binds
+    in let value = expr fun_builder scope gamma' body
       in L.build_ret value fun_builder
 
 in let _ = List.map

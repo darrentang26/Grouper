@@ -1,0 +1,13 @@
+type Language = C | JAVA | OCAML | RUST | OTHER of String
+
+([User-Type: Language] -> String) hasObjects: (([User-Type: Language] -> String) : (User-Type: Language lang) -> (String : match (User-Type: Language lang) with
+  | (OTHER((String : s))) -> (String : (String : s) + (String : "++"))
+  | (OTHER((String : "Grouper"))) -> (String : "heck no")
+  | (RUST) -> (String : "no idea")
+  | (OCAML) -> (String : "apparently")
+  | (JAVA) -> (String : "heck yeah")
+  | (C) -> (String : "nah")))
+
+(String : let User-Type: Language js =
+(User-Type: Language : OTHER((String : "JavaScript")))
+in (String : print: (String : (([User-Type: Language] -> String) : hasObjects): {(User-Type: Language : js)})))

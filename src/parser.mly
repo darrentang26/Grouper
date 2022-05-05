@@ -13,7 +13,7 @@ open Ast
 %token <int> LITERAL
 %token <bool> BLIT
 %token <string> NAME ADTNAME TYPNAME FLIT STRINGLIT
-%token EOF
+%token EOF MAX
 
 %start program
 %type <Ast.program> program
@@ -21,21 +21,22 @@ open Ast
 %nonassoc NOIN
 %nonassoc LET IN PRINT
 %nonassoc FUNCTION IF
-%nonassoc LBRACE LPAREN LBRACKET RPAREN RBRACE RBRACKET
 %nonassoc COMMA
 %right ARROW
 %nonassoc LIST
 %nonassoc POLY
 %nonassoc GROUP RING FIELD
 %right ASSIGN
-%left CONS
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
+%nonassoc LPAREN RPAREN LBRACE LBRACKET RBRACE RBRACKET 
+%left CONS
 %left OR AND
 %left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
 %left CAR CDR NULL
 %right NOT
+%nonassoc MAX
 
 %%
 
@@ -120,11 +121,11 @@ expr:
   | CDR expr              { CdrExpr ($2)}
   | NULL expr             { Unop(Null, $2) }
   | NAME                  { Name($1) }
-  | expr binop expr %prec STAR { Binop($1, $2, $3) }
-  | MINUS expr %prec CAR  { Unop(Neg, $2) }
+  | expr binop expr { Binop($1, $2, $3) }
+  | MINUS expr %prec NOT  { Unop(Neg, $2) }
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
-  | expr expr %prec NOT { Call($1, $2) }
+  | expr expr %prec CAR { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
   | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
@@ -137,7 +138,7 @@ expr:
                           { StructInit($2) }
   | NAME DOT NAME         { StructRef($1, $3) }
   | PRINT expr            { Print($2) }
-  | target_conc %prec IN          { AdtExpr($1) }
+  | target_conc  { AdtExpr($1) }
   | LPAREN expr RPAREN    { $2 }
 
 
@@ -145,7 +146,9 @@ expr:
 
 fn_def:
     formals expr END           { Function($1, $2)}
-  | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
+  // | formals MATCH formals WITH match_rule END { Function($1, Match($3, $5)) }
+  | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
+  // | formals MATCH LPAREN var_list RPAREN WITH match_rule END { Function($1, Match($4, $7)) }
 
 //---------- formals ----------//
 formals:
@@ -160,6 +163,10 @@ formal_list:
   | formal_list type_expr NAME  { ($3, $2) :: $1 }
 
 //---------- pattern matching ----------//
+var_list:
+    NAME                 { [$1] }
+  | var_list COMMA NAME  { $3 :: $1 }
+
 match_rule:
     match_line { [$1] }
   | match_line match_rule { $1 :: $2 }
@@ -174,7 +181,7 @@ pattern:
 target_wild:
     ADTNAME                           { TargetWildName($1) }
   | literal                           { TargetWildLiteral($1) }
-  | ADTNAME LPAREN target_wild RPAREN { TargetWildApp($1, $3) }
+  | ADTNAME LPAREN target_wild RPAREN %prec MAX { TargetWildApp($1, $3) }
   | UNDERSCORE                        { CatchAll }
 
 literal:
@@ -187,9 +194,8 @@ literal:
                           { PairExpr($2, $4) }
 
 target_conc:
-      ADTNAME                           { TargetConcName($1) }
-    | ADTNAME LPAREN target_conc RPAREN { TargetConcApp($1, $3) }
-    | ADTNAME LPAREN expr RPAREN        { TargetConcApp($1, TargetConcExpr($3)) }
+      ADTNAME                { TargetWildName($1) }
+    | ADTNAME LPAREN expr RPAREN %prec MAX   { TargetWildApp($1, TargetWildLiteral($3)) }
 
 
 //-------------------- MISC RULES --------------------//
