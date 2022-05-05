@@ -28,14 +28,14 @@ open Ast
 %nonassoc GROUP RING FIELD
 %right ASSIGN
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
-%nonassoc LPAREN RPAREN LBRACE LBRACKET RBRACE RBRACKET 
+%nonassoc LPAREN RPAREN LBRACE LBRACKET RBRACE RBRACKET
 %left CONS
 %left OR AND
 %left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
 %left CAR CDR NULL
-%right NOT
+%right NOT 
 %nonassoc MAX
 
 %%
@@ -121,11 +121,11 @@ expr:
   | CDR expr              { CdrExpr ($2)}
   | NULL expr             { Unop(Null, $2) }
   | NAME                  { Name($1) }
-  | expr binop expr { Binop($1, $2, $3) }
+  | expr binop expr       { Binop($1, $2, $3) }
   | MINUS expr %prec NOT  { Unop(Neg, $2) }
   | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
-  | expr expr %prec CAR { Call($1, $2) }
+  | expr expr %prec NOT { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
   | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
