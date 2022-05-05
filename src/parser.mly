@@ -6,10 +6,10 @@ open Ast
 
 %token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
 %token COLON DOT COMMA PLUS MINUS STAR DIVIDE MOD ASSIGN UNDERSCORE ARROW
-%token EQ NEQ LT LEQ GT GEQ AND OR NOT CONS CAR CDR NULL
+%token EQ NEQ LT LEQ GT GEQ AND OR NOT NEG CONS CAR CDR NULL
 %token GROUP RING FIELD POLY LET IN LAND IF THEN ELSE
 %token TYPE OF BAR LIST INT BOOL FLOAT STRING VOID PRINT
-%token FUNCTION MATCH WITH END
+%token FUNCTION MATCH WITH END FUN
 %token <int> LITERAL
 %token <bool> BLIT
 %token <string> NAME ADTNAME TYPNAME FLIT STRINGLIT
@@ -34,8 +34,9 @@ open Ast
 %left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
-%left CAR CDR NULL
-%right NOT 
+%nonassoc FUN
+%nonassoc CAR CDR NULL
+%nonassoc NOT NEG
 %nonassoc MAX
 
 %%
@@ -72,8 +73,7 @@ type_expr:
   | type_expr RING  { RingType($1) }
   | type_expr FIELD { FieldType($1) }
   | type_expr POLY  { PolyType($1) }
-  | LPAREN type_expr RPAREN
-                    { $2 }
+  | LPAREN type_expr RPAREN { $2 }
 
 adt_opt:
     adt_type_expr             { [$1] }
@@ -116,16 +116,28 @@ expr:
   | LPAREN expr COMMA expr RPAREN
                           { PairExpr($2, $4) }
   | LBRACKET inside_list RBRACKET  { $2 }
+  | NAME                  { Name($1) }
+  | expr PLUS expr {Binop($1, Add, $3) }
+  | expr MINUS expr {Binop($1, Sub, $3) }
+  | expr STAR expr {Binop($1, Mult, $3) }
+  | expr DIVIDE expr {Binop ($1, Div, $3) }
+  | expr EQ expr {Binop($1, Equal, $3) }
+  | expr NEQ expr {Binop($1, Neq, $3)}
+  | expr LT expr {Binop($1, Less, $3)}
+  | expr GT expr {Binop($1, Greater, $3)}
+  | expr LEQ expr {Binop($1, Leq, $3)}
+  | expr GEQ expr {Binop($1, Geq, $3)}
+  | expr AND expr {Binop($1, And, $3)}
+  | expr OR expr {Binop($1, Or, $3)}
+  | expr MOD expr {Binop($1, Mod, $3)}
+  | NEG expr { Unop(Neg, $2) }
+  /*| expr binop expr     { Binop($1, $2, $3) }*/
+  | NOT expr              { Unop(Not, $2) } 
   | expr CONS expr        { ConsExpr ($1, $3)}
   | CAR expr              { CarExpr ($2)}
   | CDR expr              { CdrExpr ($2)}
   | NULL expr             { Unop(Null, $2) }
-  | NAME                  { Name($1) }
-  | expr binop expr       { Binop($1, $2, $3) }
-  | MINUS expr %prec NOT  { Unop(Neg, $2) }
-  | NOT expr              { Unop(Not, $2) } 
   | FUNCTION fn_def       { $2 }
-  | expr expr %prec NOT { Call($1, $2) }
   | IF expr THEN expr ELSE expr END
                           { If($2, $4, $6) }
   | GROUP LBRACE type_expr COMMA expr COMMA expr COMMA expr COMMA expr RBRACE
@@ -139,7 +151,8 @@ expr:
   | NAME DOT NAME         { StructRef($1, $3) }
   | PRINT expr            { Print($2) }
   | target_conc  { AdtExpr($1) }
-  | LPAREN expr RPAREN    { $2 }
+  | LPAREN expr RPAREN  { $2 }
+  | expr expr %prec FUN { Call($1, $2) }
 
 
 //-------------------- FUNCTION DEFINITION --------------------//
@@ -210,7 +223,7 @@ inside_list:
   | expr                    { ConsExpr ($1, EmptyListExpr) }
   | expr COMMA inside_list  { ConsExpr ($1, $3) }
 
-binop:
+/*binop:
     PLUS    { Add }
   | MINUS   { Sub }
   | STAR    { Mult }
@@ -223,4 +236,4 @@ binop:
   | GEQ     { Geq }
   | AND     { And}
   | OR      { Or }
-  | MOD     { Mod }
+  | MOD     { Mod }*/
