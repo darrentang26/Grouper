@@ -511,14 +511,15 @@ let check (typ_decls, body) = let
                                         then (TypNameExpr type_name, SAdtExpr (STargetWildApp (target_name, STargetWildLiteral (ty, sx))))
                                         else raise (Failure ("cannot apply " ^ string_of_type_expr ty ^ " to " ^ string_of_type_expr arg_type)))
           | _ -> raise (Failure ("cannot use " ^ string_of_target target ^ " as a top-level target")))
-      | StructInit bindsList -> (*let rec
-            (heck_consec_dupes = function
-                x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
-                           else x::(check_consec_dupes (y::rest))
-              | x::[] -> x::[] in let rec
+      | StructInit bindsList -> let rec
+            check_consec_dupes = function
+              x::y::rest -> if x = y then raise (Failure "Struct field names must be unique")
+                     else x::(check_consec_dupes (y::rest))
+            | x::[] -> x::[] in let rec              
             get_names = function
-                
-            _ -> check_consec_dupes (List.sort String.compare bindsList) in*) 
+              (name, typ)::binds -> name::(get_names binds)
+            | [] -> [] in let    
+            _ = check_consec_dupes (List.sort String.compare (get_names bindsList)) in 
             let eq_binds b1s b2s = (match (b1s, b2s) with
                 ([], []) -> true
             |   ((n1, t1) :: _, (n2, t2) :: _) -> n1 = n2 && eq_type t1 t2
@@ -539,7 +540,8 @@ let check (typ_decls, body) = let
                                                                 else struct_type binds
              |  _::binds -> struct_type binds
              |  [] -> raise (Failure "initialized a struct that matches no declared struct type") in
-            (struct_type (StringMap.bindings gamma), SStructInit(typed_binds))
+             let gamma' = StringMap.union (fun key t1 t2 -> Some t1) gamma user_typs in
+            (struct_type (StringMap.bindings gamma'), SStructInit(typed_binds))
       | StructRef (var, field) -> let 
         (typ_name, sexp) = semant gamma epsilon (Name(var)) in (match typ_name with
            TypNameExpr(typ) -> let
