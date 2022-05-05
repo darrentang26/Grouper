@@ -84,15 +84,19 @@ let check (typ_decls, body) = let
 
       | Binop (e1, op, e2) -> let
             (t1, s1) = semant gamma epsilon e1 and
-            (t2, s2) = semant gamma epsilon e2
-                in if t1 != t2 then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
+            (t2, s2) = semant gamma epsilon e2 in
+            let unalias = function
+              TypNameExpr name -> StringMap.find name user_typs 
+            | typ -> typ
+                in if (unalias t1) != (unalias t2) then raise (Failure ("cannot apply binary operator to arguments of different types (" ^ string_of_type_expr t1 ^ " and " ^ string_of_type_expr t2 ^ ")"))
                     (* Need to change this to work with algebra stuff!!!! *)
-                    else (match op, t1 with
+                    else (match op, unalias t1 with
                       (Add, IntExpr) | (Add, FloatExpr) | (Add, StringExpr) -> (t1, SBinop ((t1, s1), Add, (t2, s2)))
                     | (Sub, IntExpr) | (Sub, FloatExpr) -> (t1, SBinop ((t1, s1), Sub, (t2, s2)))
                     | (Mult, IntExpr) | (Mult, FloatExpr) -> (t1, SBinop ((t1, s1), Mult, (t2, s2)))
                     | (Div, IntExpr) | (Div, FloatExpr) -> (t1, SBinop ((t1, s1), Div, (t2, s2)))
-                    | (Equal, IntExpr) | (Equal, FloatExpr) | (Equal, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Equal, (t2, s2)))
+                    | (Equal, IntExpr) | (Equal, FloatExpr) | (Equal, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Equal, (t2, s2))) 
+                    | (Equal, StructTypeExpr fields) -> (BoolExpr, SBinop ((StructTypeExpr fields, s1), Equal, (StructTypeExpr fields, s2)))
                     | (Neq, IntExpr) | (Neq, FloatExpr) | (Neq, StringExpr) -> (BoolExpr, SBinop ((t1, s1), Neq, (t2, s2)))
                     | (Less, IntExpr) | (Less, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Less, (t2, s2)))
                     | (Leq, IntExpr) | (Leq, FloatExpr) -> (BoolExpr, SBinop ((t1, s1), Leq, (t2, s2)))
