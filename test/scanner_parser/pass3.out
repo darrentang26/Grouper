@@ -7,4 +7,4 @@ let ([User-Type: Language] -> String) hasObjects = (User-Type: Language lang) ->
   | (OTHER("Grouper")) -> "heck no"
   | (OTHER(s)) -> s + "++" in
 let User-Type: Language js = OTHER("JavaScript") in
-print: (hasObjects js)
+print: ( Call hasObjects on js)

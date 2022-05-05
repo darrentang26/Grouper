@@ -7,11 +7,12 @@ let [(User-Type: Z2 -> User-Type: Z2)] inverse = (User-Type: Z2 a) -> match (a) 
   | (ZERO) -> ONE
   | (ONE) -> ZERO in
 let User-Type: Z2 identity = ZERO in
-let ([(User-Type: Z2 * User-Type: Z2)] -> Bool) equals = (User-Type: Z2 n, User-Type: Z2 m) -> n == m in
-let User-Type: Z2 group mod_2_group = User-Type: Z2 add identity inverse equals in
+let ([User-Type: Z2, User-Type: Z2] -> Bool) equals = (User-Type: Z2 n, User-Type: Z2 m) -> n == m in
+let User-Type: Z2 group mod_2_group = User-Type: Z2 identity equals add inverse in
 let User-Type: Z2 mult_id = ONE in
 let ([(User-Type: Z2 * User-Type: Z2)] -> User-Type: Z2) mult = (User-Type: Z2 a, User-Type: Z2 b) -> match (b, a) with
   | (ONE, ONE) -> ONE
   | (_) -> ZERO in
-let User-Type: Z2 ring mod_2_ring = User-Type: Z2 add identity inverse equals mult mult_id in
+let ([User-Type: Z2] -> User-Type: Z2) inv = (User-Type: Z2 a) -> a in
+let User-Type: Z2 field mod_2_field = User-Type: Z2 identity equals add inverse mult_id mult inv in
 ZERO + ONE == ZERO
