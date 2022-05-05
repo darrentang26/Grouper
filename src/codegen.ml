@@ -309,7 +309,7 @@ let translate (typ_decls, fns, letb) =
        in
       build_ands cmpd_values
     | (Equal, EmptyListType) -> L.build_load (L.const_int (ltype_of_typ BoolExpr) 1) "emptycmp" builder
-    (*| (Equal, ListType typ) -> match typ with *)
+    | (Equal, ListType typ) -> raise (Failure ("llvalue for list equality: " ^ (L.string_of_llvalue left)))
     | (Neq, IntExpr)        -> L.build_icmp L.Icmp.Ne left right "" builder
     | (Neq, FloatExpr)      -> L.build_fcmp L.Fcmp.Une left right "" builder (* not quite sure how this works... *)
     | (Less, IntExpr)       -> L.build_icmp L.Icmp.Slt left right "" builder
