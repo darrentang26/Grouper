@@ -329,11 +329,11 @@ let translate (typ_decls, fns, letb) =
     | (Not, BoolExpr) -> L.build_not value "" builder)
   | SLet (binds, body) -> let
     store_typ gamma ((name, ty), sexpr) = (StringMap.add name ty gamma) in let
-    store_val scope ((name, ty), sexpr) = let
+    store_val scope' ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
       value = expr builder scope gamma sexpr in let
       _ = L.build_store value local builder in
-        (StringMap.add name local scope) in let
+        (StringMap.add name local scope') in let
     scope' = List.fold_left 
         store_val
         scope
