@@ -164,12 +164,14 @@ let translate (typ_decls, fns, letb) =
   | SStructInit binds ->
       let struct_name = (match t with 
         TypNameExpr name -> name
+      | StructTypeExpr field -> ""
       | GroupType ty -> "group"
       | FieldType ty -> "field"
       | RingType ty -> "ring"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
         TypNameExpr name -> StringMap.find name gamma
+      | StructTypeExpr fields -> t
       | GroupType ty -> group_to_struct ty
       | FieldType ty -> field_to_struct ty
       | RingType ty -> ring_to_struct ty
@@ -301,7 +303,10 @@ let translate (typ_decls, fns, letb) =
     | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
-    right = expr builder scope gamma (tr, sr)
+    right = expr builder scope gamma (tr, sr) in
+    let unalias = function 
+      TypNameExpr name -> StringMap.find name gamma
+    | typ -> typ
     in (match op, tl with
       (Add, IntExpr)        -> L.build_add left right "" builder
     | (Add, FloatExpr)      -> L.build_fadd left right "" builder
@@ -343,6 +348,34 @@ let translate (typ_decls, fns, letb) =
     | (Equal, IntExpr)      -> L.build_icmp L.Icmp.Eq left right "" builder
     | (Equal, FloatExpr)    -> L.build_fcmp L.Fcmp.Ueq left right "" builder (* not quite sure how this works... *)
     | (Equal, StringExpr)   -> raise (Failure "not yet implemented-- string equality")
+    | (Equal, StructTypeExpr fields) -> (*raise (Failure ("left: " ^ (L.string_of_llvalue left)))*)
+      let left_ptr = L.build_alloca (ltype_of_typ (StructTypeExpr fields)) "left" builder in
+      let right_ptr = L.build_alloca (ltype_of_typ (StructTypeExpr fields)) "right" builder in
+      let left_store = L.build_store left left_ptr builder in
+      let right_store = L.build_store right right_ptr builder in 
+      let type_order = List.map (fun (name, typ) -> typ) fields in
+      let rec load_fields lstruct idx = function
+        IntExpr::rest | FloatExpr::rest -> (L.build_load (L.build_struct_gep lstruct idx "" builder) "" builder)::(load_fields lstruct (idx + 1) rest)
+      | typ::rest -> raise (Failure ("(struct equality) cannot check equality of " ^ (string_of_type_expr typ)))
+      | [] -> [] in
+      let left_loads = load_fields left_ptr 0 type_order in
+      let right_loads = load_fields right_ptr 0 type_order in
+      let rec cmp_left_right (left_list, right_list, typs) = match (left_list, right_list, typs) with
+        (left_val::lrest, right_val::rrest, typ::trest) -> 
+          let cmp_fn = match typ with
+            IntExpr -> L.build_icmp L.Icmp.Eq
+          | FloatExpr -> L.build_fcmp L.Fcmp.Ueq
+          | _ -> raise (Failure "Other types should not be present") in
+            (cmp_fn left_val right_val "" builder)::(cmp_left_right (lrest, rrest, trest))
+      | ([], [], []) -> []
+      | _ -> raise (Failure "unequal list lengths in struct equality check (somehow)") in
+      let cmpd_values = cmp_left_right (left_loads, right_loads, type_order) in
+      let rec build_ands = function
+         [] -> raise (Failure "There's literally no way the list can be empty")
+      |  val1::[] -> val1
+      |  val1::rest -> L.build_and val1 (build_ands rest) "" builder 
+       in
+      build_ands cmpd_values  
     | (Neq, IntExpr)        -> L.build_icmp L.Icmp.Ne left right "" builder
     | (Neq, FloatExpr)      -> L.build_fcmp L.Fcmp.Une left right "" builder (* not quite sure how this works... *)
     | (Less, IntExpr)       -> L.build_icmp L.Icmp.Slt left right "" builder
@@ -366,11 +399,11 @@ let translate (typ_decls, fns, letb) =
     | (Null, ListType tau) -> L.build_is_null value "" builder)
   | SLet (binds, body) -> let
     store_typ gamma ((name, ty), sexpr) = (StringMap.add name ty gamma) in let
-    store_val scope ((name, ty), sexpr) = let
+    store_val scope' ((name, ty), sexpr) = let
       local = L.build_alloca (ltype_of_typ ty) "" builder in let
       value = expr builder scope gamma sexpr in let
       _ = L.build_store value local builder in
-        (StringMap.add name local scope) in let
+        (StringMap.add name local scope') in let
     scope' = List.fold_left 
         store_val
         scope
