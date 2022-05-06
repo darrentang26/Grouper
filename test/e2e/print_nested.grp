@@ -1,0 +1,2 @@
+let Int x = 6
+in print print x
