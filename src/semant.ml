@@ -429,9 +429,14 @@ let check (typ_decls, body) = let
                 (fun epsilon ((name, ty), sexpr) -> (match sexpr with
                         (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin)])
-                            -> StringMap.add (string_of_type_expr ty) 
+                            ->  let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty) 
                                             [("==", seq); ("+", spl);
-                                             ("n", sneg); ("-", smin)] epsilon
+                                             ("n", sneg); ("-", smin)] epsilon'
                         | (RingType ty, sx) ->
                         let build_ref ty field = (ty, SName (name ^ "." ^ field))
                         in (match struct_sx sx with
@@ -439,10 +444,15 @@ let check (typ_decls, body) = let
                                    ("neg", sneg); ("minus", smin); one;
                                    ("times", stim); ("div", sdiv);
                                    ("mod", smod); gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                -> let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); ("mod", smod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon'
                                 | _ -> epsilon)
                         (*| (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin); one; 
@@ -461,13 +471,18 @@ let check (typ_decls, body) = let
                                    ("poly_neg", spneg); ("poly_times", sptim);
                                    ("poly_div", spdiv); ("poly_mod", spmod);
                                    poly_gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                -> let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); 
                                              ("p==", speq); ("p+", sppl);
                                              ("p-", spmin); ("pn", spneg); ("p*", sptim);
                                              ("p/", spdiv); ("pmod", spmod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon'
                             | _ -> epsilon)
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
