@@ -23,6 +23,17 @@ let [Int, Int] -> Int gcd = lambda (Int x Int y)
     let Int rem = x mod y in
       gcd y rem end end 
 
+(* discrete_inv: [Int, Int] -> Int
+ * params: Int a, Int p
+ * returns the inverse of a in Z mod p where p is prime (maybe)
+ *)    
+let [Int, Int, Int, Int, Int] -> Int disc_inv_helper = 
+lambda (Int old_r Int r Int old_t Int t Int base) 
+  if r == 0 then if old_t < 0 then old_t + base else old_t end else 
+    let Int q = old_r / r in
+      disc_inv_helper r (old_r - (q * r)) t (old_t - (q * t)) base end end
+let [Int, Int] -> Int discrete_inv = lambda (Int p Int a) disc_inv_helper p a 0 1 p end
+
 (* abs *)
 let [Int] -> Int abs = lambda (Int x) if x < 0 then ~x else x end end
 
@@ -101,5 +112,4 @@ let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equ
 let Fraction field rat_field = field {Fraction, {numer = 0, denom = 1}, 
                                      frac_equal, frac_add, 
                                      frac_neg, {numer = 1, denom = 1},
-                                     frac_mult, frac_inv} in
-                                               
+                                     frac_mult, frac_inv} in 
