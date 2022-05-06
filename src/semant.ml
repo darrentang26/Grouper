@@ -539,7 +539,8 @@ let check (typ_decls, body) = let
                 (fun (name, tl) -> tl)
                 binds and
             (rt, sbody) = semant gamma' epsilon body
-                in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
+                in if binds = [] then raise (Failure "all functions must have at least one parameter")
+                    else(FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
       | AdtExpr target -> (match target with
             TargetWildName target_name -> let
                 (type_name, arg_type) = lookup_adt target_name rho in

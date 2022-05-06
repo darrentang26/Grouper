@@ -267,18 +267,18 @@ let translate (typ_decls, fns, letb) =
           let next = L.build_load pr "Next" builder in
           L.build_pointercast next list_node_p "Next_c" builder)
   | SPrint (typ, sx) -> 
-      let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in
-      let bool_format_str = L.build_global_stringptr "b%d\n" "fmt" builder in let
+      let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
+      let float_format_str = L.build_global_stringptr "%g" "fmt" builder in
+      let bool_format_str = L.build_global_stringptr "b%d" "fmt" builder in let
       value = expr builder scope gamma (typ, sx) in                          
       (match typ with 
         StringExpr -> let
           str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder in let
           _ = L.build_call print_func [| str |] "printf" builder 
           in value
-      | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
-      | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
-      | BoolExpr -> L.build_call print_func [|bool_format_str ; value|] "printf" builder
+      | IntExpr -> let _ = L.build_call print_func [| int_format_str ;  value |] "printf" builder in value
+      | FloatExpr -> let _ = L.build_call print_func [| float_format_str ; value|] "printf" builder in value
+      | BoolExpr -> let _ = L.build_call print_func [|bool_format_str ; value|] "printf" builder in value
       | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
   
   (*| SPrint sexpr -> (match sexpr with 
