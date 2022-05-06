@@ -112,5 +112,4 @@ let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equ
 let Fraction field rat_field = field {Fraction, {numer = 0, denom = 1}, 
                                      frac_equal, frac_add, 
                                      frac_neg, {numer = 1, denom = 1},
-                                     frac_mult, frac_inv} in
-                                               
+                                     frac_mult, frac_inv} in 
