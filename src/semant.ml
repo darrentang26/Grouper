@@ -398,8 +398,8 @@ let check (typ_decls, body) = let
             let ring_name = "ring." ^ string_of_int field_count in
             let gamma_fun = StringMap.filter 
                 (fun name ty -> (match ty with
-                                        FunType _ -> true
-                                        |       _ -> false))
+                                        FunType _ | GroupType _ | RingType _ | FieldType _ -> true
+                                        | _ -> false))
                 gamma in 
             let gamma' = List.fold_left
                 (fun gamma ((name, tl), expr) -> let
@@ -432,12 +432,17 @@ let check (typ_decls, body) = let
                     in ((name, tl), semant gamma'' epsilon expr)) binds
             in let
                 epsilon' = List.fold_left
-                (fun epsilon ((name, ty), sexpr) -> (match sexpr with
+                (fun epsilon ((name, ty), sexpr) -> 
+                    let key = ".last_alg" in
+                    let epsilon_add = [(name, (IntExpr, SName "fu"))] in
+
+                    (match sexpr with
                         (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin)])
-                            -> StringMap.add (string_of_type_expr ty) 
+                            -> StringMap.add key epsilon_add
+                            (StringMap.add (string_of_type_expr ty) 
                                             [("==", seq); ("+", spl);
-                                             ("n", sneg); ("-", smin)] epsilon
+                                             ("n", sneg); ("-", smin)] epsilon)
                         | (RingType ty, sx) ->
                         let build_ref ty field = (ty, SName (name ^ "." ^ field))
                         in (match struct_sx sx with
@@ -445,10 +450,11 @@ let check (typ_decls, body) = let
                                    ("neg", sneg); ("minus", smin); one;
                                    ("times", stim); ("div", sdiv);
                                    ("mod", smod); gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                -> StringMap.add key epsilon_add
+                                (StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); ("mod", smod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon)
                                 | _ -> epsilon)
                         (*| (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin); one; 
@@ -467,13 +473,14 @@ let check (typ_decls, body) = let
                                    ("poly_neg", spneg); ("poly_times", sptim);
                                    ("poly_div", spdiv); ("poly_mod", spmod);
                                    poly_gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                -> StringMap.add key epsilon_add
+                                (StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); 
                                              ("p==", speq); ("p+", sppl);
                                              ("p-", spmin); ("pn", spneg); ("p*", sptim);
                                              ("p/", spdiv); ("pmod", spmod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon)
                             | _ -> epsilon)
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
@@ -575,6 +582,7 @@ let check (typ_decls, body) = let
 
 
       | Group (texp, zero, eq, plus, neg) -> 
+        let (alg_name, _) = List.hd (String_Map.find ".last_alg" epsilon)
         let build_group zero eq plus neg min =
             SStructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min)]
 
