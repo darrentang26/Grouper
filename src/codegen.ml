@@ -267,9 +267,9 @@ let translate (typ_decls, fns, letb) =
           let next = L.build_load pr "Next" builder in
           L.build_pointercast next list_node_p "Next_c" builder)
   | SPrint (typ, sx) -> 
-      let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-      let float_format_str = L.build_global_stringptr "%g\n" "fmt" builder in
-      let bool_format_str = L.build_global_stringptr "b%d\n" "fmt" builder in let
+      let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
+      let float_format_str = L.build_global_stringptr "%g" "fmt" builder in
+      let bool_format_str = L.build_global_stringptr "b%d" "fmt" builder in let
       value = expr builder scope gamma (typ, sx) in                          
       (match typ with 
         StringExpr -> let
