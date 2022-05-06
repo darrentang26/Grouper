@@ -34,6 +34,8 @@ let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
 let comul_type ty = FunType (ParamType [ty; IntExpr; PolyType ty; ty], PolyType ty)
 let bterm_type ty = FunType (ParamType [IntExpr; ty], PolyType ty)
 let gcd_type ty = FunType (ParamType [ty; ty; ty], ty)
+let pow_type ty = FunType (ParamType [ty; IntExpr], ty)
+let eval_type ty = FunType (ParamType [PolyType ty; ty], ty)
 
 let get_fun opp (op_name, sexp) = opp = op_name
 
@@ -41,8 +43,9 @@ let get_fun opp (op_name, sexp) = opp = op_name
 let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_type ty);
                     ("neg", unop_type ty); ("minus", binop_type ty)]
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
-                       ("inv", unop_type ty); ("div", binop_type ty); 
+                       ("inv", unop_type ty); ("div", binop_type ty); ("pow", pow_type ty);
                        ("make_poly", mpoly_type ty); ("poly_deg", pdeg_type ty);
+                       ("poly_eval", eval_type ty);
                        ("poly_equals", compare_type (PolyType ty));
                        ("poly_plus", poly_binop_type ty);
                        ("poly_minus", poly_binop_type ty);
@@ -53,7 +56,7 @@ let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty);
                        ("poly_gcd", poly_binop_type ty)]
 let ring_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("div", binop_type ty); ("mod", binop_type ty);
-                       ("gcd", gcd_type ty)]
+                       ("gcd", gcd_type ty); ("pow", pow_type ty)]
 let ring_to_struct ty = StructTypeExpr (ring_list ty)
 let field_to_struct ty = StructTypeExpr (field_list ty)
 
@@ -76,6 +79,15 @@ let gcd_bind modd equals ty index body =
                     Call(Call(Call(Name fun_name, Name "y"), Name "rem"), Name "zero")))))],
     body)
 
+let pow_bind times ty index body =
+    let fun_name = "pow." ^ string_of_int index in
+    Let([((fun_name, pow_type ty),
+        Function([("base", ty); ("exp", IntExpr)],
+            If(Binop(Name "exp", Equal, Literal 1),
+                Name "base",
+                Call(Call(times, Name "base"), Call(Call(Name fun_name, Name "base"), Binop(Name "exp", Sub, Literal 1))))))],
+        body)
+
 let poly_deg_bind ty index body =
     let fun_name = "poly_deg." ^ string_of_int index in
     Let([((fun_name, pdeg_type ty), 
@@ -85,6 +97,21 @@ let poly_deg_bind ty index body =
                         Binop(Literal 1, Add, 
                               Call(Name fun_name, CdrExpr (Name "xs"))))))], 
         body)
+
+let poly_eval_bind plus times ty index body =
+    let fun_name = "poly_eval." ^ string_of_int index in
+    let deg_name = "poly_deg." ^ string_of_int index in
+    let pow_name = "pow." ^ string_of_int index in
+    Let([((fun_name, eval_type ty),
+        Function([("ps", ListType ty); ("x", ty)],
+            If(Unop(Null, Name "ps"),
+                Name "x",
+                If(Unop(Null, CdrExpr(Name "ps")),
+                    CarExpr(Name "ps"),
+                    Let([(("d", IntExpr), Call(Name deg_name, Name "ps"))],
+                    Let([(("curr_term", ty), Call(Call(times, CarExpr(Name "ps")), Call(Call(Name pow_name, Name "x"), Name "d")))],
+                        Call(Call(plus, Name "curr_term"), Call(Call(Name fun_name, CdrExpr(Name "ps")), Name "x"))))))))],
+    body)
 
 let poly_neg_bind neg ty index body =
     let fun_name = "poly_neg." ^ string_of_int index in
@@ -389,6 +416,8 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
+            let (((fname, _),_)::_) = binds in
+            (try 
             let rec struct_sx sexp = (match sexp with
                                 SLet (binds, (ty, sx)) -> struct_sx sx
                             |   SStructInit sexprs -> sexprs
@@ -429,20 +458,30 @@ let check (typ_decls, body) = let
                 (fun epsilon ((name, ty), sexpr) -> (match sexpr with
                         (GroupType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin)])
-                            -> StringMap.add (string_of_type_expr ty) 
+                            ->  let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty) 
                                             [("==", seq); ("+", spl);
-                                             ("n", sneg); ("-", smin)] epsilon
+                                             ("n", sneg); ("-", smin)] epsilon'
                         | (RingType ty, sx) ->
                         let build_ref ty field = (ty, SName (name ^ "." ^ field))
                         in (match struct_sx sx with
                             [("zero", szero); ("equals", seq); ("plus", spl);
                                    ("neg", sneg); ("minus", smin); one;
                                    ("times", stim); ("div", sdiv);
-                                   ("mod", smod); gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                   ("mod", smod); gcd; pow]
+                                -> let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); ("mod", smod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon'
                                 | _ -> epsilon)
                         (*| (FieldType ty, SStructInit [zero; ("equals", seq); ("plus", spl); 
                                                     ("neg", sneg); ("minus", smin); one; 
@@ -455,23 +494,30 @@ let check (typ_decls, body) = let
                         in (match struct_sx sx with
                             [("zero", szero); ("equals", seq); ("plus", spl);
                                    ("neg", sneg); ("minus", smin); one;
-                                   ("times", stim); inv; ("div", sdiv);
-                                   make_poly; poly_deg; ("poly_equals", speq);
+                                   ("times", stim); inv; ("div", sdiv); pow;
+                                   make_poly; poly_deg; poly_eval;
+                                   ("poly_equals", speq);
                                    ("poly_plus", sppl); ("poly_minus", spmin);
                                    ("poly_neg", spneg); ("poly_times", sptim);
                                    ("poly_div", spdiv); ("poly_mod", spmod);
                                    poly_gcd]
-                                -> StringMap.add (string_of_type_expr ty)
+                                -> let epsilon' = if StringMap.mem (string_of_type_expr ty) epsilon
+                                    then let tracker = string_of_int (StringMap.cardinal epsilon)
+                                    in StringMap.add tracker [(".placeholder", (VoidExpr, SName "fake"))] epsilon
+                                    else epsilon
+
+                                    in StringMap.add (string_of_type_expr ty)
                                     [("==", seq); ("+", spl); ("n", sneg); ("-", smin);
                                              ("*", stim); ("/", sdiv); 
                                              ("p==", speq); ("p+", sppl);
                                              ("p-", spmin); ("pn", spneg); ("p*", sptim);
                                              ("p/", spdiv); ("pmod", spmod);
-                                             ("zero", szero)] epsilon
+                                             ("zero", szero)] epsilon'
                             | _ -> epsilon)
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
+        with Failure "cannot call a non-function with type Int" -> raise (Failure fname))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in
             if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
@@ -591,8 +637,10 @@ let check (typ_decls, body) = let
             let gen_bind field = (field, Name (field ^ "." ^ str_index)) in
             let struct_body = StructInit [("zero", zero); ("equals", eq); ("plus", plus); 
                                           ("neg", neg); ("minus", min); ("one", one); 
-                                          ("times", times); ("div", div); ("mod", modd); gen_bind "gcd"]
-            in gcd_bind modd eq texp index struct_body
+                                          ("times", times); ("div", div); ("mod", modd); 
+                                          gen_bind "gcd"; gen_bind "pow"]
+            in let pow_body = pow_bind times texp index struct_body
+            in gcd_bind modd eq texp index pow_body
         and (t0, s0) = semant gamma epsilon zero
         and (teq, seq) = semant gamma epsilon eq
         and (tpl, spl) = semant gamma epsilon plus
@@ -621,8 +669,9 @@ let check (typ_decls, body) = let
             let str_index = string_of_int index in
             let gen_bind field = (field, Name (field ^ "." ^ str_index)) in
             let struct_body = StructInit [("zero", zero); ("equals", eq); ("plus", plus); ("neg", neg); ("minus", min);
-                         ("one", one); ("times", times); ("inv", inv); ("div", div);
-                         ("make_poly", mpoly); gen_bind "poly_deg"; gen_bind "poly_equals";
+                         ("one", one); ("times", times); ("inv", inv); ("div", div); gen_bind "pow";
+                         ("make_poly", mpoly); gen_bind "poly_deg"; gen_bind "poly_eval";
+                         gen_bind "poly_equals";
                          gen_bind "poly_plus"; ("poly_minus", pmin); 
                          gen_bind "poly_neg"; gen_bind "poly_times";
                          gen_bind "poly_div"; gen_bind "poly_mod";
@@ -634,8 +683,10 @@ let check (typ_decls, body) = let
             let plus_body = poly_plus_bind plus texp index times_body in
             let neg_body = poly_neg_bind neg texp index plus_body in
             let eq_body = poly_equals_bind eq texp index neg_body in
-            let deg_body = poly_deg_bind texp index eq_body in
-            poly_reduce_bind eq texp index deg_body
+            let eval_body = poly_eval_bind plus times texp index eq_body in
+            let deg_body = poly_deg_bind texp index eval_body in
+            let reduce_body = poly_reduce_bind eq texp index deg_body
+            in pow_bind times texp index reduce_body
 
         and (t0, s0) = semant gamma epsilon zero
         and (teq, seq) = semant gamma epsilon eq

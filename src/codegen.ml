@@ -13,10 +13,11 @@ let idx_lookup field fs =
                   fs 0
 (* FIELDMOD *)
 let group_names = ["zero"; "equals"; "plus"; "neg"; "minus"]
-let field_names = group_names @ ["one"; "times"; "inv"; "div"; "make_poly"; "poly_deg"; "poly_equals"; 
+let field_names = group_names @ ["one"; "times"; "inv"; "div"; "pow"; "make_poly"; 
+                                 "poly_deg"; "poly_eval"; "poly_equals"; 
                                  "poly_plus"; "poly_minus"; "poly_neg"; "poly_times"; 
                                  "poly_div"; "poly_mod"; "poly_gcd"]
-let ring_names = group_names @ ["one"; "times"; "div"; "mod"; "gcd"]
+let ring_names = group_names @ ["one"; "times"; "div"; "mod"; "gcd"; "pow"]
 
 
 let compare_type ty = FunType (ParamType [ty; ty], BoolExpr)
@@ -27,14 +28,17 @@ let poly_unop_type ty = FunType (ParamType [PolyType ty; PolyType ty; ty], PolyT
 let mpoly_type ty = FunType (ParamType [ListType ty], PolyType ty)
 let pdeg_type ty = FunType (ParamType [PolyType ty], IntExpr)
 let gcd_type ty = FunType (ParamType [ty; ty; ty], ty)
+let pow_type ty = FunType (ParamType [ty; IntExpr], ty)
+let eval_type ty = FunType (ParamType [PolyType ty; ty], ty)
 
 let group_list ty = [("zero", ty); ("equals", compare_type ty); ("plus", binop_type ty);
                     ("neg", unop_type ty); ("minus", binop_type ty)]
 let group_to_struct ty = StructTypeExpr (group_list ty)
 
 let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
-                       ("inv", unop_type ty); ("div", binop_type ty); 
+                       ("inv", unop_type ty); ("div", binop_type ty); ("pow", pow_type ty);
                        ("make_poly", mpoly_type ty); ("poly_deg", pdeg_type ty);
+                       ("poly_eval", eval_type ty);
                        ("poly_equals", compare_type (PolyType ty));
                        ("poly_plus", poly_binop_type ty);
                        ("poly_minus", poly_binop_type ty);
@@ -43,11 +47,10 @@ let field_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty);
                        ("poly_div", poly_binop_type ty);
                        ("poly_mod", poly_binop_type ty);
                        ("poly_gcd", poly_binop_type ty)]
-let field_to_struct ty = StructTypeExpr (field_list ty)
-
 let ring_list ty = (group_list ty) @ [("one", ty); ("times", binop_type ty); 
                        ("div", binop_type ty); ("mod", binop_type ty);
-                       ("gcd", gcd_type ty)]
+                       ("gcd", gcd_type ty); ("pow", pow_type ty)]
+let field_to_struct ty = StructTypeExpr (field_list ty)
 let ring_to_struct ty = StructTypeExpr (ring_list ty)
 
 let translate (typ_decls, fns, letb) =
