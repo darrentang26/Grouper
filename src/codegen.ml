@@ -276,9 +276,9 @@ let translate (typ_decls, fns, letb) =
           str = L.build_in_bounds_gep value [| (L.const_int i32_t 0) |] "" builder in let
           _ = L.build_call print_func [| str |] "printf" builder 
           in value
-      | IntExpr -> L.build_call print_func [| int_format_str ;  value |] "printf" builder
-      | FloatExpr -> L.build_call print_func [| float_format_str ; value|] "printf" builder
-      | BoolExpr -> L.build_call print_func [|bool_format_str ; value|] "printf" builder
+      | IntExpr -> let _ = L.build_call print_func [| int_format_str ;  value |] "printf" builder in value
+      | FloatExpr -> let _ = L.build_call print_func [| float_format_str ; value|] "printf" builder in value
+      | BoolExpr -> let _ = L.build_call print_func [|bool_format_str ; value|] "printf" builder in value
       | _ -> raise (Failure ("printing of " ^ (string_of_type_expr typ) ^ " is not yet implemented")))
   
   (*| SPrint sexpr -> (match sexpr with 
