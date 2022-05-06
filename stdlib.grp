@@ -1,8 +1,33 @@
 (* Top for stdlib types*)
 type Fraction = {numer : Int, denom : Int}
 type Complex = {real : Float, fake : Float}
+type Error = PASS | FAIL
 
 (* series of lets for stdlib functions *)
+
+(* print n newlines *)
+let [Int] -> Int print_newlines = lambda (Int n)
+  if n < 0
+    then let [Error] -> Int newlines_error = lambda (Error k) match (k) with
+        | (PASS) -> 0
+      end
+      in let String a = print "
+"
+      in let String a = print "Error: print_newlines called with negative argument"
+      in let String a = print "
+"
+        in newlines_error FAIL
+    else if n == 0
+      then 0
+      else let String a = print "
+"
+        in print_newlines (n - 1)
+    end
+  end
+end
+
+(* print a string *)
+
 (* Standard Integer Operations*)
 
 (* expon: [Int, Int] -> Int 
