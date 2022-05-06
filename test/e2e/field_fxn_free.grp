@@ -1,0 +1,11 @@
+let [Int, Int] -> Bool eq = lambda (Int x Int y) (x mod 3) == (y mod 3) end in 
+let [Int, Int] -> Int pl = lambda (Int x Int y) (x + y) mod 3 end in
+let [Int] -> Int neg = lambda (Int x) ~x + 3 end in
+let [Int, Int] -> Int times = lambda (Int x Int y) (x * y) mod 3 end in
+let [Int] -> Int inv = lambda (Int x) x end in
+let Int field fd = field {Int, 0, eq, pl, neg, 1, times, inv} in
+let [Int poly, Int, Int] -> Int poly poly_pow = lambda (Int poly xs Int exp Int zero)
+    if exp == 1 then xs else fd.poly_times xs (poly_pow xs (exp - 1) zero) zero end end in
+let Int poly xp1_6 = poly_pow (fd.make_poly [1, 1]) 6 0 in
+
+print fd.poly_deg xp1_6
