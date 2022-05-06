@@ -31,7 +31,6 @@ let [Int, Int] -> Int int_mult = lambda (Int a Int b) a * b end
 let [Int, Int] -> Int int_div = lambda (Int a Int b) a / b end in
 
 let Int ring int_ring = ring {Int, 0, int_eq, int_add, int_neg, 1, int_mult, int_div} in
-let [Int, Int, Int] -> Int irgcd = int_ring.gcd in
 
 (* Fraction functions *)
 
@@ -43,7 +42,7 @@ let [Fraction] -> Fraction simplify = lambda (Fraction n)
                                         if (n.numer == n.denom) then {numer = 1, denom = 1} else
                                         let Int bigger = if (n.numer > n.denom) then n.numer else n.denom end
                                         and Int smaller = if (n.numer > n.denom) then n.denom else n.numer end in        
-                                        let Int gcd_top_bot = irgcd bigger smaller 0 in
+                                        let Int gcd_top_bot = int_ring.gcd bigger smaller 0 in
                                           {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)} end end in
 
 (* frac_equal: [Fraction, Fraction] -> Bool   

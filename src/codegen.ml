@@ -593,12 +593,15 @@ in let populate_function fun_type fun_defn fun_builder sexpr =
     in let value = expr fun_builder scope gamma' body
       in L.build_ret value fun_builder
 
+
+in let _ = expr main_builder StringMap.empty gamma letb
+in let _ = L.build_ret (L.const_int i32_t 0) main_builder
+
 in let _ = List.map
   (fun (((name, _), sexpr) : bind * sexpr) ->
     let (fun_type, fun_defn, fun_builder) = (try StringMap.find name user_functions with Not_found -> raise (Failure name))
       in populate_function fun_type fun_defn fun_builder sexpr)
   fns
 
-in let _ = expr main_builder StringMap.empty gamma letb
-in let _ = L.build_ret (L.const_int i32_t 0) main_builder
 in grp_module 
+
