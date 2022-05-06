@@ -1,0 +1,1 @@
+Fatal error: exception Semant.Failure("the left- and right-hand sides of bindings must match: Int =/= String")

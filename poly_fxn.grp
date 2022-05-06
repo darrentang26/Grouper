@@ -1,0 +1,120 @@
+let [Int, Int] -> Bool equal = lambda (Int x Int y) (x mod 3) == (y mod 3) end in 
+let [Int, Int] -> Int plus = lambda (Int x Int y) (x + y) mod 3 end in
+let [Int] -> Int neg = lambda (Int x) (~x + 3) mod 3 end in
+let [Int, Int] -> Int times = lambda (Int x Int y) (x * y) mod 3 end in
+let [Int] -> Int inv = lambda (Int x) x end in
+let [Int, Int] -> Int div = lambda (Int x Int y) times x (inv y) end in
+let Int zero = 0 in
+
+let [Int list] -> Int deg = lambda (Int list xs)
+    if null? xs then ~1 else 1 + (deg cdr xs) end end in
+
+let [Int, Int] -> Int pow = lambda (Int base Int exp)
+    if exp == 1 then base else times base (pow base (exp - 1)) end end in
+
+let [Int list, Int] -> Int eval = lambda (Int list ps Int x)
+    if (null? ps) then x
+    else if null? (cdr ps) then (car ps) else
+         let Int d = deg ps in
+         let Int curr_term = (times (car ps) (pow x d))
+            in plus curr_term (eval (cdr ps) x) end end end in
+
+let [Int list, Int list] -> Bool poly_equal = lambda (Int list xs Int list ys)
+    if null? xs && null? ys
+    then true
+    else if null? xs || null? ys
+         then false
+         else (equal (car xs) (car ys)) && (poly_equal (cdr xs) (cdr ys)) end end end in 
+
+let [Int list, Int] -> Int list poly_reduce = lambda (Int list xs Int zero)
+    if null? xs then zero :: []
+    else if equal (car xs) zero then poly_reduce (cdr xs) zero
+    else xs end end end in
+
+let [Int list] -> Int list poly_neg = lambda (Int list xs)
+    if null? xs then []
+    else (neg (car xs)) :: (poly_neg (cdr xs)) end end in
+
+let [Int list, Int list] -> Int list poly_plus_inner = 
+        lambda (Int list xs Int list ys)
+            if null? xs && null? ys 
+            then []
+            else let Int x = deg xs
+                 and Int y = deg ys in
+                if x < y 
+                then (car ys) :: (poly_plus_inner xs (cdr ys))
+                else if x > y
+                     then (car xs) :: (poly_plus_inner (cdr xs) ys)
+                     else (plus (car xs) (car ys)) :: (poly_plus_inner (cdr xs) (cdr ys)) end end end end in
+
+let [Int list, Int list, Int] -> Int list poly_plus = lambda (Int list xs Int list ys Int zero)
+    poly_reduce (poly_plus_inner xs ys) zero end in
+
+let [Int list, Int list, Int] -> Int list poly_minus =
+        lambda (Int list xs Int list ys Int zero)
+        poly_plus xs (poly_neg ys) zero end in
+
+
+let [Int, Int, Int list, Int] -> Int list co_mul =
+                lambda (Int coeff Int degree Int list xs Int zero)
+                    if null? xs && (degree == 0)
+                    then []
+                    else if null? xs
+                         then zero :: (co_mul coeff (degree - 1) xs zero)
+                         else (times coeff (car xs)) :: (co_mul coeff degree (cdr xs) zero) end end end in
+
+let [Int list, Int list, Int] -> Int list poly_times =
+    lambda (Int list xs Int list ys Int zero)
+        if null? xs
+        then []
+        else let Int x = deg xs
+            in if null? xs 
+               then []
+               else poly_plus (co_mul (car xs) (deg xs) ys zero) (poly_times (cdr xs) ys zero) zero end end end in
+
+let [Int, Int] -> Int list build_term = lambda (Int x Int zero)
+    if x == 0 then [] else zero :: (build_term (x - 1) zero) end end in
+
+let [Int list, Int list, Int] -> Int list poly_div_inner = 
+    lambda (Int list xs Int list ys Int zero)
+    if null? ys then []
+    else let Int x = deg xs
+         and Int y = deg ys in
+            if x < y || (poly_equal xs (zero :: [])) then []
+            else let Int lead_coeff = div (car xs) (car ys)
+              in let Int list lead_term = lead_coeff :: (build_term (x - y) zero)
+              in let Int list diff = poly_minus xs (poly_times lead_term ys zero) zero
+              in lead_coeff :: (poly_div_inner diff ys zero) end end end in
+
+let [Int list, Int list, Int] -> Int list poly_div =
+    lambda (Int list xs Int list ys Int zero)
+    let Int list q = poly_div_inner xs ys zero in
+        if null? q then zero :: q else q end end in
+
+let [Int list, Int list, Int] -> Int list poly_mod = 
+    lambda (Int list xs Int list ys Int zero)
+    if null? ys then xs
+    else let Int x = deg xs
+         and Int y = deg ys in
+            if x < y || (poly_equal xs (zero :: []))  then xs
+            else let Int lead_coeff = div (car xs) (car ys)
+              in let Int list lead_term = lead_coeff :: (build_term (x - y) zero)
+              in let Int list diff = poly_minus xs (poly_times lead_term ys zero) zero
+              in poly_mod diff ys zero end end end in
+
+let [Int list, Int list, Int] -> Int list poly_gcd_inner =
+    lambda (Int list xs Int list ys Int zero)
+        if (poly_equal ys (zero :: []))
+        then xs
+        else let Int list rem = poly_mod xs ys zero in
+            poly_gcd_inner ys rem zero end end in
+
+let [Int list, Int list, Int] -> Int list poly_gcd =
+    lambda (Int list xs Int list ys Int zero)
+        let Int list gcd = poly_gcd_inner xs ys zero in
+            if deg gcd == 0 then gcd else
+            poly_times gcd ((inv (car gcd)) :: []) zero end end in
+
+let Int list gcd = poly_gcd [1, 2, 0, 1] [1, 1] zero in
+print eval [1, 1, 2] 0
+

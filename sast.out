@@ -1,0 +1,87 @@
+(Int : let ([Int, Int] -> Bool) eq =
+(([Int, Int] -> Bool) : (Int x, Int y) -> (Bool : (Int : (Int : x) mod (Int : 3)) == (Int : (Int : y) mod (Int : 3))))
+in (Int : let ([Int, Int] -> Int) pl =
+(([Int, Int] -> Int) : (Int x, Int y) -> (Int : (Int : (Int : x) + (Int : y)) mod (Int : 3)))
+in (Int : let ([Int] -> Int) neg =
+(([Int] -> Int) : (Int x) -> (Int : (Int : -(Int : x)) + (Int : 3)))
+in (Int : let ([Int, Int] -> Int) times =
+(([Int, Int] -> Int) : (Int x, Int y) -> (Int : (Int : (Int : x) * (Int : y)) mod (Int : 3)))
+in (Int : let ([Int] -> Int) inv =
+(([Int] -> Int) : (Int x) -> (Int : x))
+in (Int : let Int field fd =
+(Int field : let ([Int, Int] -> Int) pow.0 =
+(([Int, Int] -> Int) : (Int base, Int exp) -> (Int : if (Bool : (Int : exp) == (Int : 1)) then (Int : base) else (Int : (([Int, Int] -> Int) : times): {(Int : base), (Int : (([Int, Int] -> Int) : pow.0): {(Int : base), (Int : (Int : exp) - (Int : 1))})})))
+in (Int field : let ([Int poly, Int] -> Int poly) poly_reduce.0 =
+(([Int list, Int] -> Int list) : (Int list xs, Int zero) -> (Int list : if (Bool : null?(Int list : xs)) then (Int list : ((Int : zero) :: ([] : []))) else (Int poly : if (Bool : (([Int, Int] -> Bool) : eq): {(Int : car (Int list : xs)), (Int : zero)}) then (Int poly : (([Int poly, Int] -> Int poly) : poly_reduce.0): {(Int list : cdr (Int list : xs)), (Int : zero)}) else (Int list : xs))))
+in (Int field : let ([Int poly] -> Int) poly_deg.0 =
+(([Int list] -> Int) : (Int list xs) -> (Int : if (Bool : null?(Int list : xs)) then (Int : -1) else (Int : (Int : 1) + (Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : cdr (Int list : xs))}))))
+in (Int field : let ([Int poly, Int] -> Int) poly_eval.0 =
+(([Int list, Int] -> Int) : (Int list ps, Int x) -> (Int : if (Bool : null?(Int list : ps)) then (Int : x) else (Int : if (Bool : null?(Int list : cdr (Int list : ps))) then (Int : car (Int list : ps)) else (Int : let Int d =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : ps)})
+in (Int : let Int curr_term =
+(Int : (([Int, Int] -> Int) : times): {(Int : car (Int list : ps)), (Int : (([Int, Int] -> Int) : pow.0): {(Int : x), (Int : d)})})
+in (Int : (([Int, Int] -> Int) : pl): {(Int : curr_term), (Int : (([Int poly, Int] -> Int) : poly_eval.0): {(Int list : cdr (Int list : ps)), (Int : x)})}))))))
+in (Int field : let ([Int list, Int list] -> Bool) poly_equals.0 =
+(([Int list, Int list] -> Bool) : (Int list xs, Int list ys) -> (Bool : if (Bool : (Bool : null?(Int list : xs)) && (Bool : null?(Int list : ys))) then (Bool : true) else (Bool : if (Bool : (Bool : null?(Int list : xs)) || (Bool : null?(Int list : ys))) then (Bool : false) else (Bool : (Bool : (([Int, Int] -> Bool) : eq): {(Int : car (Int list : xs)), (Int : car (Int list : ys))}) && (Bool : (([Int list, Int list] -> Bool) : poly_equals.0): {(Int list : cdr (Int list : xs)), (Int list : cdr (Int list : ys))})))))
+in (Int field : let ([Int list] -> Int list) poly_neg.0 =
+(([Int list] -> []) : (Int list xs) -> ([] : if (Bool : null?(Int list : xs)) then ([] : []) else (Int list : ((Int : (([Int] -> Int) : neg): {(Int : car (Int list : xs))}) :: (Int list : (([Int list] -> Int list) : poly_neg.0): {(Int list : cdr (Int list : xs))})))))
+in (Int field : let ([Int list, Int list] -> Int list) poly_plus_inner.0 =
+(([Int list, Int list] -> []) : (Int list xs, Int list ys) -> ([] : if (Bool : (Bool : null?(Int list : xs)) && (Bool : null?(Int list : ys))) then ([] : []) else (Int list : let Int x =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : xs)})
+and Int y =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : ys)})
+in (Int list : if (Bool : (Int : x) < (Int : y)) then (Int list : ((Int : car (Int list : ys)) :: (Int list : (([Int list, Int list] -> Int list) : poly_plus_inner.0): {(Int list : xs), (Int list : cdr (Int list : ys))}))) else (Int list : if (Bool : (Int : x) > (Int : y)) then (Int list : ((Int : car (Int list : xs)) :: (Int list : (([Int list, Int list] -> Int list) : poly_plus_inner.0): {(Int list : ys), (Int list : cdr (Int list : xs))}))) else (Int list : ((Int : (([Int, Int] -> Int) : pl): {(Int : car (Int list : xs)), (Int : car (Int list : ys))}) :: (Int list : (([Int list, Int list] -> Int list) : poly_plus_inner.0): {(Int list : cdr (Int list : xs)), (Int list : cdr (Int list : ys))}))))))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_plus.0 =
+(([Int list, Int list, Int] -> Int poly) : (Int list xs, Int list ys, Int zero) -> (Int poly : (([Int poly, Int] -> Int poly) : poly_reduce.0): {(Int list : (([Int list, Int list] -> Int list) : poly_plus_inner.0): {(Int list : xs), (Int list : ys)}), (Int : zero)}))
+in (Int field : let ([Int, Int, Int poly, Int] -> Int poly) co_mul.0 =
+(([Int, Int, Int list, Int] -> []) : (Int coeff, Int degree, Int list xs, Int zero) -> ([] : if (Bool : (Bool : null?(Int list : xs)) && (Bool : (Int : degree) == (Int : 0))) then ([] : []) else (Int poly : if (Bool : null?(Int list : xs)) then (Int poly : ((Int : zero) :: (Int poly : (([Int, Int, Int poly, Int] -> Int poly) : co_mul.0): {(Int : coeff), (Int : (Int : degree) - (Int : 1)), (Int list : xs), (Int : zero)}))) else (Int poly : ((Int : (([Int, Int] -> Int) : times): {(Int : coeff), (Int : car (Int list : xs))}) :: (Int poly : (([Int, Int, Int poly, Int] -> Int poly) : co_mul.0): {(Int : coeff), (Int : degree), (Int list : cdr (Int list : xs)), (Int : zero)}))))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_times.0 =
+(([Int list, Int list, Int] -> []) : (Int list xs, Int list ys, Int zero) -> ([] : if (Bool : null?(Int list : xs)) then ([] : []) else (Int poly : let Int x =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : xs)})
+in (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_plus.0): {(Int poly : (([Int, Int, Int poly, Int] -> Int poly) : co_mul.0): {(Int : car (Int list : xs)), (Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : xs)}), (Int list : ys), (Int : zero)}), (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_times.0): {(Int list : cdr (Int list : xs)), (Int list : ys), (Int : zero)}), (Int : zero)}))))
+in (Int field : let ([Int, Int] -> Int poly) build_term.0 =
+(([Int, Int] -> []) : (Int x, Int zero) -> ([] : if (Bool : (Int : x) == (Int : 0)) then ([] : []) else (Int poly : ((Int : zero) :: (Int poly : (([Int, Int] -> Int poly) : build_term.0): {(Int : (Int : x) - (Int : 1)), (Int : zero)})))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_div_inner.0 =
+(([Int list, Int list, Int] -> []) : (Int list xs, Int list ys, Int zero) -> ([] : if (Bool : null?(Int list : ys)) then ([] : []) else ([] : let Int x =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : xs)})
+and Int y =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : ys)})
+in ([] : if (Bool : (Bool : (Int : x) < (Int : y)) || (Bool : (([Int list, Int list] -> Bool) : poly_equals.0): {(Int list : xs), (Int list : ((Int : zero) :: ([] : [])))})) then ([] : []) else (Int poly : let Int lead_coeff =
+(Int : (([Int, Int] -> Int) : (Int x, Int y) -> (Int : (([Int, Int] -> Int) : times): {(Int : x), (Int : (([Int] -> Int) : inv): {(Int : y)})})): {(Int : car (Int list : xs)), (Int : car (Int list : ys))})
+in (Int poly : let Int list lead_term =
+(Int poly : ((Int : lead_coeff) :: (Int poly : (([Int, Int] -> Int poly) : build_term.0): {(Int : (Int : x) - (Int : y)), (Int : zero)})))
+in (Int poly : let Int list diff =
+(Int poly : (([Int list, Int list, Int] -> Int poly) : (Int list xs, Int list ys, Int zero) -> (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_plus.0): {(Int list : xs), (Int list : (([Int list] -> Int list) : poly_neg.0): {(Int list : ys)}), (Int : zero)})): {(Int list : xs), (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_times.0): {(Int list : lead_term), (Int list : ys), (Int : zero)}), (Int : zero)})
+in (Int poly : ((Int : lead_coeff) :: (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_div_inner.0): {(Int list : diff), (Int list : ys), (Int : zero)}))))))))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_div.0 =
+(([Int list, Int list, Int] -> Int list) : (Int list xs, Int list ys, Int zero) -> (Int list : let Int list q =
+(Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_div_inner.0): {(Int list : xs), (Int list : ys), (Int : zero)})
+in (Int list : if (Bool : null?(Int list : q)) then (Int list : ((Int : zero) :: (Int list : q))) else (Int list : q))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_mod.0 =
+(([Int list, Int list, Int] -> Int list) : (Int list xs, Int list ys, Int zero) -> (Int list : if (Bool : null?(Int list : ys)) then (Int list : xs) else (Int list : let Int x =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : xs)})
+and Int y =
+(Int : (([Int poly] -> Int) : poly_deg.0): {(Int list : ys)})
+in (Int list : if (Bool : (Bool : (Int : x) < (Int : y)) || (Bool : (([Int list, Int list] -> Bool) : poly_equals.0): {(Int list : xs), (Int list : ((Int : zero) :: ([] : [])))})) then (Int list : xs) else (Int poly : let Int lead_coeff =
+(Int : (([Int, Int] -> Int) : (Int x, Int y) -> (Int : (([Int, Int] -> Int) : times): {(Int : x), (Int : (([Int] -> Int) : inv): {(Int : y)})})): {(Int : car (Int list : xs)), (Int : car (Int list : ys))})
+in (Int poly : let Int list lead_term =
+(Int poly : ((Int : lead_coeff) :: (Int poly : (([Int, Int] -> Int poly) : build_term.0): {(Int : (Int : x) - (Int : y)), (Int : zero)})))
+in (Int poly : let Int list diff =
+(Int poly : (([Int list, Int list, Int] -> Int poly) : (Int list xs, Int list ys, Int zero) -> (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_plus.0): {(Int list : xs), (Int list : (([Int list] -> Int list) : poly_neg.0): {(Int list : ys)}), (Int : zero)})): {(Int list : xs), (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_times.0): {(Int list : lead_term), (Int list : ys), (Int : zero)}), (Int : zero)})
+in (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_mod.0): {(Int list : diff), (Int list : ys), (Int : zero)}))))))))
+in (Int field : let ([Int poly, Int poly, Int] -> Int poly) poly_gcd.0 =
+(([Int list, Int list, Int] -> Int list) : (Int list xs, Int list ys, Int zero) -> (Int list : if (Bool : (([Int list, Int list] -> Bool) : poly_equals.0): {(Int list : ys), (Int list : ((Int : zero) :: ([] : [])))}) then (Int list : xs) else (Int poly : let Int list rem =
+(Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_mod.0): {(Int list : xs), (Int list : ys), (Int : zero)})
+in (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_gcd.0): {(Int list : ys), (Int list : rem), (Int : zero)}))))
+in (Int field : {zero = (Int : 0), equals = (([Int, Int] -> Bool) : eq), plus = (([Int, Int] -> Int) : pl), neg = (([Int] -> Int) : neg), minus = (([Int, Int] -> Int) : (Int x, Int y) -> (Int : (([Int, Int] -> Int) : pl): {(Int : x), (Int : (([Int] -> Int) : neg): {(Int : y)})})), one = (Int : 1), times = (([Int, Int] -> Int) : times), inv = (([Int] -> Int) : inv), div = (([Int, Int] -> Int) : (Int x, Int y) -> (Int : (([Int, Int] -> Int) : times): {(Int : x), (Int : (([Int] -> Int) : inv): {(Int : y)})})), pow = (([Int, Int] -> Int) : pow.0), make_poly = (([Int list] -> Int list) : (Int list xs) -> (Int list : xs)), poly_deg = (([Int poly] -> Int) : poly_deg.0), poly_eval = (([Int poly, Int] -> Int) : poly_eval.0), poly_equals = (([Int list, Int list] -> Bool) : poly_equals.0), poly_plus = (([Int poly, Int poly, Int] -> Int poly) : poly_plus.0), poly_minus = (([Int list, Int list, Int] -> Int poly) : (Int list xs, Int list ys, Int zero) -> (Int poly : (([Int poly, Int poly, Int] -> Int poly) : poly_plus.0): {(Int list : xs), (Int list : (([Int list] -> Int list) : poly_neg.0): {(Int list : ys)}), (Int : zero)})), poly_neg = (([Int list] -> Int list) : poly_neg.0), poly_times = (([Int poly, Int poly, Int] -> Int poly) : poly_times.0), poly_div = (([Int poly, Int poly, Int] -> Int poly) : poly_div.0), poly_mod = (([Int poly, Int poly, Int] -> Int poly) : poly_mod.0), poly_gcd = (([Int poly, Int poly, Int] -> Int poly) : poly_gcd.0)}))))))))))))))))
+in (Int : let Int poly ys =
+(Int poly : (([Int list] -> Int poly) : fd.make_poly): {(Int list : ((Int : 1) :: (Int list : ((Int : 2) :: (Int list : ((Int : 0) :: (Int list : ((Int : 1) :: ([] : [])))))))))})
+in (Int : let Int poly xs =
+(Int poly : (([Int list] -> Int poly) : fd.make_poly): {(Int list : ((Int : 1) :: (Int list : ((Int : 1) :: ([] : [])))))})
+in (Int : let Int poly quotient =
+(Int poly : (([Int poly, Int poly, Int] -> Int poly) : fd.poly_div): {(Int poly : xs), (Int poly : ys), (Int : fd.zero)})
+in (Int : let Int poly remainder =
+(Int poly : (([Int poly, Int poly, Int] -> Int poly) : fd.poly_mod): {(Int poly : xs), (Int poly : ys), (Int : fd.zero)})
+in (Int : let Int poly gcd =
+(Int poly : (([Int poly, Int poly, Int] -> Int poly) : fd.poly_gcd): {(Int poly : xs), (Int poly : ys), (Int : fd.zero)})
+in (Int : print: (Int : (([Int poly, Int] -> Int) : fd.poly_eval): {(Int list : ((Int : 2) :: (Int list : ((Int : 1) :: (Int list : ((Int : 2) :: ([] : []))))))), (Int : 2)})))))))))))))

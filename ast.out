@@ -1,0 +1,12 @@
+let ([Int, Int] -> Bool) eq = (Int x, Int y) -> x mod 3 == y mod 3 in
+let ([Int, Int] -> Int) pl = (Int x, Int y) -> x + y mod 3 in
+let ([Int] -> Int) neg = (Int x) -> -x + 3 in
+let ([Int, Int] -> Int) times = (Int x, Int y) -> x * y mod 3 in
+let ([Int] -> Int) inv = (Int x) -> x in
+let Int field fd = Int 0 eq pl neg 1 times inv in
+let Int poly ys = ( Call fd.make_poly on (1 :: (2 :: (0 :: (1 :: []))))) in
+let Int poly xs = ( Call fd.make_poly on (1 :: (1 :: []))) in
+let Int poly quotient = ( Call ( Call ( Call fd.poly_div on xs) on ys) on fd.zero) in
+let Int poly remainder = ( Call ( Call ( Call fd.poly_mod on xs) on ys) on fd.zero) in
+let Int poly gcd = ( Call ( Call ( Call fd.poly_gcd on xs) on ys) on fd.zero) in
+print: ( Call ( Call fd.poly_eval on (2 :: (1 :: (2 :: [])))) on 2)
