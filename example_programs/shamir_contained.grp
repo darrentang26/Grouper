@@ -1,3 +1,4 @@
+(* This version is standalone and can be compiled by itself *)
 let [Int, Int, Int, Int, Int] -> Int disc_inv_helper = 
 lambda (Int old_r Int r Int old_t Int t Int base) 
   if r == 0 then if old_t < 0 then old_t + base else old_t end else 
@@ -19,44 +20,27 @@ let Int to_get_secret = 4 in (* number of sharers needed to obtain secret *)
 let Int secret = 14 in (* f(0) in our polynomial, or y-intercept term, which holds the secret *)
 
 (* Privately generated polynomial to generate keys *)
-(* The following integers were randomly generated 0 < n < p *)
+(* The following integers were randomly generated 0 < n < p, all polynomial coefficients must be unique *)
 (* Every sharer recieves a pair (xi, yi) s.t. yi = f(xi) and they know only their pair *)
 let Int poly as = zmod19.make_poly [9, 4, 18, 12, secret] in (* randomly generated coefficients *)
-let Int list xs = [13, 7, 5, 14, 2] in (* randomly generated x value points *)
-(* let Int y1 = zmod19.poly_eval as (car xs) in
-let Int y2 = zmod19.poly_eval as (car (cdr xs)) in
-let Int y3 = zmod19.poly_eval as (car (cdr (cdr xs))) in
-let Int y4 = zmod19.poly_eval as (car (cdr (cdr (cdr xs)))) in
-let Int y5 = zmod19.poly_eval as (car (cdr (cdr (cdr (cdr xs))))) in) *)
+let Int list xs = [13, 7, 5, 14, 2] in (* unique randomly generated x value points *)
 
 let [Int poly, Int list] -> Int list get_ys = lambda (Int poly as Int list xs) 
                                                 if null? xs then [] 
                                                 else (zmod19.poly_eval as (car xs))::(get_ys as (cdr xs)) end end in
 let Int list ys = get_ys as xs in 
-(*let Int list ys = [y1, y2, y3, y4, y5] in*)
 (* xs and ys are parallel lists for polynomial points, we retrieve the secret using only xs and ys *)                                                
-(* LaGrange Polynomials *)
+(* using the LaGrange Polynomial Interpolation  *)
 
 let [Int, Int list] -> Int prod = 
   lambda (Int xi Int list xjs)
     if null? xjs then 1 
     else if xi == (car xjs) then prod xi (cdr xjs)
-    else mod19_times (mod19_times (mod19_neg car xjs) (zmod19.inv (mod19_add xi (mod19_neg car xjs)))) (prod xi (cdr xjs)) end end end in
+    else zmod19.times (zmod19.times (zmod19.neg car xjs) (zmod19.inv (zmod19.plus xi (zmod19.neg car xjs)))) (prod xi (cdr xjs)) end end end in
 
 let [Int list, Int list, Int list] -> Int sum = 
   lambda (Int list curr_xs Int list curr_ys Int list all_xs)
     if null? curr_xs then 0 
-    else mod19_add (mod19_times (car curr_ys) (prod (car curr_xs) all_xs)) (sum (cdr curr_xs) (cdr curr_ys) all_xs) end end
-
-(* let [Int, Int list] -> Int prod = 
-  lambda (Int xi Int list xjs) 
-    if null? xjs then 1 
-    else if xi == (car xjs) then prod xi (cdr xjs)
-    else ((car xjs) * (discrete_inv 19 (xi - (car xjs)))) * (prod xi (cdr xjs)) end end end in
-
-let [Int list, Int list, Int list] -> Int sum = 
-  lambda (Int list curr_xs Int list curr_ys Int list all_xs)
-    if null? curr_xs then 0 
-    else ((car curr_ys) * (prod (car curr_xs) all_xs)) + (sum (cdr curr_xs) (cdr curr_ys) all_xs) end end *)
+    else zmod19.plus (zmod19.times (car curr_ys) (prod (car curr_xs) all_xs)) (sum (cdr curr_xs) (cdr curr_ys) all_xs) end end
 
 in print sum xs ys xs
