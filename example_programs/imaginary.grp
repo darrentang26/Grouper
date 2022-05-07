@@ -1,0 +1,117 @@
+(* Float field definitions *)
+let [Float, Float] -> Bool eq = lambda (Float x Float y) x == y end in 
+let [Float, Float] -> Float pl = lambda (Float x Float y) x + y end in
+let [Float] -> Float neg = lambda (Float x) ~x end in
+let [Float, Float] -> Float times = lambda (Float x Float y) x * y end in
+let [Float] -> Float inv = lambda (Float x) 1.0 / x end in
+let Float field fd = field {Float, 0.0, eq, pl, neg, 1.0, times, inv} in
+
+
+(* Complex number field definitions *)
+
+(* Complex reduction *)
+let [Float poly] -> Float poly compl_reduce =
+  lambda (Float poly xs)
+    if fd.poly_deg xs > 3
+      then
+        let Int x = error "cannot reduce polynomial with degree > 2"
+          in xs
+      else if fd.poly_deg xs == 2
+        then
+          fd.poly_plus
+            (fd.poly_neg (fd.make_poly [car xs]))
+            (cdr xs)
+            0.0
+        else
+          xs
+      end
+    end
+  end in
+
+(* Complex equality with reduction *)
+let [Float poly, Float poly] -> Bool compl_eq =
+  lambda (Float poly xs Float poly ys)
+    let Float poly xs = compl_reduce xs
+    and Float poly ys = compl_reduce ys
+      in fd.poly_equals xs ys
+  end in
+
+(* Complex addition with reduction *)
+let [Float poly, Float poly] -> Float poly compl_add =
+  lambda (Float poly xs Float poly ys)
+    let Float poly xs = compl_reduce xs
+    and Float poly ys = compl_reduce ys
+      in fd.poly_plus xs ys 0.0
+  end in
+
+(* Complex negation with reduction *)
+let [Float poly] -> Float poly compl_neg =
+  lambda (Float poly xs)
+    let Float poly xs = compl_reduce xs
+      in fd.poly_neg xs
+  end in
+
+(* Complex multiplication with reduction *)
+let [Float poly, Float poly] -> Float poly compl_times =
+  lambda (Float poly xs Float poly ys)
+    let Float poly xs = compl_reduce xs
+    and Float poly ys = compl_reduce ys
+      in fd.poly_times xs ys 0.0
+  end in
+
+(* Complex inversion with reduction *)
+let [Float poly] -> Float poly compl_inv =
+  lambda (Float poly xs)
+    let Float poly xs = compl_reduce xs
+      in if (fd.poly_deg xs) == 0
+        then fd.make_poly [fd.inv (car xs)]
+        else
+          let Float a = car xs
+          and Float b = car (cdr xs)
+            in let Float denom = (a * a) + (b * b)
+              in fd.make_poly [(~a) / denom, b / denom]
+      end
+  end in
+
+let Float poly compl_zero = fd.make_poly [0.0] in
+let Float poly compl_one = fd.make_poly [1.0] in
+let (Float poly) field compl =
+  field {Float poly,
+          compl_zero, compl_eq, compl_add, compl_neg, (* additive group *)
+          compl_one, compl_times, compl_inv} in (* multiplicative group *)
+
+
+(* Complex number helpers *)
+
+(* Complex number printing *)
+let [Float poly] -> Int compl_print =
+  lambda (Float poly xs)
+    let Float poly xs = compl_reduce xs
+      in if fd.poly_deg xs == 1
+        then
+          let Float f = print (car xs) in
+          let String s = print "i + "
+            in compl_print (cdr xs)
+        else
+          let Float f = print (car xs)
+            in 0
+      end
+  end in
+
+(* Complex number creation *)
+(* ai + b *)
+let [Float, Float] -> Float poly compl_make =
+  lambda (Float a Float b)
+    fd.make_poly [a, b]
+  end in
+
+
+(* Sandbox *)
+
+(* Instantiaion *)
+let Float poly xs = compl_make 12.0 (~0.9) in
+let Float poly ys = compl.inv xs in
+
+(* Prints out 1!!! *)
+let Int x = compl_print (xs * ys)
+in print_newlines 1
