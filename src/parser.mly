@@ -23,9 +23,6 @@ open Ast
 %nonassoc FUNCTION IF
 %nonassoc COMMA
 %right ARROW
-%nonassoc LIST
-%nonassoc POLY
-%nonassoc GROUP RING FIELD
 %right ASSIGN
 %nonassoc LITERAL FLIT BLIT STRINGLIT NAME ADTNAME
 %nonassoc LPAREN RPAREN LBRACE LBRACKET RBRACE RBRACKET
@@ -34,6 +31,9 @@ open Ast
 %left EQ NEQ LT GT LEQ GEQ
 %left PLUS MINUS
 %left STAR DIVIDE MOD
+%nonassoc GROUP RING FIELD
+%nonassoc POLY
+%nonassoc LIST
 %nonassoc FUN
 %nonassoc CAR CDR NULL
 %nonassoc NOT NEG

@@ -1,0 +1,2 @@
+let Int * Bool x = (3, false) in
+if cdr x then print car x else print car x + 1 end

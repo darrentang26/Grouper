@@ -1,0 +1,55 @@
+type Fraction = {numer : Int, denom : Int}
+
+let [Int] -> Int abs = lambda (Int x) if x < 0 then ~x else x end end
+let [Int, Int] -> Int gcd = lambda (Int x Int y)
+  if y == 0 then x else
+    let Int rem = x mod y in
+      gcd y rem end end 
+let [Fraction] -> Fraction simplify = lambda (Fraction n) 
+                                        if (n.numer == n.denom) then {numer = 1, denom = 1} else
+                                        let Int bigger = if ((abs n.numer) > (abs n.denom)) then (abs n.numer) else (abs n.denom) end
+                                        and Int smaller = if ((abs n.numer) > (abs n.denom)) then (abs n.denom) else (abs n.numer) end in        
+                                        let Int gcd_top_bot = gcd bigger smaller in
+                                          {numer = (n.numer / gcd_top_bot), denom = (n.denom / gcd_top_bot)} end end in
+
+let [Fraction, Fraction] -> Bool frac_equal = lambda (Fraction m Fraction n) (m.numer * n.denom) == (n.numer * m.denom) end in
+
+let [Fraction, Fraction] -> Fraction frac_add = lambda (Fraction m Fraction n) 
+                                                  let Fraction simple_m = simplify m in
+                                                  let Fraction simple_n = simplify n in
+                                                    simplify {numer = (simple_n.numer * simple_m.denom + simple_m.numer * simple_n.denom), 
+                                                              denom = (simple_m.denom * simple_n.denom)} end in
+
+let [Fraction] -> Fraction frac_neg = lambda (Fraction n) 
+                                        let Fraction simple_n = simplify n in
+                                        {numer = ~(simple_n.numer), denom = simple_n.denom} end in
+ 
+let [Fraction] -> Fraction frac_inv = lambda (Fraction n) 
+                                        let Fraction simple_n = simplify n in
+                                        {numer = simple_n.denom, denom = simple_n.numer} end in
+
+let [Fraction, Fraction] -> Fraction frac_mult = lambda (Fraction m Fraction n)
+                                                 simplify {numer = (m.numer * n.numer), denom = (m.denom * n.denom)} end in
+
+let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} in
+let Fraction zero = {numer = 0, denom = 1} in
+let Fraction field rat_field = field {Fraction, zero, 
+                                     frac_equal, frac_add, 
+                                     frac_neg, {numer = 1, denom = 1},
+                                     frac_mult, frac_inv} in 
+
+let Fraction x = {numer = 3, denom = 5} in
+let Fraction y = {numer = 6, denom = 10} in
+let Fraction poly xs = [{numer = 3, denom = 4}] in
+let Fraction poly ys = [{numer = 2, denom = 3}] in
+
+let [Fraction poly, Fraction poly, Fraction] -> Fraction poly add_polys =
+    lambda (Fraction poly a Fraction poly b Fraction zero) 
+    rat_field.poly_plus a b zero end in
+let Fraction poly sum = add_polys xs ys zero in
+let Fraction coeff = car sum in
+let [Fraction] -> Fraction print_frac = lambda (Fraction m)
+  let Int num = print m.numer
+  in let String over = print "/"
+  in let Int denom = print m.denom in m end
+in print_frac coeff

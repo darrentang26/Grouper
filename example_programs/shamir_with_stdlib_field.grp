@@ -1,0 +1,38 @@
+(* The following are to set up the problem, not required in computation*)
+let Int num_total = 20 in (* total number of sharers *)
+let Int to_get_secret = 11 in (* number of sharers needed to obtain secret *)
+
+(* The following are used in computation *)
+let Int secret = 985 in (* f(0) in our polynomial, or y-intercept term, which holds the secret *)
+
+(* Privately generated polynomial to generate keys *)
+(* The following integers were randomly generated 0 < n < p, all polynomial coefficients must be unique *)
+(* Every sharer recieves a pair (xi, yi) s.t. yi = f(xi) and they know only their pair *)
+let Int poly as = z_mod_large_p.make_poly [125, 465, 181, 
+                                           167, 655, 266, 
+                                           756, 454, 57,
+                                           122, 34, secret] in (* randomly generated coefficients *)
+let Int list xs = [133, 721, 567, 
+                   141, 223, 98,
+                   343, 432, 12,
+                   25, 456, 234] in (* unique randomly generated x value points *)
+
+let [Int poly, Int list] -> Int list get_ys = lambda (Int poly as Int list xs) 
+                                                if null? xs then [] 
+                                                else (z_mod_large_p.poly_eval as (car xs))::(get_ys as (cdr xs)) end end in
+let Int list ys = get_ys as xs in 
+(* xs and ys are parallel lists for polynomial points, we retrieve the secret using only xs and ys *)                                                
+(* using the LaGrange Polynomial Interpolation  *)
+
+let [Int, Int list] -> Int prod = 
+  lambda (Int xi Int list xjs)
+    if null? xjs then 1 
+    else if xi == (car xjs) then prod xi (cdr xjs)
+    else z_mod_large_p.times (z_mod_large_p.times (z_mod_large_p.neg car xjs) (z_mod_large_p.inv (z_mod_large_p.plus xi (z_mod_large_p.neg car xjs)))) (prod xi (cdr xjs)) end end end in
+
+let [Int list, Int list, Int list] -> Int sum = 
+  lambda (Int list curr_xs Int list curr_ys Int list all_xs)
+    if null? curr_xs then 0 
+    else z_mod_large_p.plus (z_mod_large_p.times (car curr_ys) (prod (car curr_xs) all_xs)) (sum (cdr curr_xs) (cdr curr_ys) all_xs) end end
+
+in print sum xs ys xs

@@ -5,6 +5,8 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+exception Failure of string
+
 let idx_lookup field fs =
   List.fold_right (fun name acc ->
                       if acc > 0 then acc + 1 
@@ -99,7 +101,7 @@ let translate (typ_decls, fns, letb) =
     | ListType tau -> list_node_p
     | EmptyListType -> list_node_p
     | PolyType tau -> ltype_of_typ (ListType tau)
-    | PairType (tau1, tau2) -> struct_t [| (ltype_of_typ tau1); (ltype_of_typ tau2) |]
+    | PairType (tau1, tau2) -> L.pointer_type (struct_t [| (ltype_of_typ tau1); (ltype_of_typ tau2) |])
     | FunType (ParamType pts, rt) -> L.pointer_type (L.function_type (ltype_of_typ rt) (Array.of_list (List.map ltype_of_typ pts)))
     | GroupType ty -> ltype_of_typ (group_to_struct ty)
     | FieldType ty -> ltype_of_typ (field_to_struct ty)
@@ -236,16 +238,25 @@ let translate (typ_decls, fns, letb) =
       (*L.const_struct context [| v1; ptr|]*)
   | SEmptyListExpr ->
       L.const_pointer_null list_node_p
-  | SPairExpr (sexp1, sexp2) -> L.const_struct context
+  | SPairExpr ((t1, e1), (t2, e2)) -> 
+    let v1 = expr builder scope gamma (t1, e1) in
+    let v2 = expr builder scope gamma (t2, e2) in
+    let pair_type = struct_t [|ltype_of_typ t1; ltype_of_typ t2|] in
+    let pair = L.build_malloc pair_type "Pair" builder in
+    let pair_c = L.build_pointercast pair (L.pointer_type pair_type) "Pair_c" builder in
+    let fst_ptr = L.build_struct_gep pair_c 0 "Fst_p" builder in
+    let _ = L.build_store v1 fst_ptr builder in
+    let snd_ptr = L.build_struct_gep pair_c 1 "Snd_p" builder in
+    let _ = L.build_store v2 snd_ptr builder in 
+    pair_c
+  (*L.const_struct context
                                   (Array.of_list 
                                     (List.map 
                                       (fun (sexp) -> expr builder scope gamma sexp) 
-                                    [sexp1; sexp2]))
+                                    [sexp1; sexp2]))*)
   | SCarExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
-          let v = (match e with 
-                      SName name -> (try StringMap.find name scope with Not_found -> raise (Failure "car/cdr"))
-                    | _ -> expr builder scope gamma (t, e)) in
+          let v = expr builder scope gamma (t, e) in
           let pr = L.build_struct_gep v 0 "pair.fst" builder in
           L.build_load pr "pair.fst" builder
     | ListType tau | PolyType tau ->
@@ -256,9 +267,7 @@ let translate (typ_decls, fns, letb) =
           L.build_load data_c "Data" builder)
   | SCdrExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
-        let v = (match e with
-                    SName name -> (try StringMap.find name scope with Not_found -> raise (Failure "car/cdr"))
-                  | _ -> expr builder scope gamma (t, e)) in
+        let v = expr builder scope gamma (t, e) in
         let pr = L.build_struct_gep v 1 "pair.snd" builder in
         L.build_load pr "pair.fst" builder
       | ListType _ | PolyType _ ->
@@ -300,7 +309,7 @@ let translate (typ_decls, fns, letb) =
               (* global *)
               L.build_load global name builder
           | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
-    | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
+    | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure ("unbound variable " ^ name))) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
     right = expr builder scope gamma (tr, sr) in
