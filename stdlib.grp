@@ -134,6 +134,15 @@ let [Fraction] -> Fraction frac_inv = lambda (Fraction n)
 let [Fraction, Fraction] -> Fraction frac_mult = lambda (Fraction m Fraction n)
                                                  simplify {numer = (m.numer * n.numer), denom = (m.denom * n.denom)} end in
 
+(* print_frac: [Fraction] -> Fraction
+ * params: Fraction m
+ * returns: m while printing m as numer/denom
+ *)
+let [Fraction] -> Fraction print_frac = lambda (Fraction m)
+  let Int num = print m.numer
+  in let String over = print "/"
+  in let Int denom = print m.denom in m end in
+
 (* The rationals group and field *)
 let Fraction group rat_group = group {Fraction, {numer = 0, denom = 1}, frac_equal, frac_add, frac_neg} in
 let Fraction field rat_field = field {Fraction, {numer = 0, denom = 1}, 

@@ -494,8 +494,8 @@ let check (typ_decls, body) = let
                             with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
                             in let (_, (_, szero)) = try List.find (get_fun ("zero")) (StringMap.find (string_of_type_expr tau) epsilon)
                                 with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
-                            in let ty = (match opp with "p==" -> BoolExpr | _ -> t1)
-                            in (ty, SCall(sexp, [(t1, s1); (t2, s2); (tau, szero)]))
+                            in (match opp with "p==" -> (BoolExpr, SCall(sexp, [(t1, s1); (t2, s2)]))
+                                | _ -> (t1, SCall(sexp, [(t1, s1); (t2, s2); (tau, szero)])))
 
                         | _ -> let (opp, sexp) = try List.find (get_fun (string_of_op op)) (StringMap.find (string_of_type_expr t1) epsilon)
                             with Not_found -> raise (Failure ("cannot apply " ^ string_of_op op ^ " to arguments of type " ^ string_of_type_expr t1))
@@ -517,8 +517,6 @@ let check (typ_decls, body) = let
                     | _ -> raise (Failure ("cannot apply " ^ string_of_uop uop ^ " to argument of type " ^ string_of_type_expr ty)))
                     (* This needs to have algebra added to it *)
       | Let (binds, body) ->
-            let (((fname, _),_)::_) = binds in
-            (try 
             let rec struct_sx sexp = (match sexp with
                                 SLet (binds, (ty, sx)) -> struct_sx sx
                             |   SStructInit sexprs -> sexprs
@@ -624,7 +622,6 @@ let check (typ_decls, body) = let
                         | _ -> epsilon)) epsilon sbinds
                 in let (t, sx) = semant gamma' epsilon' body
                     in (t, SLet (sbinds, (t, sx)))
-        with Failure "unbound identifier x" -> raise (Failure fname))
       | If (cond_expr, then_expr, else_expr) -> let
             (cond_t, cond_s) = semant gamma epsilon cond_expr in
             if cond_t != BoolExpr then raise (Failure "if condition expression must be a boolean")
@@ -646,8 +643,7 @@ let check (typ_decls, body) = let
                 (fun (name, tl) -> tl)
                 binds and
             (rt, sbody) = semant gamma' epsilon body
-                in if binds = [] then raise (Failure "all functions must have at least one parameter")
-                    else(FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
+                in (FunType (ParamType param_types, rt), SFunction (binds, (rt, sbody)))
       | AdtExpr target -> (match target with
             TargetWildName target_name -> let
                 (type_name, arg_type) = lookup_adt target_name rho in
@@ -719,26 +715,6 @@ let check (typ_decls, body) = let
                    (_, found_type) = List.find (fun (curr_field, _) -> curr_field = field) binds in
                      (found_type, SStructRef(var,field))
                 |  _ -> raise (Failure (var ^ " is not a struct")))
-            (*|  GroupType ty -> 
-                let (n, t) = try List.find (fun (name, tau) -> name = field) (group_list ty)
-                                            with Not_found -> raise (Failure (field ^ " is not a valid group element"))
-
-                    in let sx = if field = "zero" or field = "one" then
-                        SStructRef(var, field) else SName (var ^ "." ^ field)
-                    in (t, sx)
-            |  RingType ty -> 
-                let (n, t) = try List.find (fun (name, tau) -> name = field) (ring_list ty)
-                                            with Not_found -> raise (Failure (field ^ " is not a valid ring element"))
-
-                    in let sx = if field = "zero" or field = "one" then
-                        SStructRef(var, field) else SName (var ^ "." ^ field)
-                    in (t, sx)
-            |  FieldType ty ->
-                let (n, t) = try List.find (fun (name, tau) -> name = field) (field_list ty)
-                                            with Not_found -> raise (Failure (field ^ " is not a valid field element"))
-                    in let sx = if field = "zero" or field = "one" then
-                        SStructRef(var, field) else SName (var ^ "." ^ field)
-                    in (t, sx)*)
             |  _ -> raise (Failure "What was accessed was not a name")))
 
 
@@ -898,7 +874,9 @@ let check (typ_decls, body) = let
                 in (rt, SMatch (binds, sevals))
             
       | Call (e1, e2) -> semant_call gamma epsilon (Call (e1, e2))
-      | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))
+      (*let (ty, sx) = semant_call gamma epsilon (Call (e1, e2))
+      in match
+      | expr -> raise (Failure (string_of_expr expr ^ " not yet implemented"))*)
 
     and semant_call gamma epsilon call =
         let rec semant_call_inner = function

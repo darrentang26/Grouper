@@ -5,6 +5,8 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+exception Failure of string
+
 let idx_lookup field fs =
   List.fold_right (fun name acc ->
                       if acc > 0 then acc + 1 
@@ -300,7 +302,7 @@ let translate (typ_decls, fns, letb) =
               (* global *)
               L.build_load global name builder
           | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
-    | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
+    | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure ("unbound variable " ^ name))) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
     right = expr builder scope gamma (tr, sr) in
