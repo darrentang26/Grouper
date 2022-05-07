@@ -308,7 +308,7 @@ let translate (typ_decls, fns, letb) =
             Some global ->
               (* global *)
               L.build_load global name builder
-          | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure name)) name builder)
+          | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise ("lifting error: function not global")) name builder)
     | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure ("unbound variable " ^ name))) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
@@ -615,7 +615,7 @@ in let populate_function fun_type fun_defn fun_builder sexpr =
 
 in let _ = List.map
   (fun (((name, _), sexpr) : bind * sexpr) ->
-    let (fun_type, fun_defn, fun_builder) = (try StringMap.find name user_functions with Not_found -> raise (Failure name))
+    let (fun_type, fun_defn, fun_builder) = (try StringMap.find name user_functions with Not_found -> raise (Failure ("function " ^ name ^ " not found")))
       in populate_function fun_type fun_defn fun_builder sexpr)
   fns
 
