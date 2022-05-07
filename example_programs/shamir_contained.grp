@@ -22,13 +22,13 @@ let Int secret = 14 in (* f(0) in our polynomial, or y-intercept term, which hol
 (* Privately generated polynomial to generate keys *)
 (* The following integers were randomly generated 0 < n < p, all polynomial coefficients must be unique *)
 (* Every sharer recieves a pair (xi, yi) s.t. yi = f(xi) and they know only their pair *)
-let Int poly as = zmod19.make_poly [9, 4, 18, 12, secret] in (* randomly generated coefficients *)
+let Int poly coefs = zmod19.make_poly [9, 4, 18, 12, secret] in (* randomly generated coefficients *)
 let Int list xs = [13, 7, 5, 14, 2] in (* unique randomly generated x value points *)
 
-let [Int poly, Int list] -> Int list get_ys = lambda (Int poly as Int list xs) 
+let [Int poly, Int list] -> Int list get_ys = lambda (Int poly coefs Int list xs) 
                                                 if null? xs then [] 
-                                                else (zmod19.poly_eval as (car xs))::(get_ys as (cdr xs)) end end in
-let Int list ys = get_ys as xs in 
+                                                else (zmod19.poly_eval coefs (car xs))::(get_ys coefs (cdr xs)) end end in
+let Int list ys = get_ys coefs xs in 
 (* xs and ys are parallel lists for polynomial points, we retrieve the secret using only xs and ys *)                                                
 (* using the LaGrange Polynomial Interpolation  *)
 
