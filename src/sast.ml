@@ -24,9 +24,6 @@ and sx =
   | SMatch of bind list * (spattern * sexpr) list
   | SCall of sexpr * sexpr list
   | SIf of sexpr * sexpr * sexpr
-  | SGroup of sgroup
-  | SRing of sring
-  | SField of sfield
   | SPrint of sexpr
 
 and spattern =  
@@ -37,10 +34,6 @@ and starget =
   | STargetWildLiteral of sexpr
   | STargetWildApp of name * starget
   | SCatchAll
-  
-and sgroup = type_expr * sexpr * sexpr * sexpr * sexpr
-and sring = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
-and sfield = type_expr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr * sexpr
 
 type sprogram = typ_decl list * sexpr
 type sprogram_lifted = typ_decl list * (bind * sexpr) list * sexpr
@@ -74,9 +67,6 @@ let rec string_of_sexpr (t, e) =
 | SIf(expr1,expr2,expr3) -> "if " ^ string_of_sexpr expr1 
                          ^ " then " ^ string_of_sexpr expr2 
                          ^ " else " ^ string_of_sexpr expr3
-| SGroup(group) -> string_of_sgroup group
-| SRing(ring) -> string_of_sring ring
-| SField(field) -> string_of_sfield field
 | SPrint(expr) -> "print: " ^ string_of_sexpr expr
   ) ^ ")"
 and string_of_spattern = function
@@ -87,22 +77,6 @@ and string_of_starget = function
 | STargetWildLiteral(expr) -> string_of_sexpr expr
 | STargetWildApp(name,target) -> name ^ "(" ^ string_of_starget target ^ ")"
 | SCatchAll -> "_" 
-
-and string_of_sgroup (name, expr1, expr2, expr3, expr4) = 
-  string_of_type_expr name ^ " " ^
-  string_of_sexpr expr1 ^ " " ^
-  string_of_sexpr expr2 ^ " " ^
-  string_of_sexpr expr3 ^ " " ^
-  string_of_sexpr expr4
-
-and string_of_sring(name, expr1, expr2, expr3, expr4, expr5, expr6) = 
-  string_of_sgroup (name, expr1, expr2, expr3, expr4) ^ " " ^
-  string_of_sexpr expr5 ^ " " ^
-  string_of_sexpr expr6
-
-and string_of_sfield(name, expr1, expr2, expr3, expr4, expr5, expr6, expr7) = 
-  string_of_sring (name, expr1, expr2, expr3, expr4, expr5, expr6) ^ " " ^
-  string_of_sexpr expr7
 
 let string_of_sprogram (typ_decls, expr) = 
   String.concat "" (List.map string_of_typ_decl typ_decls) ^ string_of_sexpr expr ^ "\n"
