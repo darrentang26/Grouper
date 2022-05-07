@@ -308,7 +308,7 @@ let translate (typ_decls, fns, letb) =
             Some global ->
               (* global *)
               L.build_load global name builder
-          | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise ("lifting error: function not global")) name builder)
+          | None -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure ("lifting error: function not global"))) name builder)
     | _ -> L.build_load (try (StringMap.find name scope) with Not_found -> raise (Failure ("unbound variable " ^ name))) name builder)
   | SBinop ((tl, sl), op, (tr, sr)) -> let
     left = expr builder scope gamma (tl, sl) and
