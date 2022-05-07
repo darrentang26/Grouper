@@ -26,7 +26,16 @@ let [Int] -> Int print_newlines = lambda (Int n)
   end
 end
 
-(* print a string *)
+(* print an error string and exits *)
+let [String] -> Int error = lambda (String s)
+  let String a = print "Error: "
+  in let String a = print s
+  in let Int a = print_newlines 1
+  in let [Error] -> Int exit_fail = lambda (Error k) match (k) with
+    | (PASS) -> 0
+  end
+    in (exit_fail FAIL)
+end
 
 (* Standard Integer Operations*)
 
