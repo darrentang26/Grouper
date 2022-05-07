@@ -1,0 +1,3 @@
+let [Int] -> Int * Int diag_point =
+    lambda (Int x) (x, x) end in
+print car (diag_point 12)

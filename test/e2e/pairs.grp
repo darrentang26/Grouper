@@ -1,0 +1,10 @@
+type Point = {x : Float, y : Float}
+
+let Float x = 3.0 in
+let Float y = 1.0 in
+let Point p = {x = x, y = y} in
+let Point q = {x = y, y = x} in
+let Point * Point ppair = (p, q) in
+let Point fst = car ppair in
+let Point snd = cdr ppair in
+print fst.x == snd.y
