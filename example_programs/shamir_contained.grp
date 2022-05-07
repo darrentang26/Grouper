@@ -1,3 +1,15 @@
+(* Shamir secret sharing overview:
+ *   n people want to share a secret that can only
+ * be revealed when t people are present. The secret
+ * is encrypted in a t - 1 degree polynomial
+ * zero-degree coefficient being the secret.
+ * Each n people is given a distinct (xi,yi) pair
+ * such that yi = f(xi) where f is the polynomial.
+ * Using polynomial interpolation f(0) of a t-1 degree
+ * polynomial can be found using t distinct points,
+ * thus requiring t people give their part of the secret
+ *)
+
 (* This version is standalone and can be compiled by itself *)
 let [Int, Int, Int, Int, Int] -> Int disc_inv_helper = 
 lambda (Int old_r Int r Int old_t Int t Int base) 
