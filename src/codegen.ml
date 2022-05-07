@@ -93,7 +93,7 @@ let translate (typ_decls, fns, letb) =
     | FloatExpr -> float_t
     | VoidExpr -> void_t
     | StringExpr -> string_t
-    | TypNameExpr name -> ltype_of_typ (StringMap.find name gamma)
+    | TypNameExpr name -> ltype_of_typ (try StringMap.find name gamma with Not_found -> raise (Failure ("unknown type: " ^ name)))
     | AdtTypeExpr binds -> struct_t [| i8_t ; L.pointer_type i8_t |]
     | StructTypeExpr fields -> struct_t (Array.of_list (List.map (fun (_, typ) -> ltype_of_typ typ) fields))
     | ListType tau -> list_node_p
@@ -140,7 +140,7 @@ let translate (typ_decls, fns, letb) =
   let user_functions = List.fold_left create_function StringMap.empty fns in
 
   let create_fp user_fps (((name, ty), (t', body)) : bind * sexpr) =
-    let (_, fun_defn, _) = StringMap.find name user_functions in 
+    let (_, fun_defn, _) = (try StringMap.find name user_functions with Not_found -> raise (Failure ("cannot find function: " ^ name))) in 
     let gloabl_fp = L.define_global name fun_defn grp_module
       in StringMap.add name gloabl_fp user_fps in
   let user_fps = List.fold_left create_fp StringMap.empty fns in
@@ -173,7 +173,7 @@ let translate (typ_decls, fns, letb) =
       | RingType ty -> "ring"
       | _ -> raise (Failure "Initializing a non-struct(?)")) in
       let struct_type = (match t with 
-        TypNameExpr name -> StringMap.find name gamma
+        TypNameExpr name -> (try StringMap.find name gamma with Not_found -> raise (Failure ("cannot find type: " ^ name)))
       | StructTypeExpr fields -> t
       | GroupType ty -> group_to_struct ty
       | FieldType ty -> field_to_struct ty
@@ -244,7 +244,7 @@ let translate (typ_decls, fns, letb) =
   | SCarExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
           let v = (match e with 
-                      SName name -> StringMap.find name scope
+                      SName name -> (try StringMap.find name scope with Not_found -> raise (Failure "car/cdr"))
                     | _ -> expr builder scope gamma (t, e)) in
           let pr = L.build_struct_gep v 0 "pair.fst" builder in
           L.build_load pr "pair.fst" builder
@@ -257,7 +257,7 @@ let translate (typ_decls, fns, letb) =
   | SCdrExpr ((t, e)) -> (match t with
       PairType (t1, t2) ->
         let v = (match e with
-                    SName name -> StringMap.find name scope
+                    SName name -> (try StringMap.find name scope with Not_found -> raise (Failure "car/cdr"))
                   | _ -> expr builder scope gamma (t, e)) in
         let pr = L.build_struct_gep v 1 "pair.snd" builder in
         L.build_load pr "pair.fst" builder
@@ -305,7 +305,7 @@ let translate (typ_decls, fns, letb) =
     left = expr builder scope gamma (tl, sl) and
     right = expr builder scope gamma (tr, sr) in
     let unalias = function 
-      TypNameExpr name -> StringMap.find name gamma
+      TypNameExpr name -> (try StringMap.find name gamma with Not_found -> raise (Failure ("cannot find aliased function: " ^ name)))
     | typ -> typ
     in (match op, tl with
       (Add, IntExpr)        -> L.build_add left right "" builder
@@ -413,14 +413,14 @@ let translate (typ_decls, fns, letb) =
       expr builder scope' gamma' body
   | SAdtExpr target -> (match target with
       STargetWildName name ->
-        let (enum, _) = StringMap.find name rho in
+        let (enum, _) = (try StringMap.find name rho with Not_found -> raise (Failure ("cannot find definition for ADT constructor (no arguments): " ^ name))) in
         let target_type = ltype_of_typ t in
         let location = L.build_alloca target_type name builder in
         let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
         let store = L.build_store (L.const_int i8_t enum) enum_location builder
           in L.build_load location "" builder
     | STargetWildApp (name, STargetWildLiteral sexpr) -> 
-        let (enum, ty) = StringMap.find name rho in
+        let (enum, ty) = (try StringMap.find name rho with Not_found -> raise (Failure ("cannot find definition for ADT constructor: " ^ name))) in
         let target_type = ltype_of_typ t in
         let location = L.build_alloca target_type name builder in
         let enum_location = L.build_struct_gep location 0 (name ^ "-enum") builder in
@@ -441,14 +441,14 @@ let translate (typ_decls, fns, letb) =
       in let start_bb = L.insertion_block builder
       in let the_function = L.block_parent start_bb
 
-      in let merge_bb = L.append_block context "switchcase" the_function
-      in let _ = L.position_at_end merge_bb builder
-
-      in let default_bb = L.append_block context "default" the_function
+      in let default_bb = L.append_block context "matchdefault" the_function
       in let _ = L.position_at_end default_bb builder
       in let _ = L.build_call exit_func [| (L.const_int i32_t 2) |] "" builder 
       in let default_value = L.const_null (ltype_of_typ t)
       in let default_bb = L.insertion_block builder
+
+      in let merge_bb = L.append_block context "matchcont" the_function
+      in let _ = L.position_at_end merge_bb builder
 
       in let _ = L.position_at_end default_bb builder
       in let _ = L.build_br merge_bb builder
@@ -458,7 +458,7 @@ let translate (typ_decls, fns, letb) =
           let targets = match pattern with SPattern (targets) -> targets
           in let target_vals = List.combine targets match_vals
 
-          in let then_bb = L.append_block context "then" the_function
+          in let then_bb = L.append_block context "matchthen" the_function
           in let _ = L.position_at_end then_bb builder
           
           in let (cond_value, scope') = List.fold_left
@@ -466,7 +466,7 @@ let translate (typ_decls, fns, letb) =
               let (target_cond, scope') =
                 let rec codegen_target target value = match target with
                     STargetWildName name -> 
-                      let (enum_target, _) = StringMap.find name rho
+                      let (enum_target, _) = (try StringMap.find name rho with Not_found -> raise (Failure ("(match) cannot find definition for ADT constructor (no arguments): " ^ name)))
                       in let value_location = L.build_alloca (L.type_of value) "" builder
                       in let _ = L.build_store value value_location builder
                       in let enum_target_value = L.const_int i8_t enum_target
@@ -475,7 +475,7 @@ let translate (typ_decls, fns, letb) =
                       in let cond_value = L.build_icmp L.Icmp.Eq enum_target_value enum_match_value ("is-" ^ name) builder
                         in (cond_value, scope)
                   | STargetWildApp (name, STargetWildLiteral sexpr) ->
-                      let (enum_target, target_type) = StringMap.find name rho
+                      let (enum_target, target_type) = (try StringMap.find name rho with Not_found -> raise (Failure ("(match) cannot find definition for ADT constructor: " ^ name)))
                       in let value_location = L.build_alloca (L.type_of value) "" builder
                       in let _ = L.build_store value value_location builder
                       in let enum_target_value = L.const_int i8_t enum_target
@@ -488,7 +488,9 @@ let translate (typ_decls, fns, letb) =
                             in let target_location = L.build_pointercast target_location (L.pointer_type (L.pointer_type (ltype_of_typ ty))) (name ^ "-value-casted") builder
                             in let target_location = L.build_load target_location "" builder
                             in let scope' = StringMap.add name_to_bind target_location scope
-                              in (L.const_int i1_t 1, scope')
+                            in let const_int_location = L.build_alloca i1_t "" builder
+                            in let _ = L.build_store (L.const_int i1_t 1) const_int_location builder
+                              in (L.build_load const_int_location "" builder, scope')
                         | (ty, sx) ->
                             let sexpr_target_value = expr builder scope gamma (ty, sx)
                             in let sexpr_match_location = L.build_struct_gep value_location 1 (name ^ "-value") builder
@@ -502,7 +504,7 @@ let translate (typ_decls, fns, letb) =
                       in let cond_value = L.build_and enum_cond_value sexpr_cond_value "enum-literal-matches" builder
                         in (cond_value, scope')
                   | STargetWildApp (name, inner_target) ->
-                      let (enum_target, target_type) = StringMap.find name rho
+                      let (enum_target, target_type) = (try StringMap.find name rho with Not_found -> raise (Failure ("(match) cannot find definition for ADT constructor (inner target): " ^ name)))
                       in let value_location = L.build_alloca (L.type_of value) "" builder
                       in let _ = L.build_store value value_location builder
 
@@ -519,7 +521,11 @@ let translate (typ_decls, fns, letb) =
                       in let (inner_cond_value, scope') = codegen_target inner_target target_value
                         in let cond_value = L.build_and enum_cond_value inner_cond_value "" builder
                           in (cond_value, scope')
-                  | SCatchAll -> (L.const_int i1_t 1, scope)
+                  | SCatchAll ->
+                    let const_int_location = L.build_alloca i1_t "" builder
+                    in let _ = L.build_store (L.const_int i1_t 1) const_int_location builder
+                      in (L.build_load const_int_location "" builder, scope)
+                      (* in (L.const_int i1_t 1, scope) *)
                   in codegen_target target value
 
               in let cond_value' = L.build_and cond_value target_cond "accumulated-match" builder
@@ -527,15 +533,17 @@ let translate (typ_decls, fns, letb) =
               (L.const_int i1_t 1, scope)
               target_vals
 
-          in let then_value = expr builder scope' gamma sexpr
-          in let then_bb = L.insertion_block builder
-          (* in let _ = L.move_block_after then_bb next_bb *)
-
           in let _ = L.position_at_end then_bb builder
-          in let _ = L.build_cond_br cond_value merge_bb next_bb builder
-            in ((then_value, then_bb) :: cases, then_bb))
+          in let then_value = expr builder scope' gamma sexpr
+          in let then_value_location = L.build_alloca (L.type_of then_value) "" builder
+          in let _ = L.build_store then_value then_value_location builder
+          in let then_source_bb = L.instr_parent then_value_location
+          in let _ = L.position_at_end then_source_bb builder
+          in let branch = L.build_cond_br cond_value merge_bb next_bb builder
+
+          in let _ = L.position_at_end then_source_bb builder
+            in ((then_value, then_source_bb) :: cases, then_bb))
         ([(default_value, default_bb)], default_bb)
-        (* (List.rev bodies) *)
         bodies
       
       in let _ = L.position_at_end start_bb builder
@@ -554,12 +562,12 @@ let translate (typ_decls, fns, letb) =
     in let start_bb = L.insertion_block builder
     in let the_function = L.block_parent start_bb
 
-    in let then_bb = L.append_block context "then" the_function
+    in let then_bb = L.append_block context "ifthen" the_function
     in let _ = L.position_at_end then_bb builder
     in let then_value = expr builder scope gamma then_sexpr
     in let then_bb_end = L.insertion_block builder
 
-    in let else_bb = L.append_block context "else" the_function
+    in let else_bb = L.append_block context "ifelse" the_function
     in let _ = L.position_at_end else_bb builder
     in let else_value = expr builder scope gamma else_sexpr
     in let else_bb_end = L.insertion_block builder

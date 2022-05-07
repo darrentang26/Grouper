@@ -1,0 +1,15 @@
+let [Int list, Int list] -> Bool eq = lambda (Int list x Int list y) 
+    ((car x) mod 3) == ((car y) mod 3) end in
+let [Int list, Int list] -> Int list pl = lambda (Int list x Int list y) 
+    [ (car x + car y) mod 3] end in
+let [Int list] -> Int list neg = lambda (Int list x) 
+    [(3 - (car x)) mod 3] end in
+let [Int list, Int list] -> Int list tim = lambda (Int list x Int list y)
+    [((car x) * (car y)) mod 3] end in
+let [Int list] -> Int list inv = lambda (Int list x) x end in
+let Int list field fd = field {Int list, [0], eq, pl, neg, [1], tim, inv} in
+let [Int list poly, Int] -> Int list poly poly_pow = 
+    lambda (Int list poly xs Int exp)
+    if exp == 1 then xs else  xs * (poly_pow xs (exp - 1)) end end in
+let Int list poly xp1_5 = poly_pow (fd.make_poly [[1], [1]]) 5 in
+print car (car cdr xp1_5)
