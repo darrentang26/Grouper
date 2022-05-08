@@ -1,0 +1,20 @@
+(* Small example program to demonstrate a map function *)
+
+let [[Int] -> Int, Int list] -> Int list mapInt =
+  lambda ([Int] -> Int fun Int list xs)
+    if null? xs
+      then []
+      else (fun (car xs)) :: (mapInt fun (cdr xs))
+    end
+  end
+
+in let Int list xs = mapInt (lambda (Int x) ~x end) [1, 2, 3]
+in let Int x = print (car xs)
+in let String s = print "
+"
+in let Int x = print (car (cdr xs))
+in let String s = print "
+"
+in let Int x = print (car (cdr (cdr xs)))
+in print "
+"
