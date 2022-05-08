@@ -1,3 +1,16 @@
+(* Imaginary numbers overview:
+ * This program implements complex numbers as a polynomial of Floats. The source
+ * code for this implementation is very compact compared to languages like C,
+ * relying on the fact that 1-degree polynomials can be made to act exactly like
+ * complex numbers by applying a reduction rule implemented in compl_reduce. It
+ * concludes with a demonstration that the complex inverse function works by
+ * multiplying a number with its inverse and showing that the result is 1. It is
+ * worth noting that because complex numbers are implmented as a field, this
+ * program also supports polynomials of complex numbers, and as such could be
+ * hypothetically (without respect to memory limitations) used for Shamir Secret
+ * Sharing.
+ *)
+
 (* Float field definitions *)
 let [Float, Float] -> Bool eq = lambda (Float x Float y) x == y end in 
 let [Float, Float] -> Float pl = lambda (Float x Float y) x + y end in
@@ -111,6 +124,7 @@ let [Float, Float] -> Float poly compl_make =
 (* Instantiaion *)
 let Float poly xs = compl_make 12.0 (~0.9) in
 let Float poly ys = compl.inv xs in
+let Float poly zs = compl_make 12.0 (~0.9) in
 
 (* Prints out 1!!! *)
 let Int x = compl_print (xs * ys)
